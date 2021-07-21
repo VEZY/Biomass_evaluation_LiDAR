@@ -1,6 +1,8 @@
 using MTG
 using Statistics
+using CSV
 using MTG:parent
+include("1-code/functions.jl")
 
 branch = "E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/2-mtg/tree3h.mtg"
 mtg = read_mtg(branch)
@@ -17,7 +19,7 @@ df =
         [
             :density, :length, :diameter, :axis_length, :topological_order,
             :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
-            :cross_section_children, :cross_section_leaves, :volume_subtree,
+            :cross_section_children, :cross_section_leaves,
             :number_leaves, :pathlength_subtree, :segment_subtree
         ])
 
