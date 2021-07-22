@@ -212,3 +212,28 @@ function compute_subtree_length!(x)
     length_descendants = filter(x -> x !== nothing, descendants!(x, :length, symbol = "S", self = true))
     length(length_descendants) > 0 ? sum(length_descendants) : nothing
 end
+
+
+function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
+    # Import the mtg file:
+    mtg = read_mtg(mtg_file)
+
+    # Compute extra data:
+    compute_data_mtg(mtg)
+
+    # write the resulting mtg to disk:
+    write_mtg(new_mtg_file, mtg)
+
+    # And the resulting DataFrame to a csv file:
+    df =
+    DataFrame(
+        mtg,
+        [
+            :density, :length, :diameter, :axis_length, :topological_order,
+            :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
+            :cross_section_children, :cross_section_leaves,
+            :number_leaves, :pathlength_subtree, :segment_subtree
+        ])
+
+    CSV.write(csv_file, df[:,Not(:tree)])
+end

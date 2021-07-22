@@ -1,26 +1,27 @@
+# Aim: Compute new variables in the MTG and export the results in a CSV and a new mtg.
+# Author: A. Bonnet & M. Millan and R. Vezy
+# Date of creation: 22/07/2021
+
+# Imports
+
 using MTG
 using Statistics
 using CSV
+using DataFrames
 using MTG:parent
 include("1-code/functions.jl")
 
-branch = "E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/2-mtg/tree3h.mtg"
-mtg = read_mtg(branch)
+# Listing the mtg files:
 
-compute_data_mtg(mtg)
+mtg_files = filter(x -> endswith(x, ".mtg"), readdir("0-data\\2-mtg", join = true))
 
-# write the resulting mtg to disk:
-write_mtg("E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/5-enriched_manual_mtg/tree3h.mtg", mtg)
 
-# And the resulting DataFrame to a csv file:
-df =
-    DataFrame(
-        mtg,
-        [
-            :density, :length, :diameter, :axis_length, :topological_order,
-            :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
-            :cross_section_children, :cross_section_leaves,
-            :number_leaves, :pathlength_subtree, :segment_subtree
-        ])
+# Computing new variables for each mtg and saving the results in "0-data/5-enriched_manual_mtg":
 
-CSV.write("E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/5-enriched_manual_mtg/tree3h.csv",df)
+for i in mtg_files
+    compute_all_mtg_data(
+        i,
+        joinpath("0-data", "5-enriched_manual_mtg", basename(i)),
+        joinpath("0-data", "5-enriched_manual_mtg", splitext(basename(i))[1] * ".csv"),
+    )
+end
