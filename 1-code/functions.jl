@@ -72,7 +72,7 @@ function compute_data_mtg(mtg)
     @mutate_mtg!(
         mtg,
         segment_subtree = length(descendants!(node, :length, symbol = "S", self = true)),
-        number_leaves = length(descendants!(node, :length; filter_fun = isleaf)),
+        number_leaves = nleaves!(node),
         symbol = "S"
     )
 
@@ -119,8 +119,17 @@ function compute_data_mtg(mtg)
     @mutate_mtg!(mtg, cross_section_leaves = compute_cross_section_leaves(node), symbol = "S")
 
 
-     # Volume of wood the section bears (all the sub-tree):
+    # Volume of wood the section bears (all the sub-tree):
     @mutate_mtg!(mtg, volume_subtree = compute_volume_subtree(node), symbol = "S")
+
+    # How many leaves the sibling of the node has:
+    @mutate_mtg!(mtg, nleaves_siblings = nleaves_siblings!(node))
+
+    # How many leaves the node has in proportion to its siblings + itself:
+    @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
+
+    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level = 2))[1]
+    @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
     # Clean-up the cached variables:
     clean_cache!(mtg)

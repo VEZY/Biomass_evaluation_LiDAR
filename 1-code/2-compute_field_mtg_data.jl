@@ -25,3 +25,10 @@ for i in mtg_files
         joinpath("0-data", "5-enriched_manual_mtg", splitext(basename(i))[1] * ".csv"),
     )
 end
+
+
+# mtg_file = "0-data\\2-mtg\\tree11h.mtg"
+# mtg = read_mtg(mtg_file)
+# compute_data_mtg(mtg)
+# df = DataFrame(mtg, [:diameter, :diameter_pipe])
+# CSV.write("tmp.csv",df[:,Not(:tree)])
