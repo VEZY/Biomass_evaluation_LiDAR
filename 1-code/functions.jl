@@ -123,13 +123,22 @@ function compute_data_mtg(mtg)
     @mutate_mtg!(mtg, volume_subtree = compute_volume_subtree(node), symbol = "S")
 
     # How many leaves the sibling of the node has:
-    @mutate_mtg!(mtg, nleaves_siblings = nleaves_siblings!(node))
+    @mutate_mtg!(mtg, nleaves_siblings = sum(nleaves_siblings!(node)))
 
     # How many leaves the node has in proportion to its siblings + itself:
     @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
 
-    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level = 2))[1]
+    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level = 5))[1]
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
+
+
+    # Adding the cross_section to the root:
+    append!(mtg, (cross_section_all = first_cross_section,))
+    # Compute the cross-section for the axes nodes using the one measured on the S just below:
+    @mutate_mtg!(mtg, cross_section_all = descendants(mtg, :cross_section, symbol = "S", recursivity_level = 1)[1])
+
+    # Use the pipe model, but only on nodes with a cross_section <= 314 (≈20mm diameter)
+    @mutate_mtg!(mtg, cross_section_pipe_20 = pipe_model!(node, :cross_section, 314))
 
     # Clean-up the cached variables:
     clean_cache!(mtg)
@@ -148,6 +157,15 @@ function compute_cross_section(x)
         π * ((x[:diameter] / 2.0)^2)
     end
 end
+
+# function dispatch_cross_section(x)
+#     if x[:cross_section] === nothing
+
+#     else
+#         x[:cross_section]
+#     end
+# end
+
 
 function compute_cross_section_children(x)
     cross_section_child = filter(x -> x !== nothing, descendants!(x, :cross_section, symbol = "S", recursivity_level = 1))
@@ -241,7 +259,8 @@ function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
             :density, :length, :diameter, :axis_length, :topological_order,
             :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
             :cross_section_children, :cross_section_leaves,
-            :number_leaves, :pathlength_subtree, :segment_subtree
+            :number_leaves, :pathlength_subtree, :segment_subtree,
+            :cross_section_pipe, :nleaf_proportion_siblings, :nleaves_siblings
         ])
 
     CSV.write(csv_file, df[:,Not(:tree)])
