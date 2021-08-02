@@ -1,3 +1,5 @@
+using MTG
+
 """
     compute_length(node)
 
@@ -53,7 +55,7 @@ end
 
 
 ###############################################
-# Functions used in 2-co,pute_field_mtg_data.jl
+# Functions used in 1-compute_field_mtg_data.jl
 ###############################################
 
 function compute_data_mtg(mtg)
@@ -76,7 +78,7 @@ function compute_data_mtg(mtg)
         symbol = "S"
     )
 
-    topological_order(mtg, ascend = false)
+    branching_order!(mtg, ascend = false)
     # We use basipetal topological order (from tip to base) to allow comparisons between branches of
     # different ages (the last emitted segment will always be of order 1).
 
@@ -131,19 +133,31 @@ function compute_data_mtg(mtg)
     first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level = 5))[1]
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
-
     # Adding the cross_section to the root:
-    append!(mtg, (cross_section_all = first_cross_section,))
+    append!(mtg, (cross_section = first_cross_section,))
     # Compute the cross-section for the axes nodes using the one measured on the S just below:
-    @mutate_mtg!(mtg, cross_section_all = descendants(mtg, :cross_section, symbol = "S", recursivity_level = 1)[1])
+    @mutate_mtg!(mtg, cross_section_all = compute_cross_section_all(node))
 
     # Use the pipe model, but only on nodes with a cross_section <= 314 (≈20mm diameter)
-    @mutate_mtg!(mtg, cross_section_pipe_20 = pipe_model!(node, :cross_section, 314))
+    @mutate_mtg!(mtg, cross_section_pipe_20 = pipe_model!(node, :cross_section_all, 314, allow_missing = true))
 
     # Clean-up the cached variables:
     clean_cache!(mtg)
 
     return mtg
+end
+
+function compute_cross_section_all(x)
+    if x.MTG.symbol == "A"
+        desc_cross_section = descendants(x, :cross_section, symbol = "S", recursivity_level = 1)
+        if length(desc_cross_section) > 0
+            return desc_cross_section[1]
+        else
+            @warn "$(x.name) has no descendants with a value for cross_section."
+        end
+    else
+        x[:cross_section]
+    end
 end
 
 
@@ -256,12 +270,51 @@ function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
     DataFrame(
         mtg,
         [
-            :density, :length, :diameter, :axis_length, :topological_order,
+            :density, :length, :diameter, :axis_length, :branching_order,
             :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
             :cross_section_children, :cross_section_leaves,
             :number_leaves, :pathlength_subtree, :segment_subtree,
-            :cross_section_pipe, :nleaf_proportion_siblings, :nleaves_siblings
+            :cross_section_pipe, :cross_section_pipe_20, :nleaf_proportion_siblings,
+            :nleaves_siblings, :cross_section_all, :comment
         ])
 
     CSV.write(csv_file, df[:,Not(:tree)])
+end
+
+
+
+
+###############################################
+# Functions used in 2-model_diameter.jl
+    ###############################################
+
+function bind_csv_files(csv_files)
+    dfs = []
+    for i in csv_files
+        df_i = CSV.read(i, DataFrame)
+        df_i[:,:branch] .= splitext(basename(i))[1]
+
+        transform!(
+        df_i,
+        :branch => ByRow(x -> x[5:end - 1]) => :tree
+    )
+
+        rename!(
+        df_i,
+        :branch => :unique_branch
+    )
+
+        transform!(
+        df_i,
+        :unique_branch => ByRow(x -> x[end]) => :branch
+    )
+        push!(dfs, df_i)
+    end
+
+    df = dfs[1]
+    for i in 2:length(dfs)
+        df = vcat(df, dfs[i])
+    end
+
+    return df
 end
