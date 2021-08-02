@@ -25,10 +25,10 @@ for i in mtg_files
     )
 end
 
-mtg_file = "0-data\\1-xlsx\\tree11h.xlsm"
-mtg = read_mtg(mtg_file)
-node = get_node(mtg, "node_73")
-node.MTG
-node.attributes
-pipe_model!(node, :cross_section_all, 314, allow_missing = false)
-desc_cross_section = descendants(node, :cross_section, symbol = "S", recursivity_level = 1)
+# mtg_file = "0-data\\1-xlsx\\tree11h.xlsm"
+# mtg = read_mtg(mtg_file)
+# node = get_node(mtg, "node_73")
+# node.MTG
+# node.attributes
+# pipe_model!(node, :cross_section_all, 314, allow_missing = false)
+# desc_cross_section = descendants(node, :cross_section, symbol = "S", recursivity_level = 1)
