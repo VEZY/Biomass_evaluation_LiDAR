@@ -18,7 +18,7 @@ using BrowseTables
 using TerminalPager
 using Revise
 
-plotlyjs()
+# plotlyjs()
 
 includet("1-code/functions.jl")
 
@@ -42,16 +42,16 @@ min_cross_section = π * ((min_diam / 2.0)^2)
 df_inf20 = filter(x -> x.cross_section < min_cross_section, df)
 
 # The formula used for the general model:
-# formula = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + topological_order + segment_index_on_axis + number_leaves + axis_length + segment_subtree)
+# formula = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order + segment_index_on_axis + number_leaves + axis_length + segment_subtree)
 # NB: using this formula we see that number_leaves, segment_subtree and segment_index_on_axis have a Pr(>|t|) > 0.05 and a low t value
-formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + topological_order + axis_length)
+formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + length)
 
 # Model trained on all segments (not what we are searching for, but keep it as a reference):
 ols_all = lm(formula_all, df)
 df[!,:pred_cross_section] = predict(ols_all, df)
 
 # Same but only for segments < 20mm
-formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + topological_order + axis_length)
+formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order  + segment_index_on_axis + axis_length + length)
 ols_20 = lm(formula_20, df_inf20)
 df[!,:pred_cross_section_20] = predict(ols_20, df)
 
@@ -88,7 +88,7 @@ xlabel!("Measured cross section (mm²)")
 
 filter(x -> x.pathlength_subtree > 4e4, dropmissing(df_inf20, :pathlength_subtree))
 
-scatter(df_inf20[!,:cross_section], df_inf20[!,:topological_order], label = "Measured")
+scatter(df_inf20[!,:cross_section], df_inf20[!,:branching_order], label = "Measured")
 ylabel!("Topological order (#)")
 xlabel!("Measured cross section (mm²)")
 
@@ -97,7 +97,7 @@ ylabel!("Axis length (mm)")
 xlabel!("Measured cross section (mm²)")
 
 scatter(df_inf20[!,:cross_section], df_inf20[!,:number_leaves], label = "Measured")
-ylabel!("Total number of terminal nodes (#)")
+ylabel!("Number of terminal nodes (#)")
 xlabel!("Measured cross section (mm²)")
 
 scatter(df_inf20[!,:cross_section], df_inf20[!,:cross_section_all], label = "pipe model")
@@ -134,8 +134,6 @@ scatter(df[!,:cross_section], df[!,:cross_section_pipe], ylab = "CS pipe", xlab 
 
 filter(x -> x.cross_section_children < 750 && x.cross_section > 1000, dropmissing(df, [:cross_section_children]))  |> open_html_table
 
-
-cross_section_pipe + pathlength_subtree + topological_order + axis_length
 
 scatter(df[!,:cross_section], df[!,:cross_section_pipe], ylab = "CS pipe", xlab = "CS",
     hover = df[!,:unique_branch], hovermode = "closest")
