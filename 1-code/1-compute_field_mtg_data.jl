@@ -30,8 +30,10 @@ end
 
 # mtg_file = "0-data\\1-xlsx\\tree11h.xlsm"
 # mtg = read_mtg(mtg_file)
-# node = get_node(mtg, "node_73")
+# node = get_node(mtg, "node_13")
+# compute_data_mtg(mtg)
 # node.MTG
-# node.attributes
+# node.attributes[:axis_length]
+# ancestors(node, :axis_length, symbol = "A", recursivity_level = 1)
 # pipe_model!(node, :cross_section_all, 314, allow_missing = false)
 # desc_cross_section = descendants(node, :cross_section, symbol = "S", recursivity_level = 1)

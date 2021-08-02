@@ -172,15 +172,6 @@ function compute_cross_section(x)
     end
 end
 
-# function dispatch_cross_section(x)
-#     if x[:cross_section] === nothing
-
-#     else
-#         x[:cross_section]
-#     end
-# end
-
-
 function compute_cross_section_children(x)
     cross_section_child = filter(x -> x !== nothing, descendants!(x, :cross_section, symbol = "S", recursivity_level = 1))
 
@@ -215,11 +206,11 @@ function compute_diameter(x)
 end
 
 function get_axis_length(x)
-    axis_length = ancestors(x, :axis_length, symbol = "A", all = false)
+    axis_length = ancestors(x, :axis_length, symbol = "A", recursivity_level = 1)
     if length(axis_length) > 0
-    axis_length[1]
+        axis_length[1]
     else
-    nothing
+        nothing
     end
 end
 
