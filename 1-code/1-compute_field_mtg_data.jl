@@ -9,7 +9,8 @@ using Statistics
 using CSV
 using DataFrames
 using MTG:parent
-include("1-code/functions.jl")
+using Revise
+includet("1-code/functions.jl")
 
 # Listing the mtg files in xlsx/xlsm format:
 
@@ -26,7 +27,7 @@ for i in mtg_files
 end
 
 
-# mtg_file = "0-data\\1-xlsx\\tree11h.xlsm"
+# mtg_file = "0-data\\1-xlsx\\tree11l.xlsm"
 # mtg = read_mtg(mtg_file)
 # node = get_node(mtg, "node_13")
 # compute_data_mtg(mtg)

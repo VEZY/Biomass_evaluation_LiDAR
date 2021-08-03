@@ -46,12 +46,18 @@ df_inf20 = filter(x -> x.cross_section < min_cross_section, df)
 # NB: using this formula we see that number_leaves, segment_subtree and segment_index_on_axis have a Pr(>|t|) > 0.05 and a low t value
 formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + length)
 
+@df dropmissing(df_inf20, [:cross_section,:length]) scatter(
+    :cross_section,
+    :axis_length,
+    group = :unique_branch
+)
+
 # Model trained on all segments (not what we are searching for, but keep it as a reference):
 ols_all = lm(formula_all, df)
 df[!,:pred_cross_section] = predict(ols_all, df)
 
 # Same but only for segments < 20mm
-formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order  + segment_index_on_axis + axis_length + length)
+formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order  + segment_index_on_axis)
 ols_20 = lm(formula_20, df_inf20)
 df[!,:pred_cross_section_20] = predict(ols_20, df)
 
@@ -81,6 +87,12 @@ scatter!(
 Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
 
 # Other plots:
+
+
+scatter(df[!,:diameter], df[!,:pathlength_subtree], label = "")
+ylabel!("Total path length of the subtree (mm)")
+xlabel!("Measured cross section (mm²)")
+
 
 scatter(df_inf20[!,:cross_section], df_inf20[!,:pathlength_subtree], label = "")
 ylabel!("Total path length of the subtree (mm)")
@@ -157,3 +169,21 @@ filter(x -> x.cross_section_pipe < 100 && x.cross_section > 900, dropmissing(df,
 
 
 filter(x -> x.unique_branch == "tree11l" && x.length == 80 && x.diameter == 4.39, dropmissing(df, [:cross_section_pipe]))  |> open_html_table
+
+df = bind_csv_files(csv_files)
+
+filter(x -> x.length === missing && x.symbol == "S", df)  |> open_html_table
+
+
+
+
+bar(df[!,:diameter], df[!,:tree])
+
+
+scatter(df[!,:diameter], df[!,:length], label = "")
+
+@df dropmissing(df, [:cross_section,:pathlength_subtree]) scatter(
+    :cross_section,
+    :pathlength_subtree,
+    group = :unique_branch
+)
