@@ -1,11 +1,11 @@
 using MTG
 
 """
-    compute_length(node)
+    compute_length_coord(node)
 
 Compute node length as the distance between itself and its parent.
 """
-function compute_length(node)
+function compute_length_coord(node)
     if !isroot(node.parent)
         sqrt(
             (node.parent[:XX] - node[:XX])^2 +
@@ -45,8 +45,10 @@ function cumul_length_segment(node)
                 all = false)...
         ]
         # NB: we don't use self = true because it would trigger a stop due to all = false
+        filter!(x -> x !== nothing, length_ancestors)
 
-        sum(length_ancestors)
+
+        sum(length_ancestors) * 1000.
     else
         0.0
     end
@@ -113,6 +115,8 @@ function compute_data_mtg(mtg)
     @mutate_mtg!(mtg, diameter = compute_diameter(node), symbol = "S") # diameter of the segment in mm
 
     @mutate_mtg!(mtg, volume = compute_volume(node), symbol = "S") # volume of the segment in mm3
+
+    # @mutate_mtg!(mtg, volume = compute_volume_axis(node), symbol = "A") # volume of the axis in mm3
 
     @mutate_mtg!(mtg, cross_section = compute_cross_section(node), symbol = "S") # area of segment cross section in mm2
     @mutate_mtg!(mtg, cross_section_children = compute_cross_section_children(node), symbol = "S") # area of segment cross section in mm2
@@ -190,6 +194,12 @@ function compute_volume(x)
     end
 end
 
+
+function compute_volume_axis(x)
+    volume_descendants = descendants!(x, :volume, symbol = "S", link = ("/", "<"), all = false)
+    sum(volume_descendants)
+end
+
 function compute_diameter(x)
     if x[:diameter] === nothing
         diams = [x[:diameter_50_1], x[:diameter_50_2], x[:diameter_70_1], x[:diameter_70_2]]
@@ -200,8 +210,7 @@ function compute_diameter(x)
             return nothing
         end
     else
-        # The diameters measured by M. Millan (2020) were in cm, computing it in mm:
-        return x[:diameter] / 10.0
+        return x[:diameter]
     end
 end
 
@@ -216,7 +225,11 @@ end
 
 
 function compute_length(x)
-    x[:length] === nothing ? ifelse(x[:length_mm] === nothing, nothing, x[:length_mm]) : x[:length] / 10.
+    if x[:length] === nothing
+        x[:length_mm]
+    else
+        return x[:length] * 10.
+    end
 end
 
 function compute_axis_length(x)
@@ -235,7 +248,7 @@ end
 function compute_density(x)
     if x[:fresh_density] !== nothing
         x[:fresh_density]
-    elseif x[:dry_weight] !== nothing
+elseif x[:dry_weight] !== nothing
         x[:dry_weight] / x[:volume_bh]
     end
 end
@@ -246,7 +259,7 @@ function compute_subtree_length!(x)
 end
 
 
-function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
+    function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
     # Import the mtg file:
     mtg = read_mtg(mtg_file)
 
@@ -296,8 +309,8 @@ function bind_csv_files(csv_files)
     )
 
         transform!(
-        df_i,
-        :unique_branch => ByRow(x -> x[end]) => :branch
+    df_i,
+    :unique_branch => ByRow(x -> x[end]) => :branch
     )
         push!(dfs, df_i)
     end
