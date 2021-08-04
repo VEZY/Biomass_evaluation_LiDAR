@@ -4,25 +4,25 @@
 
 # Imports
 
-using MTG
-using Statistics
-using CSV
-using DataFrames
-using MTG:parent
 using Revise
 includet("1-code/functions.jl")
+using .BiomassFromLiDAR
 
 # Listing the mtg files in xlsx/xlsm format:
 
-mtg_files = filter(x -> splitext(basename(x))[2] in [".xlsx",".xlsm"], readdir("0-data\\1-xlsx", join = true))
+mtg_files =
+    filter(
+        x -> splitext(basename(x))[2] in [".xlsx",".xlsm"],
+        readdir(joinpath("0-data", "1-mtg_manual_measurement_corrected"), join = true)
+    )
 
 # Computing new variables for each mtg and saving the results in "0-data/5-enriched_manual_mtg":
 
 for i in mtg_files
     compute_all_mtg_data(
         i,
-        joinpath("0-data", "5-enriched_manual_mtg", splitext(basename(i))[1] * ".mtg"),
-        joinpath("0-data", "5-enriched_manual_mtg", splitext(basename(i))[1] * ".csv"),
+        joinpath("0-data", "2-mtg_manual_measurement_corrected_enriched", splitext(basename(i))[1] * ".mtg"),
+        joinpath("0-data", "2-mtg_manual_measurement_corrected_enriched", splitext(basename(i))[1] * ".csv"),
     )
 end
 

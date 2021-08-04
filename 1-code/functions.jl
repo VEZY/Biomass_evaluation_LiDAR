@@ -1,60 +1,13 @@
+module BiomassFromLiDAR
+
 using MTG
+using Statistics:mean
+using CSV
+using DataFrames
 
-"""
-    compute_length_coord(node)
-
-Compute node length as the distance between itself and its parent.
-"""
-function compute_length_coord(node)
-    if !isroot(node.parent)
-        sqrt(
-            (node.parent[:XX] - node[:XX])^2 +
-            (node.parent[:YY] - node[:YY])^2 +
-            (node.parent[:ZZ] - node[:ZZ])^2
-        )
-    else
-        0.0
-    end
-end
-
-"""
-    is_seg(x)
-
-Is a node also a segment node ? A segment node is a node at a branhing position, or at the
-first (or last) position in the tree.
-"""
-is_seg(x) = isleaf(x) || (!isroot(x) && length(x.children) > 1)
-
-"""
-    cumul_length_segment(node)
-
-Cumulates the lengths og segments inside a segment. Only does it if the node is considered
-as a segment, else returns 0.
-"""
-function cumul_length_segment(node)
-    if is_seg(node)
-
-        length_ancestors =
-        [
-            node[:length_node],
-            ancestors(
-                node,
-                :length_node,
-                filter_fun = x -> !is_seg(x),
-                scale = 2,
-                all = false)...
-        ]
-        # NB: we don't use self = true because it would trigger a stop due to all = false
-        filter!(x -> x !== nothing, length_ancestors)
-
-
-        sum(length_ancestors) * 1000.
-    else
-        0.0
-    end
-end
-
-
+export compute_all_mtg_data
+export bind_csv_files
+export segmentize_mtgs
 
 ###############################################
 # Functions used in 1-compute_field_mtg_data.jl
@@ -259,7 +212,7 @@ function compute_subtree_length!(x)
 end
 
 
-    function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
+function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
     # Import the mtg file:
     mtg = read_mtg(mtg_file)
 
@@ -290,7 +243,7 @@ end
 
 ###############################################
 # Functions used in 2-model_diameter.jl
-    ###############################################
+###############################################
 
 function bind_csv_files(csv_files)
     dfs = []
@@ -299,19 +252,19 @@ function bind_csv_files(csv_files)
         df_i[:,:branch] .= splitext(basename(i))[1]
 
         transform!(
-        df_i,
-        :branch => ByRow(x -> x[5:end - 1]) => :tree
-    )
+            df_i,
+            :branch => ByRow(x -> x[5:end - 1]) => :tree
+        )
 
         rename!(
-        df_i,
-        :branch => :unique_branch
-    )
+            df_i,
+            :branch => :unique_branch
+        )
 
         transform!(
-    df_i,
-    :unique_branch => ByRow(x -> x[end]) => :branch
-    )
+            df_i,
+            :unique_branch => ByRow(x -> x[end]) => :branch
+        )
         push!(dfs, df_i)
     end
 
@@ -321,4 +274,153 @@ function bind_csv_files(csv_files)
     end
 
     return df
+end
+
+
+
+###############################################
+# Functions used in 3-mtg_plantscan3d_to_segments
+###############################################
+
+function segmentize_mtgs(in_folder, out_folder)
+    # Listing the mtg files in the folder:
+    mtg_files = filter(x -> splitext(basename(x))[2] in [".mtg"], readdir(in_folder))
+
+    # Modifying the format of the MTG to match the one from the field, i.e. with segments and axis instead of nodes
+    for i in mtg_files
+        segmentize_mtg(
+            joinpath(in_folder, i),
+            joinpath(out_folder, i),
+    )
+    end
+end
+
+"""
+    segmentize_mtg(in_file, out_file)
+
+Transform the input mtg from plantscan3d into an mtg with segments and axis. Segments are
+nodes describing the portion of the branch between two branching points. Axis is the
+upper-scale grouping following segments, *i.e.* segments with a "/" or "<" link.
+"""
+function segmentize_mtg(in_file, out_file)
+    mtg = read_mtg(in_file)
+
+    # Compute internode length and then cumulate the lenghts when deleting.
+
+    # Step 1: computes the length of each node:
+    @mutate_mtg!(mtg, length_node = compute_length_coord(node), scale = 2) # length is in meters
+
+    # Step 3: cumulate the length of all nodes in a segment for each segment node:
+    @mutate_mtg!(mtg, length = cumul_length_segment(node), scale = 2,  filter_fun = is_seg)
+
+    # Step 4: delete nodes to make the mtg as the field measurements: with nodes only at in_fileing points
+    mtg = delete_nodes!(mtg, filter_fun = is_segment!, scale = (1, 2))
+
+    # Insert a new scale: the Axis.
+    # First step we put all nodes at scale 3 instead of 2:
+    @mutate_mtg!(mtg, node.MTG.scale = 3, scale = 2)
+
+    # 2nd step, we add axis nodes (scale 2) branching each time there's a branching node:
+    template = MutableNodeMTG("+", "A", 0, 2)
+    insert_nodes!(mtg, template, scale = 3, link = "+")
+    # And before the first node decomposing the plant:
+    insert_nodes!(mtg, MutableNodeMTG("/", "A", 0, 2), scale = 3, link = "/", all = false)
+
+    # 3d step, we change the branching nodes links to decomposition:
+    @mutate_mtg!(mtg, node.MTG.link = "/", scale = 3, link = "+")
+
+    # Fourth step, we rename the nodes symbol into segments "S":
+    @mutate_mtg!(mtg, node.MTG.symbol = "S", symbol = "N")
+    # And the plant symbol as the plant name:
+    # mtg.MTG.symbol = replace(basename(in_file), ".mtg" => "")
+    mtg.MTG.symbol = splitext(basename(out_file))[1]
+    # Last step, we add the index as in the field, *i.e.* the axis nodes are indexed following
+    # their topological order, and the segments are indexed following their position on the axis:
+
+    @mutate_mtg!(mtg,node.MTG.index = A_indexing(node))
+
+    # Set bag the root node with no indexing:
+    mtg.MTG.index = nothing
+
+    @mutate_mtg!(mtg, node.MTG.index = S_indexing(node), scale = 3)
+
+    # Delete the old length of the nodes (length_node) from the attributes:
+    traverse!(mtg, x -> x[:length_node] === nothing ? nothing : pop!(x.attributes, :length_node))
+
+    # Write MTG back to file:
+    write_mtg(out_file, mtg)
+end
+
+
+"""
+    compute_length_coord(node)
+
+Compute node length as the distance between itself and its parent.
+"""
+function compute_length_coord(node)
+    if !isroot(node.parent)
+        sqrt(
+            (node.parent[:XX] - node[:XX])^2 +
+            (node.parent[:YY] - node[:YY])^2 +
+(node.parent[:ZZ] - node[:ZZ])^2
+        )
+    else
+        0.0
+    end
+end
+
+"""
+    is_seg(x)
+
+Is a node also a segment node ? A segment node is a node at a branhing position, or at the
+first (or last) position in the tree.
+"""
+is_seg(x) = isleaf(x) || (!isroot(x) && length(x.children) > 1)
+
+"""
+    cumul_length_segment(node)
+
+Cumulates the lengths og segments inside a segment. Only does it if the node is considered
+as a segment, else returns 0.
+"""
+function cumul_length_segment(node)
+    if is_seg(node)
+
+        length_ancestors =
+        [
+            node[:length_node],
+            ancestors(
+                node,
+                :length_node,
+                filter_fun = x -> !is_seg(x),
+                scale = 2,
+                all = false)...
+        ]
+        # NB: we don't use self = true because it would trigger a stop due to all = false
+        filter!(x -> x !== nothing, length_ancestors)
+
+
+        sum(length_ancestors) * 1000.
+    else
+        0.0
+    end
+end
+
+    function A_indexing(node)
+if isroot(node)
+        return 0
+    else
+        node.MTG.link == "+" ? node.parent.MTG.index + 1 : node.parent.MTG.index
+    end
+end
+
+
+function S_indexing(node)
+    if isroot(node)
+        return 0
+    else
+        node.MTG.link == "/" ? 1 : node.parent.MTG.index + 1
+    end
+end
+
 end

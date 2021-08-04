@@ -18,12 +18,17 @@ using BrowseTables
 using TerminalPager
 using Revise
 
+includet("1-code/functions.jl")
+using .BiomassFromLiDAR
+
 # plotlyjs()
 
-includet("1-code/functions.jl")
-
 # Listing the csv files:
-csv_files = filter(x -> endswith(x, ".csv"), readdir("0-data\\5-enriched_manual_mtg\\", join = true))
+csv_files =
+    filter(
+        x -> endswith(x, ".csv"),
+        readdir(joinpath("0-data", "2-mtg_manual_measurement_corrected_enriched"), join = true)
+    )
 
 # Binding the csv files and adding the branch / tree origin:
 df = bind_csv_files(csv_files)
