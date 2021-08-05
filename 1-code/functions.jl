@@ -8,6 +8,7 @@ using DataFrames
 export compute_all_mtg_data
 export bind_csv_files
 export segmentize_mtgs
+export compute_volume, compute_volume_axis
 
 ###############################################
 # Functions used in 1-compute_field_mtg_data.jl
@@ -312,6 +313,8 @@ function segmentize_mtg(in_file, out_file)
 
     # Step 3: cumulate the length of all nodes in a segment for each segment node:
     @mutate_mtg!(mtg, length = cumul_length_segment(node), scale = 2,  filter_fun = is_seg)
+    # And add a lenght of 0 for the first segment:
+    mtg[1][:length] = 0.0
 
     # Step 4: delete nodes to make the mtg as the field measurements: with nodes only at in_fileing points
     mtg = delete_nodes!(mtg, filter_fun = is_segment!, scale = (1, 2))
