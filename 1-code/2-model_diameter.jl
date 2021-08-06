@@ -49,30 +49,56 @@ df_inf20 = filter(x -> x.cross_section < min_cross_section, df)
 # The formula used for the general model:
 # formula = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order + segment_index_on_axis + number_leaves + axis_length + segment_subtree)
 # NB: using this formula we see that number_leaves, segment_subtree and segment_index_on_axis have a Pr(>|t|) > 0.05 and a low t value
-formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + length)
+formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
 
-@df dropmissing(df_inf20, [:cross_section,:length]) scatter(
-    :cross_section,
-    :axis_length,
-    group = :unique_branch
-)
+# @df dropmissing(df_inf20, [:cross_section,:length]) scatter(
+#     :cross_section,
+#     # :axis_length,
+#     :pathlength_subtree,
+#     group = :unique_branch
+# )
 
 # Model trained on all segments (not what we are searching for, but keep it as a reference):
 ols_all = lm(formula_all, df)
 df[!,:pred_cross_section] = predict(ols_all, df)
 
 # Same but only for segments < 20mm
-formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order  + segment_index_on_axis)
+formula_20 = @formula(cross_section ~ 0 + cross_section_pipe_20 + pathlength_subtree + branching_order  + segment_index_on_axis + number_leaves + segment_subtree + n_segments_axis + nleaf_proportion_siblings)
 ols_20 = lm(formula_20, df_inf20)
 df[!,:pred_cross_section_20] = predict(ols_20, df)
-
+# Setting back the bigger segments to the "measurement" as we don't want to re-simulate them:
+df[df.cross_section .>= min_cross_section,:pred_cross_section_20] =
+    df[df.cross_section .>= min_cross_section,:cross_section]
 
 # Plotting the measured VS simulated cros-section with different methods:
 df_plot = dropmissing(df, [:cross_section_pipe_20, :pred_cross_section, :pred_cross_section_20])
+RMSEs =
+combine(
+     filter(x -> x.cross_section < min_cross_section, df_plot),
+    [:cross_section, :cross_section_pipe] => RMSE => :pipe_model,
+    [:cross_section, :pred_cross_section] => RMSE => :stat_model,
+    [:cross_section, :cross_section_pipe_20] => RMSE => :pipe_model_20,
+    [:cross_section, :pred_cross_section_20] => RMSE => :stat_model_20
+)
+
+EFs =
+combine(
+     filter(x -> x.cross_section < min_cross_section, df_plot),
+    [:cross_section, :cross_section_pipe] => EF => :pipe_model,
+    [:cross_section, :pred_cross_section] => EF => :stat_model,
+    [:cross_section, :cross_section_pipe_20] => EF => :pipe_model_20,
+    [:cross_section, :pred_cross_section_20] => EF => :stat_model_20
+)
+
 scatter(
     df_plot[!,:cross_section],
     Array(select(df_plot, :cross_section_pipe, :cross_section_pipe_20, :pred_cross_section, :pred_cross_section_20)),
-    label = ["Pipe model" "Pipe model ⌀<20mm" "Trained on all segments" "Trained on segments ⌀<20mm"],
+    label = hcat(
+        "Pipe model, RMSE: $(RMSEs.pipe_model[1]), EF: $(EFs.pipe_model[1])",
+        "Pipe model ⌀<20mm, RMSE: $(RMSEs.pipe_model_20[1]), EF: $(EFs.pipe_model_20[1])",
+        "Stat. mod. all segments, RMSE: $(RMSEs.stat_model[1]), EF: $(EFs.stat_model[1])",
+        "Stat. mod. ⌀<20mm, RMSE: $(RMSEs.stat_model_20[1]), EF: $(EFs.stat_model_20[1])"
+        ),
     yguide = "Predicted cross-section (mm²)",
     xguide = "Measured cross section (mm²)",
     legend = :topleft
@@ -90,6 +116,28 @@ scatter!(
     subplot = 2
 )
 Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
+
+
+# The model:
+# Coefficients:
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+#                                  Coef.  Std. Error       t  Pr(>|t|)    Lower 95%   Upper 95%
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# cross_section_pipe_20        0.217432   0.0131183    16.57    <1e-59    0.191715    0.243149
+# pathlength_subtree           0.0226391  0.00146669   15.44    <1e-51    0.0197638   0.0255144
+# branching_order             19.2056     0.895974     21.44    <1e-97   17.4491     20.962
+# segment_index_on_axis        6.99042    0.469006     14.90    <1e-48    6.07098     7.90986
+# number_leaves              -10.0844     0.957852    -10.53    <1e-24  -11.9622     -8.20666
+# segment_subtree              3.61329    0.439797      8.22    <1e-15    2.75111     4.47547
+# n_segments_axis              0.9353     0.0597443    15.66    <1e-53    0.818177    1.05242
+# nleaf_proportion_siblings   -6.03946    1.07981      -5.59    <1e-07   -8.15632    -3.9226
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+function cross_section_stat_mod(x)
+    0.217432 * x[:cross_section_pipe_20] + 0.0226391 * x[:pathlength_subtree] + 19.2056 * x[:branching_order] +
+    6.99042 * x[:segment_index_on_axis] - 10.0844 * x[:number_leaves] + 3.61329 * x[:segment_subtree] +
+    0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
+end
 
 # Other plots:
 
