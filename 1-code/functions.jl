@@ -150,7 +150,6 @@ function compute_volume(x)
     end
 end
 
-
 function compute_volume_axis(x, vol_col = :volume)
     sum(descendants!(x, vol_col, symbol = "S", link = ("/", "<"), all = false))
 end
@@ -317,7 +316,7 @@ function segmentize_mtg(in_file, out_file)
     # And add a lenght of 0 for the first segment:
     mtg[1][:length] = 0.0
 
-    # Step 4: delete nodes to make the mtg as the field measurements: with nodes only at in_fileing points
+    # Step 4: delete nodes to make the mtg as the field measurements: with nodes only at in_filtering points
     mtg = delete_nodes!(mtg, filter_fun = is_segment!, scale = (1, 2))
 
     # Insert a new scale: the Axis.
@@ -343,7 +342,7 @@ function segmentize_mtg(in_file, out_file)
 
     @mutate_mtg!(mtg,node.MTG.index = A_indexing(node))
 
-    # Set bag the root node with no indexing:
+    # Set back the root node with no indexing:
     mtg.MTG.index = nothing
 
     @mutate_mtg!(mtg, node.MTG.index = S_indexing(node), scale = 3)
@@ -376,10 +375,10 @@ end
 """
     is_seg(x)
 
-Is a node also a segment node ? A segment node is a node at a branhing position, or at the
+Is a node also a segment node ? A segment node is a node at a branching position, or at the
 first (or last) position in the tree.
 """
-is_seg(x) = isleaf(x) || (!isroot(x) && length(x.children) > 1)
+is_seg(x) = isleaf(x) || (!isroot(x) && (length(x.children) > 1 || x[1].MTG.link == "+"))
 
 """
     cumul_length_segment(node)
@@ -412,7 +411,7 @@ end
 
     function A_indexing(node)
 if isroot(node)
-        return 0
+        return 1
     else
         node.MTG.link == "+" ? node.parent.MTG.index + 1 : node.parent.MTG.index
     end
@@ -597,12 +596,13 @@ function compare_model_branch(branch, dir_path_lidar, dir_path_manual, df_densit
     df_lidar_model = DataFrame(mtg_lidar_model, [:volume_stat_mod, :length, :cross_section_stat_mod])
     df_manual = DataFrame(mtg_manual, [:volume_gf, :length_gap_filled, :cross_section_gap_filled])
 
-    tot_lenght_lidar = sum(filter(x -> x.symbol == "S", df_lidar).length)
-    tot_lenght_lidar_model = sum(filter(x -> x.symbol == "S", df_lidar).length)
-    tot_lenght_manual = sum(filter(x -> x.symbol == "S", df_manual).length_gap_filled)
-    mean(filter(x -> x.symbol == "S", df_lidar).diameter)
-    mean(sqrt.(filter(x -> x.symbol == "S", df_lidar_model).cross_section_stat_mod ./ π) * 2)
-    mean(sqrt.(filter(x -> x.symbol == "S", df_manual).cross_section_gap_filled ./ π) * 2)
+    tot_lenght_lidar = sum(filter(x -> x.symbol == "S", df_lidar).length) / 1000 # length in m
+    tot_lenght_manual = sum(filter(x -> x.symbol == "S", df_manual).length_gap_filled) / 1000
+    # mean(filter(x -> x.symbol == "S", df_lidar).diameter)
+    # mean(sqrt.(filter(x -> x.symbol == "S", df_lidar_model).cross_section_stat_mod ./ π) * 2)
+    # mean(sqrt.(filter(x -> x.symbol == "S", df_manual).cross_section_gap_filled ./ π) * 2)
+    length_error_pltscan3d =  tot_lenght_lidar - tot_lenght_manual
+    length_norm_error_pltscan3d = tot_lenght_lidar / tot_lenght_manual
 
     tot_vol_lidar = sum(filter(x -> x.symbol == "A", df_lidar).volume) * 1e-9 # Total volume in m3
     tot_vol_lidar_stat_mod = sum(filter(x -> x.symbol == "A", df_lidar_model).volume_stat_mod) * 1e-9 # Total volume in m3
@@ -624,14 +624,13 @@ function compare_model_branch(branch, dir_path_lidar, dir_path_manual, df_densit
     fresh_biomass_lidar = tot_vol_lidar * fresh_density * 1000 # fresh biomass in kg
     fresh_biomass_actual_lidar = tot_vol_lidar * actual_fresh_density * 1000 # fresh biomass in kg
 
-
     dry_biomass_lidar_stat_mod = tot_vol_lidar_stat_mod * dry_density * 1000 # mass in kg
     fresh_biomass_lidar_stat_mod = tot_vol_lidar_stat_mod * fresh_density * 1000 # fresh biomass in kg
+    # Using the density re-computed using the volume manual measurement:
     fresh_biomass_actual_stat_mod = tot_vol_lidar_stat_mod * actual_fresh_density * 1000 # fresh biomass in kg
 
     dry_biomass_manual = tot_vol_manual * dry_density * 1000 # mass in kg
     fresh_biomass_manual = tot_vol_manual * fresh_density * 1000 # fresh biomass in kg
-
 
     true_fresh_biomass = mtg_manual.attributes[:mass_g] / 1000
 
@@ -641,12 +640,13 @@ function compare_model_branch(branch, dir_path_lidar, dir_path_manual, df_densit
     biomass_error_stat_model = true_fresh_biomass - fresh_biomass_actual_stat_mod
     biomass_norm_error_stat_model = fresh_biomass_actual_stat_mod / true_fresh_biomass
 
-
     DataFrame(
-        variable = ["volume", "volume", "biomass", "biomass"],
-        model = ["plantscan3d", "stat. model", "plantscan3d", "stat. model"],
-        error = [volume_error_pltscan3d, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_stat_model],
-        error_norm = [volume_norm_error_pltscan3d, volume_norm_error_stat_model, biomass_norm_error_pltscan3d, biomass_norm_error_stat_model]
+        variable = ["length", "length", "volume", "volume", "biomass", "biomass"],
+        model = ["plantscan3d", "stat. model", "plantscan3d", "stat. model", "plantscan3d", "stat. model"],
+        measurement = [tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass],
+        prediction = [tot_lenght_lidar,tot_lenght_lidar,tot_vol_lidar,tot_vol_lidar_stat_mod,fresh_biomass_lidar,fresh_biomass_lidar_stat_mod],
+        error = [length_error_pltscan3d,length_error_pltscan3d,volume_error_pltscan3d, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_stat_model],
+        error_norm = [length_norm_error_pltscan3d,length_norm_error_pltscan3d,volume_norm_error_pltscan3d, volume_norm_error_stat_model, biomass_norm_error_pltscan3d, biomass_norm_error_stat_model]
     )
 end
 

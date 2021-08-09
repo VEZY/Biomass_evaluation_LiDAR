@@ -27,7 +27,7 @@ using .BiomassFromLiDAR
 csv_files =
     filter(
         x -> endswith(x, ".csv"),
-        readdir(joinpath("0-data", "2-mtg_manual_measurement_corrected_enriched"), join = true)
+        readdir(joinpath("0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join = true)
     )
 
 # Binding the csv files and adding the branch / tree origin:

@@ -13,15 +13,15 @@ using .BiomassFromLiDAR
 
 # Raw MTGs:
 segmentize_mtgs(
-    joinpath("0-data", "4-mtg_lidar_plantscan3d", "1-raw_output"),
-    joinpath("0-data", "4-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
+    joinpath("0-data", "3-mtg_lidar_plantscan3d", "1-raw_output"),
+    joinpath("0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
 )
 
 # Corrected MTGs:
 segmentize_mtgs(
-    joinpath("0-data", "4-mtg_lidar_plantscan3d", "2-manually_corrected"),
-    joinpath("0-data", "4-mtg_lidar_plantscan3d", "4-corrected_segmentized")
+    joinpath("0-data", "3-mtg_lidar_plantscan3d", "2-manually_corrected"),
+    joinpath("0-data", "3-mtg_lidar_plantscan3d", "4-corrected_segmentized")
 )
 
 
-# mtg = read_mtg("E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/4-mtg_lidar_plantscan3d/1-raw_output/tree11h.mtg")
+# mtg = read_mtg("E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/3-mtg_lidar_plantscan3d/1-raw_output/tree11h.mtg")
