@@ -10,7 +10,7 @@ export bind_csv_files
 export segmentize_mtgs
 export compute_volume, compute_volume_axis
 export NRMSE, RMSE, EF
-export compare_model_branch
+export compute_volume_model, volume_stats
 
 ###############################################
 # Functions used in 1-compute_field_mtg_data.jl
@@ -557,25 +557,35 @@ function cross_section_stat_mod(x)
     0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
 end
 
-function compare_model_branch(branch, dir_path_lidar, dir_path_manual, df_density)
+function compute_volume_model(branch, dir_path_lidar, dir_path_manual, df_density)
 
-    # Getting the densities:
+    # Compute the average density:
     dry_density = filter(x -> x.branches == branch, df_density).dry_density[1]
     fresh_density = filter(x -> x.branches == branch, df_density).fresh_density[1]
 
-    # Importing the mtg from the LiDAR data:
-    mtg_lidar = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
+    # Importing the mtg from the LiDAR data (plantscan3d):
+    mtg_lidar_ps3d = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
 
-    # and computing the volumes and biomass
-    @mutate_mtg!(mtg_lidar, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
-
-    @mutate_mtg!(mtg_lidar, volume = compute_volume(node), symbol = "S") # volume in mm3
-    @mutate_mtg!(mtg_lidar, volume = compute_volume_axis(node), symbol = "A") # Axis volume in mm3
+    # and computing the volumes and biomass:
+    @mutate_mtg!(mtg_lidar_ps3d, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
+    @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume(node), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume_axis(node), symbol = "A") # Axis volume in mm3
+    @mutate_mtg!(mtg_lidar_ps3d, fresh_mass = node[:volume] * fresh_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_ps3d, dry_mass = node[:volume] * dry_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_ps3d, fresh_mass = ancestors(node, :fresh_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_ps3d, dry_mass = ancestors(node, :dry_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
 
     # Importing the mtg from the LiDAR, but we recompute the volume using our model:
     mtg_lidar_model = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
 
     compute_data_mtg_lidar!(mtg_lidar_model)
+
+    @mutate_mtg!(mtg_lidar_model, fresh_mass = node[:volume] * fresh_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_model, dry_mass = node[:volume] * dry_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_model, fresh_mass = ancestors(node, :fresh_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
+    @mutate_mtg!(mtg_lidar_model, dry_mass = ancestors(node, :dry_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
+
+    # Importing the mtg from the LiDAR, but w
 
     # Importing the mtg from the manual measurement data:
     mtg_manual = read_mtg(joinpath(dir_path_manual, branch * ".mtg"))
@@ -592,9 +602,23 @@ function compare_model_branch(branch, dir_path_lidar, dir_path_manual, df_densit
     @mutate_mtg!(mtg_manual, volume_gf = compute_volume_gapfilled(node), symbol = "S") # volume of the segment in mm3
     @mutate_mtg!(mtg_manual, volume_gf = compute_volume_axis(node, :volume_gf), symbol = "A") # Axis volume in mm3
 
-    df_lidar = DataFrame(mtg_lidar, [:volume, :length, :diameter])
+    @mutate_mtg!(mtg_manual, fresh_mass = node[:volume_gf] * fresh_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_manual, dry_mass = node[:volume_gf] * dry_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_manual, fresh_mass = ancestors(node, :fresh_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
+    @mutate_mtg!(mtg_manual, dry_mass = ancestors(node, :dry_mass, symbol = "A", recursivity_level = 1, all = false), symbol = "S") # in g
+
+    return (mtg_manual, mtg_lidar_ps3d, mtg_lidar_model)
+end
+
+
+function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
+    df_lidar = DataFrame(mtg_lidar_ps3d, [:volume, :length, :diameter])
     df_lidar_model = DataFrame(mtg_lidar_model, [:volume_stat_mod, :length, :cross_section_stat_mod])
     df_manual = DataFrame(mtg_manual, [:volume_gf, :length_gap_filled, :cross_section_gap_filled])
+
+    # Getting the densities:
+    dry_density = filter(x -> x.branches == mtg_lidar_ps3d.MTG.symbol, df_density).dry_density[1]
+    fresh_density = filter(x -> x.branches == mtg_lidar_ps3d.MTG.symbol, df_density).fresh_density[1]
 
     tot_lenght_lidar = sum(filter(x -> x.symbol == "S", df_lidar).length) / 1000 # length in m
     tot_lenght_manual = sum(filter(x -> x.symbol == "S", df_manual).length_gap_filled) / 1000

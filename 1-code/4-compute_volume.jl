@@ -31,11 +31,6 @@ select!(
 df_density = groupby(df_density, :branches)
 df_density = combine(df_density, :dry_density => mean, :fresh_density => mean, renamecols = false)
 
-# Defining the branch:
-branch = "tree11h"
-
-joinpath(dir_path_lidar, branch * ".mtg")
-
 mtg_files =
     filter(
         x -> splitext(basename(x))[2] in [".mtg"],
@@ -43,6 +38,16 @@ mtg_files =
     )
 
 branches = first.(splitext.(mtg_files))
+
+df_stats_branch = DataFrame(
+    :branch => String[],
+    :variable => String[],
+    :measurement => Float64[],
+    :prediction => Float64[],
+    :model => String[],
+    :error => Float64[],
+    :error_norm => Float64[]
+    )
 
 df_branch = DataFrame(
     :branch => String[],
@@ -56,16 +61,21 @@ df_branch = DataFrame(
 
 for i in branches
     println("Computing branch $i")
-    df = compare_model_branch(i, dir_path_lidar, dir_path_manual, df_density)
+    (mtg_manual, mtg_lidar_ps3d, mtg_lidar_model) =
+        compute_volume_model(i, dir_path_lidar, dir_path_manual, df_density)
+    df = volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
     df[!,:branch] .= i
-    df_branch = vcat(df_branch, df)
+    df_stats_branch = vcat(df_stats_branch, df)
 end
 
-bar(df_branch.branch, df_branch.error, group = df_branch.model .* df_branch.variable)
 
-BrowseTables.open_html_table(df_branch)
+CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
 
-gdf_branch = groupby(df_branch, [:variable, :model])
+
+
+# BrowseTables.open_html_table(df_stats_branch)
+
+gdf_branch = groupby(df_stats_branch, [:variable, :model])
 
 stats =
 combine(
@@ -80,14 +90,14 @@ stats_biomass = filter(x -> x.variable == "biomass", stats)
 
 # using AlgebraOfGraphics:
 # xy =
-#     data(df_branch) *
+#     data(df_stats_branch) *
 #     mapping(:measurement, :prediction, layout = :variable, color = :model) +
-#     data(df_branch) *
+#     data(df_stats_branch) *
 #     mapping(:measurement, :measurement, layout = :variable) *
 #     visual(Lines)
 # draw(xy, axis = (aspect = 1, xscale = , yscale = identity))
 
-p_length = @df filter(x -> x.variable == "length", df_branch) scatter(
+p_length = @df filter(x -> x.variable == "length", df_stats_branch) scatter(
     :measurement,
     :prediction,
     group = :model,
@@ -103,7 +113,7 @@ p_length = @df filter(x -> x.variable == "length", df_branch) scatter(
 )
 Plots.abline!(1,0, line = :dash, label = "identity")
 
-p_vol = @df filter(x -> x.variable == "volume", df_branch) scatter(
+p_vol = @df filter(x -> x.variable == "volume", df_stats_branch) scatter(
     :measurement,
     :prediction,
     group = :model,
@@ -119,7 +129,7 @@ p_vol = @df filter(x -> x.variable == "volume", df_branch) scatter(
 )
 Plots.abline!(1,0, line = :dash, label = "identity")
 
-p_biomass = @df filter(x -> x.variable == "biomass", df_branch) scatter(
+p_biomass = @df filter(x -> x.variable == "biomass", df_stats_branch) scatter(
     :measurement,
     :prediction,
     group = :model,
