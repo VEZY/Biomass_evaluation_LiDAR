@@ -12,6 +12,7 @@ begin
 	using StatsPlots
 	using Statistics
 	using Plots
+	using PlutoUI
 end
 
 # ╔═╡ 1420a530-e1b0-4233-8d25-fd39415133c3
@@ -88,14 +89,11 @@ end
 
 # ╔═╡ 5e1ea5f9-9100-4db2-9de4-c13ad3173c38
 md"""
-Part of the over-estimation comes from structures breaking during the branch cutting, which where not always found afterward, and hence never manually measured. Another source of bias comes from the topology reconstruction in plantscan3d that often takes longer paths than necessary for structures with large diameters, *i.e.* the algorithm put nodes at one side of the branch and then the other instead of in the center of the structure (*Fig. 2*). 
+Part of the over-estimation comes from structures breaking during the branch cutting, which where not always found afterward, and hence never manually measured. Another source of bias comes from the topology reconstruction in plantscan3d that often takes longer paths than necessary for structures with large diameters, *i.e.* the algorithm put nodes at one side of the branch and then the other instead of in the center of the structure (*Fig. 2*).
 """
 
-# ╔═╡ 657dd888-c859-4922-b4a6-15edf93c2b9c
-png_joinpathsplit__FILE__1assetsplantscan3d_lengthpng = let
-    import PlutoUI
-    PlutoUI.LocalResource(joinpath(split(@__FILE__, '#')[1] * ".assets", "plantscan3d_length.png"))
-end
+# ╔═╡ cc16b3a3-03cb-4b7e-8118-fbb84212e984
+PlutoUI.LocalResource("../www/plantscan3d_length.png", :width => 400)
 
 # ╔═╡ 62ebb0a5-685e-46a8-9e35-29cc2356ef3e
 md"""
@@ -1278,7 +1276,7 @@ version = "0.9.1+5"
 # ╟─df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 # ╟─71a39333-0e26-4c32-82e9-0a4889fe3d34
 # ╟─5e1ea5f9-9100-4db2-9de4-c13ad3173c38
-# ╟─657dd888-c859-4922-b4a6-15edf93c2b9c
+# ╠═cc16b3a3-03cb-4b7e-8118-fbb84212e984
 # ╟─62ebb0a5-685e-46a8-9e35-29cc2356ef3e
 # ╟─ac526bc9-194e-4f5e-b2cc-6f098c6c4e0b
 # ╠═169bdbcf-1dac-4053-820c-763a29a82f34
