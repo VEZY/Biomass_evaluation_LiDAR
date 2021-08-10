@@ -117,7 +117,6 @@ scatter!(
 )
 Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
 
-
 # The model:
 # Coefficients:
 # ─────────────────────────────────────────────────────────────────────────────────────────────

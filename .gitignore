@@ -36,3 +36,4 @@ vignettes/*.pdf
 *.knit.md
 
 0-data/
+2-results/

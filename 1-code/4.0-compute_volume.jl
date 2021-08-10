@@ -24,8 +24,9 @@ df_density = vcat(df_dens1, df_dens2)
 select!(
     df_density,
     :branches,
-    [:dry_weight_g, :parafilm_volume_deducted_cm3] => ((x, y) -> x ./ y) => :dry_density,
-    [:fresh_weight_g, :parafilm_volume_deducted_cm3] => ((x, y) -> x ./ y) => :fresh_density
+    [:dry_weight_g, :volume_without_parafilm_cm3] => ((x, y) -> x ./ y) => :dry_density,
+    :conventional_method_density => :fresh_density
+    # [:fresh_weight_g, :parafilm_volume_deducted_cm3] => ((x, y) -> x ./ y) => :fresh_density
 )
 
 df_density = groupby(df_density, :branches)
@@ -49,14 +50,16 @@ df_stats_branch = DataFrame(
     :error_norm => Float64[]
     )
 
-df_branch = DataFrame(
+df_manual = DataFrame(
     :branch => String[],
-    :variable => String[],
-    :measurement => Float64[],
-    :prediction => Float64[],
-    :model => String[],
-    :error => Float64[],
-    :error_norm => Float64[]
+    :id => Int[],
+    :symbol => String[],
+    :scale => Int[],
+    :index => Int[],
+    :parent_id => Int[],
+    :link => Float64[],
+    :mass_g => Float64[],
+    :fresh_mass => Float64[]
     )
 
 for i in branches
@@ -66,12 +69,15 @@ for i in branches
     df = volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
     df[!,:branch] .= i
     df_stats_branch = vcat(df_stats_branch, df)
+
+    df = DataFrame(mtg_manual, [:mass_g, :fresh_mass])
+    df[!,:branch] .= i
+    df_manual = vcat(df_manual, df[:,Not(:tree)])
 end
 
 
 CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
-
-
+CSV.write("2-results/1-data/df_manual.csv", df_manual)
 
 # BrowseTables.open_html_table(df_stats_branch)
 
