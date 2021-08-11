@@ -732,7 +732,7 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_
 
     DataFrame(
         variable = ["length", "length", "length", "volume", "volume", "volume", "biomass", "biomass", "biomass"],
-        model = ["plantscan3d", "plantscan3d raw", "stat. model", "plantscan3d", "plantscan3d raw", "stat. model", "plantscan3d", "plantscan3d raw", "stat. model"],
+        model = ["plantscan3d cor.", "plantscan3d raw", "stat. model", "plantscan3d cor.", "plantscan3d raw", "stat. model", "plantscan3d cor.", "plantscan3d raw", "stat. model"],
         measurement = [tot_lenght_manual,tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass],
         prediction = [tot_lenght_lidar,tot_lenght_lidar_raw,tot_lenght_lidar,tot_vol_lidar,tot_vol_lidar_raw,tot_vol_lidar_stat_mod,fresh_biomass_lidar,fresh_biomass_lidar_raw,fresh_biomass_lidar_stat_mod],
         error = [length_error_pltscan3d,length_error_pltscan3d_raw,length_error_pltscan3d,volume_error_pltscan3d, volume_error_pltscan3d_raw, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_pltscan3d_raw, biomass_error_stat_model],

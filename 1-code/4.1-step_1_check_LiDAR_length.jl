@@ -39,7 +39,7 @@ In this notebook, we are only interested in their total length.
 
 The total length of a branch is computed by summing the length of all its segments.
 
-The length of the branch either comes from manual measurements (used as a reference) or from [plantscan3d](https://plantscan3d.readthedocs.io/) reconstructions from LiDAR data of the same branch.
+The length of the branch either comes from manual measurements (used as a reference) or from [plantscan3d](https://plantscan3d.readthedocs.io/) reconstructions from LiDAR data of the same branch, either as-is (raw), or corrected (cor.).
 """
 
 # ╔═╡ 0a16d6ad-9b1f-4d77-aacf-1626ce46d84c
@@ -65,9 +65,16 @@ md"""
 	The data is computed in the `4.0-compute_volume.jl` script. 
 """
 
+# ╔═╡ 4df2a06a-1124-4d52-a9dd-3ce6889e7b57
+md"""
+*Table 1. Statistics about the goodness of branch cumulated lenght prediction according to the algorithm. NB: stat. model is not included because the length is based on plantscan3d length.* 
+"""
+
 # ╔═╡ 613ec1c9-df39-4147-b6e7-f8d21fe5e13f
 md"""
 The branches total length estimated from the LiDAR point-cloud and [plantscan3d](plantscan3d.readthedocs.io/) are close to the manual measurements (*Fig. 1*) with an error below 10%, and a slight positive bias for some branches.
+
+The uncorrected MTG presents a lower error compared to the manually corrected, which is unexpected.
 """
 
 # ╔═╡ df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
@@ -90,7 +97,7 @@ end
 
 # ╔═╡ 5e1ea5f9-9100-4db2-9de4-c13ad3173c38
 md"""
-Part of the over-estimation comes from structures breaking during the branch cutting, which where not always found afterward, and hence never manually measured. Another source of bias comes from the topology reconstruction in plantscan3d that often takes longer paths than necessary for structures with large diameters, *i.e.* the algorithm put nodes at one side of the branch and then the other instead of in the center of the structure (*Fig. 2*).
+The over-estimation of the corrected MTG partly comes from the topology reconstruction in plantscan3d that often takes longer paths than necessary for structures with large diameters, *i.e.* the algorithm put nodes at one side of the branch and then the other instead of in the center of the structure (*Fig. 2*).
 """
 
 # ╔═╡ cc16b3a3-03cb-4b7e-8118-fbb84212e984
@@ -99,6 +106,11 @@ PlutoUI.LocalResource("../www/plantscan3d_length.png", :width => 400)
 # ╔═╡ 62ebb0a5-685e-46a8-9e35-29cc2356ef3e
 md"""
 *Figure 2. An example of an overestimation of the length in plantscan3d in a structure with a large diameter. Note that it could be avoided by using the contraction algorithm, but we prefer not to use it as it reduces the terminal structures length a lot.*
+"""
+
+# ╔═╡ 73ad3fea-981b-45b3-a9c0-2673469842cf
+md"""
+Another source of bias comes from structures breaking during the branch cutting, which where not always found afterward, and hence never manually measured.
 """
 
 # ╔═╡ ac526bc9-194e-4f5e-b2cc-6f098c6c4e0b
@@ -156,7 +168,7 @@ end
 
 # ╔═╡ 5382be48-5f85-4b3b-9353-3d0e9ffad31e
 begin
-gf_stats_branch = groupby(filter(x -> x.variable == "length", df_stats_branch), :model)
+gf_stats_branch = groupby(filter(x -> x.variable == "length" && x.model != "stat. model", df_stats_branch), :model)
 stats =
 	combine(
 	gf_stats_branch,
@@ -1271,13 +1283,15 @@ version = "0.9.1+5"
 # ╟─0a6eb2d1-2809-478b-be95-b3e27e714655
 # ╠═e04577f4-fbde-40fb-a49f-b99511395ad2
 # ╟─4939edb8-5b18-490b-8941-711b77421b97
-# ╠═5382be48-5f85-4b3b-9353-3d0e9ffad31e
+# ╟─4df2a06a-1124-4d52-a9dd-3ce6889e7b57
+# ╟─5382be48-5f85-4b3b-9353-3d0e9ffad31e
 # ╟─613ec1c9-df39-4147-b6e7-f8d21fe5e13f
 # ╟─df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 # ╟─71a39333-0e26-4c32-82e9-0a4889fe3d34
 # ╟─5e1ea5f9-9100-4db2-9de4-c13ad3173c38
 # ╟─cc16b3a3-03cb-4b7e-8118-fbb84212e984
 # ╟─62ebb0a5-685e-46a8-9e35-29cc2356ef3e
+# ╟─73ad3fea-981b-45b3-a9c0-2673469842cf
 # ╟─ac526bc9-194e-4f5e-b2cc-6f098c6c4e0b
 # ╠═169bdbcf-1dac-4053-820c-763a29a82f34
 # ╟─6085fc4c-3f95-4a8c-b6b1-1479fef06791
