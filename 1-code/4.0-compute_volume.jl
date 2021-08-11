@@ -9,11 +9,12 @@ using Plots
 # using CairoMakie
 # using AlgebraOfGraphics
 using Revise
-includet("functions.jl")
+includet("1-code/functions.jl")
 using Main.BiomassFromLiDAR
 
 # Declaring the paths to the files directories:
 dir_path_lidar = joinpath("0-data", "3-mtg_lidar_plantscan3d", "4-corrected_segmentized")
+dir_path_lidar_raw = joinpath("0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
 dir_path_manual = joinpath("0-data", "1.2-mtg_manual_measurement_corrected_enriched")
 
 # Importing the measurements of wood density
@@ -64,9 +65,9 @@ df_manual = DataFrame(
 
 for i in branches
     println("Computing branch $i")
-    (mtg_manual, mtg_lidar_ps3d, mtg_lidar_model) =
-        compute_volume_model(i, dir_path_lidar, dir_path_manual, df_density)
-    df = volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
+    (mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model) =
+        compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
+    df = volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df[!,:branch] .= i
     df_stats_branch = vcat(df_stats_branch, df)
 
@@ -75,12 +76,10 @@ for i in branches
     df_manual = vcat(df_manual, df[:,Not(:tree)])
 end
 
-
 CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
 CSV.write("2-results/1-data/df_manual.csv", df_manual)
 
 # BrowseTables.open_html_table(df_stats_branch)
-
 gdf_branch = groupby(df_stats_branch, [:variable, :model])
 
 stats =

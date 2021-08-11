@@ -571,7 +571,7 @@ function cross_section_stat_mod(x)
     0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
 end
 
-function compute_volume_model(branch, dir_path_lidar, dir_path_manual, df_density)
+function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
 
     # Compute the average density:
     dry_density = filter(x -> x.branches == branch, df_density).dry_density[1]
@@ -631,7 +631,19 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_manual, df_densit
         mtg_manual[1][:mass_g] = mtg_manual[:mass_g] - sum(mass_A2)
     end
 
-    # Importing the mtg from the LiDAR data (plantscan3d):
+    # Importing the mtg from the LiDAR data (plantscan3d, not corrected):
+    mtg_lidar_ps3d_raw = read_mtg(joinpath(dir_path_lidar_raw, branch * ".mtg"))
+
+    # and computing the volumes and biomass:
+    @mutate_mtg!(mtg_lidar_ps3d_raw, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
+    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume(node), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume_axis(node), symbol = "A") # Axis volume in mm3
+    mtg_lidar_ps3d_raw[:volume] = sum(descendants!(mtg_lidar_ps3d_raw, :volume, symbol = "A"))
+
+    @mutate_mtg!(mtg_lidar_ps3d_raw, fresh_mass = node[:volume] * fresh_density * 1e-3) # in g
+    @mutate_mtg!(mtg_lidar_ps3d_raw, dry_mass = node[:volume] * dry_density * 1e-3) # in g
+
+    # Importing the mtg from the LiDAR data (plantscan3d, manually corrected):
     mtg_lidar_ps3d = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
 
     # and computing the volumes and biomass:
@@ -647,12 +659,13 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_manual, df_densit
     mtg_lidar_model = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
 
     compute_data_mtg_lidar!(mtg_lidar_model, fresh_density, dry_density)
-
-    return (mtg_manual, mtg_lidar_ps3d, mtg_lidar_model)
+    
+    return (mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model)
 end
 
-function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
+function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df_lidar = DataFrame(mtg_lidar_ps3d, [:volume, :length, :diameter])
+    df_lidar_raw = DataFrame(mtg_lidar_ps3d_raw, [:volume, :length, :diameter])
     df_lidar_model = DataFrame(mtg_lidar_model, [:volume_stat_mod, :length, :cross_section_stat_mod])
     df_manual = DataFrame(mtg_manual, [:volume_gf, :length_gap_filled, :cross_section_gap_filled])
 
@@ -661,19 +674,25 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
     fresh_density = filter(x -> x.branches == mtg_lidar_ps3d.MTG.symbol, df_density).fresh_density[1]
 
     tot_lenght_lidar = sum(filter(x -> x.symbol == "S", df_lidar).length) / 1000 # length in m
+    tot_lenght_lidar_raw = sum(filter(x -> x.symbol == "S", df_lidar_raw).length) / 1000 # length in m
     tot_lenght_manual = sum(filter(x -> x.symbol == "S", df_manual).length_gap_filled) / 1000
     # mean(filter(x -> x.symbol == "S", df_lidar).diameter)
     # mean(sqrt.(filter(x -> x.symbol == "S", df_lidar_model).cross_section_stat_mod ./ π) * 2)
     # mean(sqrt.(filter(x -> x.symbol == "S", df_manual).cross_section_gap_filled ./ π) * 2)
     length_error_pltscan3d =  tot_lenght_lidar - tot_lenght_manual
     length_norm_error_pltscan3d = tot_lenght_lidar / tot_lenght_manual
+    length_error_pltscan3d_raw =  tot_lenght_lidar_raw - tot_lenght_manual
+    length_norm_error_pltscan3d_raw = tot_lenght_lidar_raw / tot_lenght_manual
 
     tot_vol_lidar = sum(filter(x -> x.symbol == "A", df_lidar).volume) * 1e-9 # Total volume in m3
+    tot_vol_lidar_raw = sum(filter(x -> x.symbol == "A", df_lidar_raw).volume) * 1e-9 # Total volume in m3
     tot_vol_lidar_stat_mod = sum(filter(x -> x.symbol == "A", df_lidar_model).volume_stat_mod) * 1e-9 # Total volume in m3
     tot_vol_manual = sum(filter(x -> x.symbol == "S", df_manual).volume_gf) * 1e-9 # Total volume in m3
 
     volume_error_pltscan3d =  tot_vol_lidar - tot_vol_manual
     volume_norm_error_pltscan3d = tot_vol_lidar / tot_vol_manual
+    volume_error_pltscan3d_raw =  tot_vol_lidar_raw - tot_vol_manual
+    volume_norm_error_pltscan3d_raw = tot_vol_lidar_raw / tot_vol_manual
 
     volume_error_stat_model =  tot_vol_lidar_stat_mod - tot_vol_manual
     volume_norm_error_stat_model = tot_vol_lidar_stat_mod / tot_vol_manual
@@ -688,6 +707,10 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
     fresh_biomass_lidar = tot_vol_lidar * fresh_density * 1000 # fresh biomass in kg
     fresh_biomass_actual_lidar = tot_vol_lidar * actual_fresh_density * 1000 # fresh biomass in kg
 
+    dry_biomass_lidar_raw = tot_vol_lidar_raw * dry_density * 1000 # mass in kg
+    fresh_biomass_lidar_raw = tot_vol_lidar_raw * fresh_density * 1000 # fresh biomass in kg
+    fresh_biomass_actual_lidar_raw = tot_vol_lidar_raw * actual_fresh_density * 1000 # fresh biomass in kg
+
     dry_biomass_lidar_stat_mod = tot_vol_lidar_stat_mod * dry_density * 1000 # mass in kg
     fresh_biomass_lidar_stat_mod = tot_vol_lidar_stat_mod * fresh_density * 1000 # fresh biomass in kg
     # Using the density re-computed using the volume manual measurement:
@@ -701,16 +724,19 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_model, df_density)
     biomass_error_pltscan3d = true_fresh_biomass - fresh_biomass_actual_lidar
     biomass_norm_error_pltscan3d = fresh_biomass_actual_lidar / true_fresh_biomass
 
+    biomass_error_pltscan3d_raw = true_fresh_biomass - fresh_biomass_actual_lidar_raw
+    biomass_norm_error_pltscan3d_raw = fresh_biomass_actual_lidar_raw / true_fresh_biomass
+
     biomass_error_stat_model = true_fresh_biomass - fresh_biomass_actual_stat_mod
     biomass_norm_error_stat_model = fresh_biomass_actual_stat_mod / true_fresh_biomass
 
     DataFrame(
-        variable = ["length", "length", "volume", "volume", "biomass", "biomass"],
-        model = ["plantscan3d", "stat. model", "plantscan3d", "stat. model", "plantscan3d", "stat. model"],
-        measurement = [tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass],
-        prediction = [tot_lenght_lidar,tot_lenght_lidar,tot_vol_lidar,tot_vol_lidar_stat_mod,fresh_biomass_lidar,fresh_biomass_lidar_stat_mod],
-        error = [length_error_pltscan3d,length_error_pltscan3d,volume_error_pltscan3d, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_stat_model],
-        error_norm = [length_norm_error_pltscan3d,length_norm_error_pltscan3d,volume_norm_error_pltscan3d, volume_norm_error_stat_model, biomass_norm_error_pltscan3d, biomass_norm_error_stat_model]
+        variable = ["length", "length", "length", "volume", "volume", "volume", "biomass", "biomass", "biomass"],
+        model = ["plantscan3d", "plantscan3d raw", "stat. model", "plantscan3d", "plantscan3d raw", "stat. model", "plantscan3d", "plantscan3d raw", "stat. model"],
+        measurement = [tot_lenght_manual,tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass],
+        prediction = [tot_lenght_lidar,tot_lenght_lidar_raw,tot_lenght_lidar,tot_vol_lidar,tot_vol_lidar_raw,tot_vol_lidar_stat_mod,fresh_biomass_lidar,fresh_biomass_lidar_raw,fresh_biomass_lidar_stat_mod],
+        error = [length_error_pltscan3d,length_error_pltscan3d_raw,length_error_pltscan3d,volume_error_pltscan3d, volume_error_pltscan3d_raw, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_pltscan3d_raw, biomass_error_stat_model],
+        error_norm = [length_norm_error_pltscan3d,length_norm_error_pltscan3d_raw,length_norm_error_pltscan3d,volume_norm_error_pltscan3d, volume_norm_error_pltscan3d_raw,volume_norm_error_stat_model, biomass_norm_error_pltscan3d, biomass_norm_error_pltscan3d_raw,biomass_norm_error_stat_model]
     )
 end
 

@@ -145,7 +145,6 @@ scatter(df[!,:diameter], df[!,:pathlength_subtree], label = "")
 ylabel!("Total path length of the subtree (mm)")
 xlabel!("Measured cross section (mm²)")
 
-
 scatter(df_inf20[!,:cross_section], df_inf20[!,:pathlength_subtree], label = "")
 ylabel!("Total path length of the subtree (mm)")
 xlabel!("Measured cross section (mm²)")

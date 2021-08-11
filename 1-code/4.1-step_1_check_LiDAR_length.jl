@@ -72,10 +72,11 @@ The branches total length estimated from the LiDAR point-cloud and [plantscan3d]
 
 # ╔═╡ df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 begin
-@df filter(x -> x.variable == "length" && x.model == "plantscan3d", df_stats_branch) scatter(
+@df filter(x -> x.variable == "length" && x.model != "stat. model", df_stats_branch) scatter(
     :measurement,
     :prediction,
-	group = :branch,
+	#group = :branch,
+	group = :model,
     # label = "plantscan3d, RMSE: $(stats.RMSE[1]), EF: $(stats.EF[1])",
     yguide = "plantscan3d-LiDAR length (m)",
     xguide = "Manually measured length (m)",
@@ -155,20 +156,19 @@ end
 
 # ╔═╡ 5382be48-5f85-4b3b-9353-3d0e9ffad31e
 begin
+gf_stats_branch = groupby(filter(x -> x.variable == "length", df_stats_branch), :model)
 stats =
-combine(
-    filter(x -> x.variable == "length" && x.model == "plantscan3d", df_stats_branch),
+	combine(
+	gf_stats_branch,
     [:measurement, :prediction] => RMSE => :RMSE,
     [:measurement, :prediction] => nRMSE => :nRMSE,
 	[:measurement, :prediction] => EF => :EF,
-);
-	
-nothing
+)
 end
 
 # ╔═╡ 71a39333-0e26-4c32-82e9-0a4889fe3d34
 md"""
-*Figure 1. Branch total Length estimated from a LiDAR point-cloud using [plantscan3d](https://plantscan3d.readthedocs.io/) (`y`) compared to a manual measurement (`x`). Each point is a branch. RMSE: $(stats.RMSE), nRMSE: $(stats.nRMSE), EF: $(stats.EF)*
+*Figure 1. Branch total Length estimated from a LiDAR point-cloud using [plantscan3d](https://plantscan3d.readthedocs.io/) (`y`) compared to a manual measurement (`x`). Each point is a branch. Statistics for plantscan3d: RMSE: $(stats.RMSE[1]), nRMSE: $(stats.nRMSE[1]), EF: $(stats.EF[1])*
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1271,12 +1271,12 @@ version = "0.9.1+5"
 # ╟─0a6eb2d1-2809-478b-be95-b3e27e714655
 # ╠═e04577f4-fbde-40fb-a49f-b99511395ad2
 # ╟─4939edb8-5b18-490b-8941-711b77421b97
-# ╟─5382be48-5f85-4b3b-9353-3d0e9ffad31e
+# ╠═5382be48-5f85-4b3b-9353-3d0e9ffad31e
 # ╟─613ec1c9-df39-4147-b6e7-f8d21fe5e13f
 # ╟─df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 # ╟─71a39333-0e26-4c32-82e9-0a4889fe3d34
 # ╟─5e1ea5f9-9100-4db2-9de4-c13ad3173c38
-# ╠═cc16b3a3-03cb-4b7e-8118-fbb84212e984
+# ╟─cc16b3a3-03cb-4b7e-8118-fbb84212e984
 # ╟─62ebb0a5-685e-46a8-9e35-29cc2356ef3e
 # ╟─ac526bc9-194e-4f5e-b2cc-6f098c6c4e0b
 # ╠═169bdbcf-1dac-4053-820c-763a29a82f34

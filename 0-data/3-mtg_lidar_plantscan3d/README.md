@@ -1,4 +1,4 @@
-# MTGs from liDAR scans
+# MTGs from LiDAR scans
 
 ## From point cloud to MTG
 
