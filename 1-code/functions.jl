@@ -552,12 +552,26 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # Recompute the volume:
     compute_volume_stats(x) = x[:cross_section_stat_mod] * x[:length]
     @mutate_mtg!(mtg, volume_stat_mod = compute_volume_stats(node), symbol = "S") # volume in mm3
-    @mutate_mtg!(mtg, volume_stat_mod = compute_volume_axis(node, :volume_stat_mod), symbol = "A") # Axis volume in mm3
-    mtg[:volume_stat_mod] = sum(descendants!(mtg, :volume_stat_mod, symbol = "A"))
+    # Compute the A2 volume, which is the volume of all segments they hold
+    @mutate_mtg!(mtg, volume_stat_mod = compute_volume_axis_A2(node, :volume_stat_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+
+    # A1 volume in mm3 (just itself, excluding A2 volumes:
+    mtg[1][:volume_stat_mod] = compute_volume_axis(mtg[1], :volume_stat_mod)
+
+    # Branch-scale volume, the sum of A1 and all the A2:
+    mtg[:volume_stat_mod] =
+    sum(
+        descendants!(
+            mtg,
+            :volume_stat_mod,
+            symbol = "A",
+            filter_fun = filter_A1_A2
+        )
+    )
 
     # And the biomass:
-    @mutate_mtg!(mtg, fresh_mass = node[:volume_stat_mod] * fresh_density * 1e-3) # in g
-    @mutate_mtg!(mtg, dry_mass = node[:volume_stat_mod] * dry_density * 1e-3) # in g
+    @mutate_mtg!(mtg, fresh_mass = node[:volume_stat_mod] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg, dry_mass = node[:volume_stat_mod] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
     # Clean-up the cached variables:
     clean_cache!(mtg)
@@ -597,9 +611,6 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     # A1 volume in mm3 (just itself, excluding A2 volumes:
     mtg_manual[1][:volume_gf] = compute_volume_axis(mtg_manual[1], :volume_gf)
 
-    filter_A1_A2(x) = x.MTG.symbol == "A" && (x.MTG.index == 1 || x.MTG.index == 2)
-    filter_A1_A2_S(x) = x.MTG.symbol == "S" || filter_A1_A2(x)
-
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg_manual[:volume_gf] =
     sum(
@@ -637,11 +648,25 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     # and computing the volumes and biomass:
     @mutate_mtg!(mtg_lidar_ps3d_raw, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
     @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume(node), symbol = "S") # volume in mm3
-    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume_axis(node), symbol = "A") # Axis volume in mm3
-    mtg_lidar_ps3d_raw[:volume] = sum(descendants!(mtg_lidar_ps3d_raw, :volume, symbol = "A"))
+    # Compute the A2 volume, which is the volume of all segments they hold
+    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume_axis_A2(node, :volume), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
-    @mutate_mtg!(mtg_lidar_ps3d_raw, fresh_mass = node[:volume] * fresh_density * 1e-3) # in g
-    @mutate_mtg!(mtg_lidar_ps3d_raw, dry_mass = node[:volume] * dry_density * 1e-3) # in g
+    # A1 volume in mm3 (just itself, excluding A2 volumes:
+    mtg_lidar_ps3d_raw[1][:volume] = compute_volume_axis(mtg_lidar_ps3d_raw[1], :volume)
+
+    # Branch-scale volume, the sum of A1 and all the A2:
+    mtg_lidar_ps3d_raw[:volume] =
+    sum(
+        descendants!(
+            mtg_lidar_ps3d_raw,
+            :volume,
+            symbol = "A",
+            filter_fun = filter_A1_A2
+        )
+    )
+
+    @mutate_mtg!(mtg_lidar_ps3d_raw, fresh_mass = node[:volume] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg_lidar_ps3d_raw, dry_mass = node[:volume] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
     # Importing the mtg from the LiDAR data (plantscan3d, manually corrected):
     mtg_lidar_ps3d = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
@@ -649,19 +674,38 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     # and computing the volumes and biomass:
     @mutate_mtg!(mtg_lidar_ps3d, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
     @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume(node), symbol = "S") # volume in mm3
-    @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume_axis(node), symbol = "A") # Axis volume in mm3
-    mtg_lidar_ps3d[:volume] = sum(descendants!(mtg_lidar_ps3d, :volume, symbol = "A"))
+    @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume(node), symbol = "S") # volume in mm3
+    # Compute the A2 volume, which is the volume of all segments they hold
+    @mutate_mtg!(mtg_lidar_ps3d, volume = compute_volume_axis_A2(node, :volume), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
-    @mutate_mtg!(mtg_lidar_ps3d, fresh_mass = node[:volume] * fresh_density * 1e-3) # in g
-    @mutate_mtg!(mtg_lidar_ps3d, dry_mass = node[:volume] * dry_density * 1e-3) # in g
+    # A1 volume in mm3 (just itself, excluding A2 volumes:
+    mtg_lidar_ps3d[1][:volume] = compute_volume_axis(mtg_lidar_ps3d[1], :volume)
+
+    # Branch-scale volume, the sum of A1 and all the A2:
+    mtg_lidar_ps3d[:volume] =
+    sum(
+        descendants!(
+            mtg_lidar_ps3d,
+            :volume,
+            symbol = "A",
+            filter_fun = filter_A1_A2
+        )
+    )
+
+    @mutate_mtg!(mtg_lidar_ps3d, fresh_mass = node[:volume] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg_lidar_ps3d, dry_mass = node[:volume] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
     # Importing the mtg from the LiDAR, but we recompute the volume using our model:
     mtg_lidar_model = read_mtg(joinpath(dir_path_lidar, branch * ".mtg"))
 
     compute_data_mtg_lidar!(mtg_lidar_model, fresh_density, dry_density)
-    
+
     return (mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model)
 end
+
+filter_A1_A2(x) = x.MTG.symbol == "A" && (x.MTG.index == 1 || x.MTG.index == 2)
+filter_A1_A2_S(x) = x.MTG.symbol == "S" || filter_A1_A2(x)
+
 
 function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df_lidar = DataFrame(mtg_lidar_ps3d, [:volume, :length, :diameter])
@@ -684,10 +728,10 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_
     length_error_pltscan3d_raw =  tot_lenght_lidar_raw - tot_lenght_manual
     length_norm_error_pltscan3d_raw = tot_lenght_lidar_raw / tot_lenght_manual
 
-    tot_vol_lidar = sum(filter(x -> x.symbol == "A", df_lidar).volume) * 1e-9 # Total volume in m3
-    tot_vol_lidar_raw = sum(filter(x -> x.symbol == "A", df_lidar_raw).volume) * 1e-9 # Total volume in m3
-    tot_vol_lidar_stat_mod = sum(filter(x -> x.symbol == "A", df_lidar_model).volume_stat_mod) * 1e-9 # Total volume in m3
-    tot_vol_manual = sum(filter(x -> x.symbol == "S", df_manual).volume_gf) * 1e-9 # Total volume in m3
+    tot_vol_lidar = filter(x -> x.scale == 1, df_lidar).volume[1] * 1e-9 # Total volume in m3
+    tot_vol_lidar_raw = filter(x -> x.scale == 1, df_lidar_raw).volume[1] * 1e-9 # Total volume in m3
+    tot_vol_lidar_stat_mod = filter(x -> x.scale == 1, df_lidar_model).volume_stat_mod[1] * 1e-9 # Total volume in m3
+    tot_vol_manual = filter(x -> x.scale == 1, df_manual).volume_gf[1] * 1e-9 # Total volume in m3
 
     volume_error_pltscan3d =  tot_vol_lidar - tot_vol_manual
     volume_norm_error_pltscan3d = tot_vol_lidar / tot_vol_manual
