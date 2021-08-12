@@ -4,7 +4,7 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ d0b7c2b0-f9db-11eb-0220-d5ee058b3a33
+# ╔═╡ 119133e0-fb56-11eb-0e70-336d051ce19a
 begin
 	using CSV
 	using Plots
@@ -14,146 +14,138 @@ begin
 	using Plots
 end
 
-# ╔═╡ a0a72716-d37e-48f3-a024-b61a15065fdf
-md"# Checking manual measurements integrity"
-
-# ╔═╡ ff4a2aa2-bae0-4f12-837f-5f9138bab9b5
+# ╔═╡ 061d3726-312d-486f-936d-2f40dfadf3a8
 md"""
+# Step 4: branches volume and biomass prediction
 
-# Introduction
+## Inroduction
 
-The purpose of this notebook is to check whether the biomass estimated from the
-dimensions (*i.e.* diameter and length) and fresh wood density correspond to the measured biomass using a scale.
-
+The purpose of this notebook is to evaluate the estimation of the branches volume and biomass using different methods.
 
 ## Material and methods
 
-### Measurements
+### Measurements 
 
 Two branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology:
 
-- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement).
+- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement). 
 
-- The dimensions included a measurement of the diameter and length for each segment on the branch.
+- The dimensions included a measurement of the diameter and length for each segment on the branch. They are used to compute a reference volume for each segment. See the previous notebook for more details (`4.2-step_2_check_manual_measurement.jl`).
 
-- The fresh biomass was measured for the whole branch as soon as it is cut from the tree, and for each second order axis as a whole.
+- The fresh biomass was measured for the whole branch as soon as it is cut from the tree, and for each second order axis as a whole. The biomass of the first order axis is considered as the total branch biomass minus the cumulated biomass of the second order axis (A2), unless there are missing measurements for A2, in which case it is not used (*i.e.* tree13h and tree13l).
 
 ### Computations
 
-The biomass of the first order axis is computed as the total branch biomass minus the biomass of the second order axis, unless there is missing measurements, in which case it is not computed (*i.e.* tree13h and tree13l).
+Several methods were used to estimate the cross-section of each segment in a branch: 
 
-The volume of each segment was approximated using their diameter and length. Their estimated biomass is then computed using the volume and the fresh density measured at the lab.
-
-The estimated biomass of the first order axis is then computed as the sum of the estimated biomass of its sections, excluding the second order axis. And the estimated biomass of the second order axis are computed as the sum of the estimated biomass of all sections they bear.
+- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings. 
+- the pipe model applied to all segments below 20mm diameter. This method is the same as the regular pipe model but considers all segments with a diameter higher than 20mm as well-measured by the LiDAR, and start computing the cross-section only below this given threshold.
+- the statistical model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data. 
+- the statistical model applied to segments below 20mm diameter. This is the same strategy as for the pipe model. 
 
 ## Results
 """
 
-# ╔═╡ b0976162-f64b-47cb-b68d-faeccabb0145
+# ╔═╡ ba1b00ad-6d5f-48b3-99ca-9bcc28700d69
 md"""
 ### Imports
 
 Importing the packages needed for this work:
 """
 
-# ╔═╡ b535f1f1-19da-4bbe-a060-d6988e04e2a7
-md"Importing and cleaning the data:"
+# ╔═╡ e0504916-637f-4e0f-817e-21eeeb257100
+md"""
+Importing the data:
+"""
 
-# ╔═╡ eb6b8d86-a11f-45b4-9ddd-0ff0459456c9
-begin
-df_manual = CSV.read("../2-results/1-data/df_manual.csv", DataFrame)
-filter!(x -> x.symbol == "A", df_manual);
-dropmissing!(df_manual, [:mass_g, :fresh_mass]);
-nothing
-end
+# ╔═╡ ff229a61-a03d-453e-93a7-b28612622682
+df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame);
 
-# ╔═╡ 39d734bf-b0e8-4485-9818-70871a52873b
+# ╔═╡ 91cc83a2-65e0-40fd-a94f-33f716cfc57a
 md"""
 !!! note
 	The data is computed in the `4.0-compute_volume.jl` script.
 """
 
-# ╔═╡ d4fe2ec1-bb95-4d67-a8c6-8c190ac4c747
+# ╔═╡ 400ee0ec-cc8c-4811-9e40-1438b7d21523
 md"""
-Transforming in kilograms:
+Compute some statistics:
 """
 
-# ╔═╡ 103678f0-5ef2-4679-b9d1-eada3cae6189
-df_manual_kg =
-	transform(
-		df_manual,
-		:mass_g => (x -> x / 1000) => :mass_g,
-		:fresh_mass => (x -> x / 1000) => :fresh_mass
-	);
-
-# ╔═╡ 857891e1-c00c-4672-acca-5c88603b5c23
+# ╔═╡ f914aa41-94f6-43f5-bf0e-ac6fd145fc29
 md"""
-### Plotting
+Preparing the plots for lengths (not used in this notebook):
 """
 
-# ╔═╡ a0a4079d-b5e5-4404-9f88-9edf97d94c1a
+# ╔═╡ 8377daae-d9bd-4086-8d43-8fff3a2e40a6
 md"""
-The fresh biomass estimated from the segments volume (*i.e.* `length * diameter`) and average branch fresh wood density is close to the measured fresh biomass for all the range of values (*Fig. 1*).
+And for volume and biomass:
 """
 
-# ╔═╡ b1afa486-5dc9-44c3-b737-39de850c0374
+# ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
 begin
-@df df_manual_kg scatter(:mass_g, :fresh_mass,
-        xlab = "Measured fresh biomass (kg)",
-        ylab = "Fresh biomass (kg) = Volume * Fresh Density",
-        group = :branch,
-        legend = :topleft,
-        dpi = 300
-    )
+p_vol = @df filter(x -> x.variable == "volume", df_stats_branch) scatter(
+    :measurement,
+    :prediction,
+    group = :model,
+    # label = hcat(
+    #     "plantscan3d, RMSE: $(stats_volume.RMSE[1]), EF: $(stats_volume.EF[1])",
+    #    "Stat. mod. ⌀<20mm, RMSE: $(stats_volume.RMSE[2]), EF: $(stats_volume.EF[2])"
+    #     ),
+    yguide = "Predicted volume (m³)",
+    xguide = "Measured volume (m³)",
+    xlims = (0.0, 0.04),
+    ylims = (0.0, 0.04),
+    legend = :bottomright,
+    dpi = 300
+)
 Plots.abline!(1,0, line = :dash, label = "identity")
 
-lims = (-Inf, 2)
-@df df_manual_kg scatter!(:mass_g, :fresh_mass,
-        group = :branch,
-        legend = :bottomright,
-        xlim = lims,
-        ylim = lims,
-        label = "",
-        link = :both,
-        xlims = lims,
-        ylims = lims,
-        inset = (1, bbox(0.0, 0.1, 0.35, 0.35, :bottom, :right)),
-    subplot = 2
+p_biomass = @df filter(x -> x.variable == "biomass", df_stats_branch) scatter(
+    :measurement,
+    :prediction,
+    group = :model,
+    #     label = hcat(
+    #    "plantscan3d, RMSE: $(stats_biomass.RMSE[1]), EF: $(stats_biomass.EF[1])",
+    #    "Stat. mod. ⌀<20mm, RMSE: $(stats_biomass.RMSE[2]), EF: $(stats_biomass.EF[2])"
+    #    ),
+    yguide = "Predicted biomass (kg)",
+    xguide = "Measured biomass (kg)",
+    xlims = (0.0, 40),
+    ylims = (0.0, 40),
+    legend = :bottomright
 )
-Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
+Plots.abline!(1,0, line = :dash, label = "identity")
+nothing
 end
 
-# ╔═╡ 0842de6b-313c-4a80-8b48-73ddbb58cf4c
+# ╔═╡ 2898a1e0-7108-4a38-ab24-4357157ed091
 md"""
-The modelling efficiency is close to 1.0 (closer to 1.0 is better) for all branches, and the nRMSE close to 0.0% (*Tab. 1*). Branch `tree11l` is presents the highest RMSE with 0.17kg, because it presents the highest biomass absolute values.
+And now plotting the results:
 """
 
-# ╔═╡ 2f61ff80-3dd8-45b1-8c11-4e5d78e2d1a6
+# ╔═╡ 19d9968c-22f6-46bd-8c31-1900275d1830
+begin
+	l = @layout [a ; b]
+	final_plot = plot(p_vol, p_biomass, layout = l, dpi = 300, size=(700, 800))
+end
+
+# ╔═╡ f333b2f9-fd84-40c2-8616-053ec70eff0d
 md"""
-*Table 1. Statistics at the branch-scale for the estimation of the first and second order axis biomass using dimensions measurements and an average fresh wood density per branch.*
+And saving the figure to disk:
 """
 
-# ╔═╡ dc436324-cd3b-4c3e-866e-6934c305dce3
-md"""
-These results shows that we can use the volume measured from segment dimensions as the reference when comparing with LiDAR data (see next notebooks).
-"""
+# ╔═╡ c4e44b1f-3a6d-4718-b241-190504ed39c8
+savefig(final_plot, "../2-results/2-plots/step_4_compare_models_branch_scale.png")
 
-# ╔═╡ 6f043eaa-b045-408d-8ffa-5767abe59599
-md"""
-Saving the plot to disk:
-"""
-
-# ╔═╡ 5e542492-4549-4d0d-8122-144aac4a3f0b
-savefig("../2-results/2-plots/step_2_check_manual_measurements.png")
-
-# ╔═╡ 1b39f47c-4d4d-4f13-a072-e517bde25674
+# ╔═╡ 04ec9bac-fcf3-4352-9a19-cb405e9e6f49
 md"""
 ## References
 
 Functions used in the notebook:
 """
 
-# ╔═╡ 75a15c39-d97e-47b6-a115-4694ebf12679
+# ╔═╡ c49a2264-3ec3-4e60-a159-6cca2c479e61
 begin
 """
     nRMSE(obs,sim; digits = 2)
@@ -191,31 +183,41 @@ function EF(obs, sim; digits = 2)
 end
 end
 
-# ╔═╡ 8d90b9ec-5bdb-4021-a9f6-1791e3fa2386
-fig_stats =
-combine(
-	df_manual,
-	[:mass_g, :fresh_mass] => RMSE => :RMSE,
-	[:mass_g, :fresh_mass] => nRMSE => :nRMSE,
-	[:mass_g, :fresh_mass] => EF => :EF
-);
-
-# ╔═╡ a07264d7-5d7e-44de-8a8c-d036c72d2d40
-md"""
-*Figure 1. Fresh biomass estimated from dimensions measurements and an average branch fresh density at segment scale (`y`) compared to fresh biomass measured with a scale on the field (`x`). Each point is an axis. First order axis biomass is defined as the sum of its segments biomass, excluding higher order axis, and second order axis biomass is defined as the sum of all segments it bears. RMSE: $(fig_stats.RMSE), nRMSE: $(fig_stats.nRMSE), EF: $(fig_stats.EF)*
-"""
-
-# ╔═╡ 88cff656-0cd8-45e7-a268-10c0c5e3a815
+# ╔═╡ ad52254f-cee8-4663-a2f7-9d6a9f83112a
 begin
-gdf_branch = groupby(df_manual, [:branch])
+gdf_branch = groupby(df_stats_branch, [:variable, :model])
 
 stats =
 combine(
     gdf_branch,
-    [:mass_g, :fresh_mass] => RMSE => :RMSE,
-	[:mass_g, :fresh_mass] => nRMSE => :nRMSE,
-    [:mass_g, :fresh_mass] => EF => :EF
+    [:measurement, :prediction] => RMSE => :RMSE,
+    [:measurement, :prediction] => EF => :EF
 )
+
+stats_length = filter(x -> x.variable == "length", stats)
+stats_volume = filter(x -> x.variable == "volume", stats)
+stats_biomass = filter(x -> x.variable == "biomass", stats)
+stats
+end
+
+# ╔═╡ e9dd30b0-658e-44a8-baab-91a513b05469
+begin
+p_length = @df filter(x -> x.variable == "length", df_stats_branch) scatter(
+	:measurement,
+	:prediction,
+	group = :model,
+	label = hcat(
+		"plantscan3d, RMSE: $(stats_length.RMSE[1]), EF: $(stats_length.EF[1])",
+		"Stat. mod. ⌀<20mm, RMSE: $(stats_length.RMSE[2]), EF: $(stats_length.EF[2])"
+		),
+	yguide = "LiDAR length (m)",
+	xguide = "Manual length (m)",
+	xlims = (0.0, 100.0),
+	ylims = (0.0, 100.0),
+	legend = :bottomright
+)
+Plots.abline!(1,0, line = :dash, label = "identity")
+nothing
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -984,9 +986,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
-git-tree-sha1 = "508822dca004bf62e210609148511ad03ce8f1d8"
+git-tree-sha1 = "a322a9493e49c5f3a10b50df3aedaf1cdb3244b7"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.6.0"
+version = "1.6.1"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
@@ -1297,27 +1299,23 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╟─a0a72716-d37e-48f3-a024-b61a15065fdf
-# ╟─ff4a2aa2-bae0-4f12-837f-5f9138bab9b5
-# ╟─b0976162-f64b-47cb-b68d-faeccabb0145
-# ╠═d0b7c2b0-f9db-11eb-0220-d5ee058b3a33
-# ╟─b535f1f1-19da-4bbe-a060-d6988e04e2a7
-# ╠═eb6b8d86-a11f-45b4-9ddd-0ff0459456c9
-# ╟─39d734bf-b0e8-4485-9818-70871a52873b
-# ╟─d4fe2ec1-bb95-4d67-a8c6-8c190ac4c747
-# ╠═103678f0-5ef2-4679-b9d1-eada3cae6189
-# ╟─857891e1-c00c-4672-acca-5c88603b5c23
-# ╟─a0a4079d-b5e5-4404-9f88-9edf97d94c1a
-# ╟─b1afa486-5dc9-44c3-b737-39de850c0374
-# ╟─a07264d7-5d7e-44de-8a8c-d036c72d2d40
-# ╟─8d90b9ec-5bdb-4021-a9f6-1791e3fa2386
-# ╟─0842de6b-313c-4a80-8b48-73ddbb58cf4c
-# ╟─2f61ff80-3dd8-45b1-8c11-4e5d78e2d1a6
-# ╟─88cff656-0cd8-45e7-a268-10c0c5e3a815
-# ╟─dc436324-cd3b-4c3e-866e-6934c305dce3
-# ╟─6f043eaa-b045-408d-8ffa-5767abe59599
-# ╠═5e542492-4549-4d0d-8122-144aac4a3f0b
-# ╟─1b39f47c-4d4d-4f13-a072-e517bde25674
-# ╠═75a15c39-d97e-47b6-a115-4694ebf12679
+# ╟─061d3726-312d-486f-936d-2f40dfadf3a8
+# ╟─ba1b00ad-6d5f-48b3-99ca-9bcc28700d69
+# ╠═119133e0-fb56-11eb-0e70-336d051ce19a
+# ╟─e0504916-637f-4e0f-817e-21eeeb257100
+# ╠═ff229a61-a03d-453e-93a7-b28612622682
+# ╟─91cc83a2-65e0-40fd-a94f-33f716cfc57a
+# ╟─400ee0ec-cc8c-4811-9e40-1438b7d21523
+# ╠═ad52254f-cee8-4663-a2f7-9d6a9f83112a
+# ╟─f914aa41-94f6-43f5-bf0e-ac6fd145fc29
+# ╠═e9dd30b0-658e-44a8-baab-91a513b05469
+# ╟─8377daae-d9bd-4086-8d43-8fff3a2e40a6
+# ╠═808fcdb0-75dd-4856-86f4-4ecd58161442
+# ╟─2898a1e0-7108-4a38-ab24-4357157ed091
+# ╠═19d9968c-22f6-46bd-8c31-1900275d1830
+# ╟─f333b2f9-fd84-40c2-8616-053ec70eff0d
+# ╠═c4e44b1f-3a6d-4718-b241-190504ed39c8
+# ╟─04ec9bac-fcf3-4352-9a19-cb405e9e6f49
+# ╠═c49a2264-3ec3-4e60-a159-6cca2c479e61
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
