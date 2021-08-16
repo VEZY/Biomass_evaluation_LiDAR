@@ -61,7 +61,11 @@ Importing the data:
 """
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
-df_axis = filter(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", CSV.read("../2-results/1-data/df_all.csv", DataFrame));
+begin
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
+# filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_axis)
+filter!(x -> x.origin != "Pipe mod. ⌀<20", df_axis)
+end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
 md"""
@@ -98,6 +102,11 @@ md"""
 Computing the statistics:
 """
 
+# ╔═╡ 363b2bbd-7118-4819-9814-a9db29c008d7
+md"""
+Comparing the axis length measured manually and predicted from the LiDAR pointcloud using plantscan3d: 
+"""
+
 # ╔═╡ 7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 begin
 plt_len = 
@@ -117,6 +126,16 @@ plt_len =
 plt_length = draw(plt_len)
 end
 
+# ╔═╡ 092ed56f-93c7-4343-a080-6ddc0da6c2ac
+md"""
+*Figure 1. Measured (x-axis) and predicted (y-axis) length at axis scale.*
+"""
+
+# ╔═╡ 13da9f23-5729-467f-b652-2dc83627f586
+md"""
+Comparing the axis volume computed from manual measurement of segments length and diameter, and predicted from the LiDAR pointcloud using plantscan3d as-is, or re-computed using the pipe-model or our method:
+"""
+
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
 plt_vol = 
@@ -134,6 +153,16 @@ plt_vol =
 # plt_biomass = draw(plt; axis)
 plt_volume = draw(plt_vol)
 end
+
+# ╔═╡ 430e36cb-5ccb-4103-b587-24eca5c4143b
+md"""
+*Figure 2. Measured (x-axis) and predicted (y-axis) volume at axis scale.*
+"""
+
+# ╔═╡ 17050294-fba5-4595-a601-6c1c7d53fcbe
+md"""
+Comparing the axis fresh biomass measured using a scale and predicted using the volumes from the different previous methods and a branch-averaged fresh wood density:
+"""
 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
@@ -155,7 +184,7 @@ end
 
 # ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
 md"""
-*Figure 1. measured (x-axis) and predicted (y-axis) fresh biomass at axis scale.*
+*Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale.*
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -165,6 +194,7 @@ Saving the plots:
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
 begin 
+save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit = 3)
 
 save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
 
@@ -1579,9 +1609,14 @@ version = "0.9.1+5"
 # ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╠═1f49c11d-678d-4b78-9038-4b5055f302bb
-# ╠═7ccadb8d-940d-4550-a8ef-d38704e9ea7f
-# ╠═81f64f27-3ea5-4c03-abca-f281e072b2ca
-# ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╟─363b2bbd-7118-4819-9814-a9db29c008d7
+# ╟─7ccadb8d-940d-4550-a8ef-d38704e9ea7f
+# ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
+# ╟─13da9f23-5729-467f-b652-2dc83627f586
+# ╟─81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╟─430e36cb-5ccb-4103-b587-24eca5c4143b
+# ╟─17050294-fba5-4595-a601-6c1c7d53fcbe
+# ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
