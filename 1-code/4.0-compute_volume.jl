@@ -13,7 +13,7 @@ includet("1-code/functions.jl")
 using Main.BiomassFromLiDAR
 
 # Declaring the paths to the files directories:
-dir_path_lidar = joinpath("0-data", "3-mtg_lidar_plantscan3d", "4-corrected_segmentized")
+dir_path_lidar = joinpath("0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
 dir_path_lidar_raw = joinpath("0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
 dir_path_manual = joinpath("0-data", "1.2-mtg_manual_measurement_corrected_enriched")
 
@@ -35,7 +35,7 @@ df_density = combine(df_density, :dry_density => mean, :fresh_density => mean, r
 
 mtg_files =
     filter(
-        x -> splitext(basename(x))[2] in [".mtg"],
+        x -> splitext(basename(x))[2] in [".xlsx"],
         readdir(dir_path_lidar)
     )
 
@@ -51,7 +51,8 @@ df_stats_branch = DataFrame(
     :error_norm => Float64[]
     )
 
-df_manual = DataFrame(
+df_all = DataFrame(
+    :origin => String[],
     :branch => String[],
     :id => Int[],
     :symbol => String[],
@@ -60,21 +61,103 @@ df_manual = DataFrame(
     :parent_id => Int[],
     :link => Float64[],
     :mass_g => Float64[],
-    :fresh_mass => Float64[]
+    :fresh_mass => Float64[],
+    :volume => Float64[],
+    :id_cor => Int[]
     )
 
 for i in branches
     println("Computing branch $i")
-    (mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model) =
+    (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
         compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
-    df = volume_stats(mtg_manual, mtg_lidar_ps3d, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
+    df = volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df[!,:branch] .= i
     df_stats_branch = vcat(df_stats_branch, df)
 
-    df = DataFrame(mtg_manual, [:mass_g, :fresh_mass])
-    df[!,:branch] .= i
-    df_manual = vcat(df_manual, df[:,Not(:tree)])
+    # Manual measurement:
+    df_manual = DataFrame(mtg_manual, [:mass_g, :fresh_mass, :volume_gf, :id_cor])
+    df_manual[!,:branch] .= i
+    rename!(df_manual, Dict(:volume_gf => "volume"))
+    df_manual[!,:origin] .= "measurement"
+
+    # plantscan3d, as-is:
+    df_ps3d_raw = DataFrame(mtg_lidar_ps3d_raw, [:fresh_mass, :volume])
+    df_ps3d_raw[!,:branch] .= i
+    # df_ps3d_raw[!,:id_cor] .= missing
+    df_ps3d_raw[!,:origin] .= "plantscan3d, raw"
+
+    # statistical model:
+    df_stat_mod = DataFrame(
+        mtg_lidar_model,
+        [:fresh_mass,
+        :fresh_mass_ps3d,
+        :fresh_mass_pipe_mod,
+        :fresh_mass_pipe_mod_20,
+        :volume_stat_mod,
+        :volume_ps3d,
+        :volume_pipe_mod,
+        :volume_pipe_mod_20, :id_cor])
+
+    df_stat_mod_biomass = select(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :fresh_mass => "stat. mod.", :fresh_mass_ps3d => "plantscan3d", :fresh_mass_pipe_mod => "Pipe model", :fresh_mass_pipe_mod_20 => "Pipe mod. ⌀<20"
+        )
+    df_stat_mod_biomass = stack(
+            df_stat_mod_biomass,
+            ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            variable_name = :origin,
+            value_name = :fresh_mass
+        )
+
+    select!(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :volume_stat_mod => "stat. mod.", :volume_ps3d => "plantscan3d", :volume_pipe_mod => "Pipe model", :volume_pipe_mod_20 => "Pipe mod. ⌀<20"
+    )
+
+    df_stat_mod = stack(
+            df_stat_mod,
+            ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            variable_name = :origin,
+            value_name = :volume
+        )
+
+    df_stat_mod[!, :fresh_mass] = df_stat_mod_biomass.fresh_mass
+    df_stat_mod[!,:branch] .= i
+
+    df_all = vcat(
+        df_all,
+        df_manual[:,Not(:tree)],
+        df_ps3d_raw[:,Not(:tree)],
+        df_stat_mod,
+        cols = :union
+        )
 end
 
 CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
-CSV.write("2-results/1-data/df_manual.csv", df_manual)
+CSV.write("2-results/1-data/df_all.csv", df_all)
+
+using Plots
+
+df_manual = filter(x -> x.origin == "measurement", df_all)
+scatter(df_manual.mass_g, df_manual.fresh_mass)
+
+
+df_manual_fresh_biomass =
+    select(filter(x -> x.origin == "measurement" && x.id_cor !== missing, df_all),
+    :branch, :id_cor,
+    :fresh_mass => :fresh_mass_meas,
+    :volume => :volume_meas)
+
+df_compare = leftjoin(
+    df_manual_fresh_biomass,
+    filter(x -> x.origin != "measurement" && x.id_cor !== missing, df_all),
+    on = [:branch, :id_cor]
+    )
+
+
+scatter(df_compare.fresh_mass_meas, df_compare.fresh_mass)
+scatter(df_compare.volume_meas, df_compare.volume)

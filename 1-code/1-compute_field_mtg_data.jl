@@ -13,12 +13,13 @@ using .BiomassFromLiDAR
 mtg_files =
     filter(
         x -> splitext(basename(x))[2] in [".xlsx",".xlsm"],
-        readdir(joinpath("0-data", "1.0-mtg_manual_measurement_corrected"), join = true)
+        readdir(joinpath("0-data", "1.1-mtg_manual_measurement_corrected_id"), join = true)
     )
 
 # Computing new variables for each mtg and saving the results in "0-data/5-enriched_manual_mtg":
 
 for i in mtg_files
+    println("Computing branch $(splitext(basename(i))[1])")
     compute_all_mtg_data(
         i,
         joinpath("0-data", "1.2-mtg_manual_measurement_corrected_enriched", splitext(basename(i))[1] * ".mtg"),
