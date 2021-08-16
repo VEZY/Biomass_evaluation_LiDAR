@@ -8,7 +8,7 @@ using DataFrames
 export compute_all_mtg_data
 export bind_csv_files
 export segmentize_mtgs
-export compute_volume, compute_volume_axis
+export compute_volume, compute_var_axis
 export NRMSE, RMSE, EF
 export compute_volume_model, volume_stats
 
@@ -72,7 +72,7 @@ function compute_data_mtg(mtg)
 
     @mutate_mtg!(mtg, volume = compute_volume(node), symbol = "S") # volume of the segment in mm3
 
-    # @mutate_mtg!(mtg, volume = compute_volume_axis(node), symbol = "A") # volume of the axis in mm3
+    # @mutate_mtg!(mtg, volume = compute_var_axis(node), symbol = "A") # volume of the axis in mm3
 
     @mutate_mtg!(mtg, cross_section = compute_cross_section(node), symbol = "S") # area of segment cross section in mm2
     @mutate_mtg!(mtg, cross_section_children = compute_cross_section_children(node), symbol = "S") # area of segment cross section in mm2
@@ -151,15 +151,15 @@ function compute_volume(x)
 end
 
 """
-    compute_volume_axis(x, vol_col = :volume)
+    compute_var_axis(x, vol_col = :volume)
 
-Compute the volume of the axis alone, excluding the axis it bears itself.
+Sum a variable over an axis alone, excluding the axis it bears itself.
 """
-function compute_volume_axis(x, vol_col = :volume)
+function compute_var_axis(x, vol_col = :volume)
     sum(descendants!(x, vol_col, symbol = "S", link = ("/", "<"), all = false))
 end
 
-function compute_volume_axis_A2(x, vol_col = :volume)
+function compute_var_axis_A2(x, vol_col = :volume)
     sum(descendants!(x, vol_col, symbol = "S"))
 end
 
@@ -516,7 +516,7 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
         symbol = "A"
     )
 
-     # Associate the axis length to each segment:
+    # Associate the axis length to each segment:
     @mutate_mtg!(mtg, axis_length = get_axis_length(node), symbol = "S")
 
     @mutate_mtg!(mtg, volume = compute_volume(node), symbol = "S") # volume of the segment in mm3
@@ -549,6 +549,11 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
 
     @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod(node), symbol = "S")
 
+    # Compute the A2 lengths to match measurements =total length of all segments they bear:
+    @mutate_mtg!(mtg, length_sim = compute_var_axis_A2(node, :length), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    # A1 length in mm (just itself, excluding A2 length):
+    mtg[1][:length_sim] = compute_var_axis(mtg[1], :length)
+
     # Recompute the volume:
     compute_volume_stats(x, var) = x[var] * x[:length]
 
@@ -558,16 +563,16 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_volume_stats(node, :cross_section_pipe_20), symbol = "S") # volume in mm3
 
     # Compute the A2 volume, which is the volume of all segments they hold
-    @mutate_mtg!(mtg, volume_ps3d = compute_volume_axis_A2(node, :volume_ps3d), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
-    @mutate_mtg!(mtg, volume_stat_mod = compute_volume_axis_A2(node, :volume_stat_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
-    @mutate_mtg!(mtg, volume_pipe_mod = compute_volume_axis_A2(node, :volume_pipe_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
-    @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_volume_axis_A2(node, :volume_pipe_mod_20), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_ps3d = compute_var_axis_A2(node, :volume_ps3d), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_stat_mod = compute_var_axis_A2(node, :volume_stat_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_pipe_mod = compute_var_axis_A2(node, :volume_pipe_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_var_axis_A2(node, :volume_pipe_mod_20), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg[1][:volume_ps3d] = compute_volume_axis(mtg[1], :volume_ps3d)
-    mtg[1][:volume_stat_mod] = compute_volume_axis(mtg[1], :volume_stat_mod)
-    mtg[1][:volume_pipe_mod] = compute_volume_axis(mtg[1], :volume_pipe_mod)
-    mtg[1][:volume_pipe_mod_20] = compute_volume_axis(mtg[1], :volume_pipe_mod_20)
+    mtg[1][:volume_ps3d] = compute_var_axis(mtg[1], :volume_ps3d)
+    mtg[1][:volume_stat_mod] = compute_var_axis(mtg[1], :volume_stat_mod)
+    mtg[1][:volume_pipe_mod] = compute_var_axis(mtg[1], :volume_pipe_mod)
+    mtg[1][:volume_pipe_mod_20] = compute_var_axis(mtg[1], :volume_pipe_mod_20)
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg[:volume_ps3d] = sum(descendants!(mtg, :volume_ps3d, symbol = "A", filter_fun = filter_A1_A2))
@@ -616,15 +621,20 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     gap_fill_length(x) = x[:length] === nothing ? 0 : x[:length]
     @mutate_mtg!(mtg_manual, length_gap_filled = gap_fill_length(node))
 
+    # Compute the A2 length, which is the total length of all segments they bear:
+    @mutate_mtg!(mtg_manual, length_meas = compute_var_axis_A2(node, :length_gap_filled), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    # A1 length in mm (just itself, excluding A2 length):
+    mtg_manual[1][:length_meas] = compute_var_axis(mtg_manual[1], :length_gap_filled)
+
     # Recompute the volume:
     compute_volume_gapfilled(x) = x[:cross_section_gap_filled] * x[:length_gap_filled]
     @mutate_mtg!(mtg_manual, volume_gf = compute_volume_gapfilled(node), symbol = "S") # volume of the segment in mm3
 
     # Compute the A2 volume, which is the volume of all segments they hold
-    @mutate_mtg!(mtg_manual, volume_gf = compute_volume_axis_A2(node, :volume_gf), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg_manual, volume_gf = compute_var_axis_A2(node, :volume_gf), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg_manual[1][:volume_gf] = compute_volume_axis(mtg_manual[1], :volume_gf)
+    mtg_manual[1][:volume_gf] = compute_var_axis(mtg_manual[1], :volume_gf)
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg_manual[:volume_gf] =
@@ -664,10 +674,10 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     @mutate_mtg!(mtg_lidar_ps3d_raw, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
     @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume(node), symbol = "S") # volume in mm3
     # Compute the A2 volume, which is the volume of all segments they hold
-    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_volume_axis_A2(node, :volume), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg_lidar_ps3d_raw, volume = compute_var_axis_A2(node, :volume), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg_lidar_ps3d_raw[1][:volume] = compute_volume_axis(mtg_lidar_ps3d_raw[1], :volume)
+    mtg_lidar_ps3d_raw[1][:volume] = compute_var_axis(mtg_lidar_ps3d_raw[1], :volume)
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg_lidar_ps3d_raw[:volume] =

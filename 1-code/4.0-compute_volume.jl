@@ -63,6 +63,7 @@ df_all = DataFrame(
     :mass_g => Float64[],
     :fresh_mass => Float64[],
     :volume => Float64[],
+    :length => Float64[],
     :id_cor => Int[]
     )
 
@@ -75,9 +76,9 @@ for i in branches
     df_stats_branch = vcat(df_stats_branch, df)
 
     # Manual measurement:
-    df_manual = DataFrame(mtg_manual, [:mass_g, :fresh_mass, :volume_gf, :id_cor])
+    df_manual = DataFrame(mtg_manual, [:mass_g, :length_meas, :fresh_mass, :volume_gf, :id_cor])
     df_manual[!,:branch] .= i
-    rename!(df_manual, Dict(:volume_gf => "volume"))
+    rename!(df_manual, Dict(:volume_gf => "volume", :length_meas => "length"))
     df_manual[!,:origin] .= "measurement"
 
     # plantscan3d, as-is:
@@ -89,20 +90,29 @@ for i in branches
     # statistical model:
     df_stat_mod = DataFrame(
         mtg_lidar_model,
-        [:fresh_mass,
-        :fresh_mass_ps3d,
-        :fresh_mass_pipe_mod,
-        :fresh_mass_pipe_mod_20,
-        :volume_stat_mod,
-        :volume_ps3d,
-        :volume_pipe_mod,
-        :volume_pipe_mod_20, :id_cor])
+        [
+            :length_sim,
+            :fresh_mass,
+            :fresh_mass_ps3d,
+            :fresh_mass_pipe_mod,
+            :fresh_mass_pipe_mod_20,
+            :volume_stat_mod,
+            :volume_ps3d,
+            :volume_pipe_mod,
+            :volume_pipe_mod_20,
+            :id_cor
+        ]
+    )
 
     df_stat_mod_biomass = select(
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
-            :fresh_mass => "stat. mod.", :fresh_mass_ps3d => "plantscan3d", :fresh_mass_pipe_mod => "Pipe model", :fresh_mass_pipe_mod_20 => "Pipe mod. ⌀<20"
-        )
+            :fresh_mass => "stat. mod.",
+            :fresh_mass_ps3d => "plantscan3d",
+            :fresh_mass_pipe_mod => "Pipe model",
+            :fresh_mass_pipe_mod_20 => "Pipe mod. ⌀<20"
+    )
+
     df_stat_mod_biomass = stack(
             df_stat_mod_biomass,
             ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
@@ -113,14 +123,14 @@ for i in branches
 
     select!(
             df_stat_mod,
-            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :id, :symbol, :scale, :index, :parent_id, :link, :length_sim => :length, :id_cor,
             :volume_stat_mod => "stat. mod.", :volume_ps3d => "plantscan3d", :volume_pipe_mod => "Pipe model", :volume_pipe_mod_20 => "Pipe mod. ⌀<20"
     )
 
     df_stat_mod = stack(
             df_stat_mod,
             ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
-            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor, :length],
             variable_name = :origin,
             value_name = :volume
         )

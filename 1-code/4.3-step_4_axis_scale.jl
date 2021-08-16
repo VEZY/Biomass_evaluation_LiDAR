@@ -61,7 +61,7 @@ Importing the data:
 """
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame)
+df_axis = filter(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", CSV.read("../2-results/1-data/df_all.csv", DataFrame));
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
 md"""
@@ -80,6 +80,7 @@ df_meas =
 select(
 	filter(x -> x.origin == "measurement" && x.id_cor !== missing, df_axis), 
     :branch, :id_cor, 
+	:length => :length_meas, 
     :fresh_mass => :fresh_mass_meas, 
     :volume => :volume_meas
 )
@@ -97,18 +98,37 @@ md"""
 Computing the statistics:
 """
 
+# ╔═╡ 7ccadb8d-940d-4550-a8ef-d38704e9ea7f
+begin
+plt_len = 
+	data(dropmissing(df_compare, :length)) *
+	(
+		mapping(
+			:length_meas => (x -> x / 1000) => "Measured length (m)",
+			:length => (x -> x / 1000) => "Predicted length (m)", 
+			marker = :branch) *
+		visual(Scatter) +
+		mapping(
+			:length_meas => (x -> x / 1000) =>"Measured length (m)",
+			:length_meas => (x -> x / 1000) =>"Predicted length (m)") * visual(Lines)
+	)
+# axis = (width = 500, height = 500)
+# plt_biomass = draw(plt; axis)
+plt_length = draw(plt_len)
+end
+
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
 plt_vol = 
 	data(df_compare) *
 	(
 		mapping(
-			:volume_meas => "Measured volume",
-			:volume => "Predicted volume", color= :origin, marker = :branch) *
+			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
+			:volume => (x -> x * 1e-9) => "Predicted volume (m³)", color= :origin, marker = :branch) *
 		visual(Scatter) +
 		mapping(
-			:volume_meas => "Measured volume",
-			:volume_meas => "Predicted volume") * visual(Lines)
+			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
+			:volume_meas => (x -> x * 1e-9) => "Predicted volume (m³)") * visual(Lines)
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
@@ -121,12 +141,12 @@ plt =
 	data(df_compare) *
 	(
 		mapping(
-			:fresh_mass_meas => "Measured fresh biomass (g)",
-			:fresh_mass => "Predicted fresh biomass (g)", color= :origin, marker = :branch) *
+			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+			:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
 		visual(Scatter) +
 		mapping(
-			:fresh_mass_meas => "Measured fresh biomass (g)",
-			:fresh_mass_meas => "Predicted fresh biomass (g)") * visual(Lines)
+			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+			:fresh_mass_meas => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
@@ -1559,6 +1579,7 @@ version = "0.9.1+5"
 # ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╠═1f49c11d-678d-4b78-9038-4b5055f302bb
+# ╠═7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 # ╠═81f64f27-3ea5-4c03-abca-f281e072b2ca
 # ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
