@@ -159,6 +159,19 @@ function compute_var_axis(x, vol_col = :volume)
     sum(descendants!(x, vol_col, symbol = "S", link = ("/", "<"), all = false))
 end
 
+"""
+    compute_A1_axis_from_start(x, vol_col = :volume; id_cor_start)
+
+Compute the sum of a variable over the axis starting from node that has `id_cor_start` value.
+"""
+function compute_A1_axis_from_start(x, vol_col = :volume; id_cor_start)
+    length_gf_A1 = descendants!(x, vol_col, symbol = "S", link = ("/", "<"), all = false)
+    id_cor_A1 = descendants!(x, :id_cor, symbol = "S", link = ("/", "<"), all = false)
+    sum(length_gf_A1[findfirst(x -> x == id_cor_start, id_cor_A1):end])
+end
+
+
+
 function compute_var_axis_A2(x, vol_col = :volume)
     sum(descendants!(x, vol_col, symbol = "S"))
 end
@@ -552,7 +565,7 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # Compute the A2 lengths to match measurements =total length of all segments they bear:
     @mutate_mtg!(mtg, length_sim = compute_var_axis_A2(node, :length), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
     # A1 length in mm (just itself, excluding A2 length):
-    mtg[1][:length_sim] = compute_var_axis(mtg[1], :length)
+    mtg[1][:length_sim] = compute_A1_axis_from_start(mtg[1], :length, id_cor_start = 0)
 
     # Recompute the volume:
     compute_volume_stats(x, var) = x[var] * x[:length]
@@ -569,10 +582,10 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_var_axis_A2(node, :volume_pipe_mod_20), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg[1][:volume_ps3d] = compute_var_axis(mtg[1], :volume_ps3d)
-    mtg[1][:volume_stat_mod] = compute_var_axis(mtg[1], :volume_stat_mod)
-    mtg[1][:volume_pipe_mod] = compute_var_axis(mtg[1], :volume_pipe_mod)
-    mtg[1][:volume_pipe_mod_20] = compute_var_axis(mtg[1], :volume_pipe_mod_20)
+    mtg[1][:volume_ps3d] = compute_A1_axis_from_start(mtg[1], :volume_ps3d, id_cor_start = 0)
+    mtg[1][:volume_stat_mod] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod, id_cor_start = 0)
+    mtg[1][:volume_pipe_mod] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod, id_cor_start = 0)
+    mtg[1][:volume_pipe_mod_20] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod_20, id_cor_start = 0)
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg[:volume_ps3d] = sum(descendants!(mtg, :volume_ps3d, symbol = "A", filter_fun = filter_A1_A2))
@@ -623,8 +636,8 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
 
     # Compute the A2 length, which is the total length of all segments they bear:
     @mutate_mtg!(mtg_manual, length_meas = compute_var_axis_A2(node, :length_gap_filled), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
-    # A1 length in mm (just itself, excluding A2 length):
-    mtg_manual[1][:length_meas] = compute_var_axis(mtg_manual[1], :length_gap_filled)
+    # A1 length in mm (just itself, excluding A2 length and segments not present in the LiDAR measurement):
+    mtg_manual[1][:length_meas] = compute_A1_axis_from_start(mtg_manual[1], :length_gap_filled, id_cor_start = 0)
 
     # Recompute the volume:
     compute_volume_gapfilled(x) = x[:cross_section_gap_filled] * x[:length_gap_filled]
@@ -633,8 +646,10 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     # Compute the A2 volume, which is the volume of all segments they hold
     @mutate_mtg!(mtg_manual, volume_gf = compute_var_axis_A2(node, :volume_gf), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
-    # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg_manual[1][:volume_gf] = compute_var_axis(mtg_manual[1], :volume_gf)
+    # A1 volume in mm3 (just itself, excluding A2 volumes, but also excluding the first segment because we don't know:
+    mtg_manual[1][:volume_gf] = compute_A1_axis_from_start(mtg_manual[1], :volume_gf, id_cor_start = 0)
+
+    # NB: the first matching segment is identified with a value of 0 in the `id_cor` column.
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg_manual[:volume_gf] =
@@ -655,11 +670,9 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
 
     # Compute the mass of A1 using A1 = tot_mass - ∑A2:
     mass_A2 = descendants!(mtg_manual, :mass_g, symbol = "A", filter_fun = x -> x.MTG.index == 2)
-
-    if branch == "tree12h" # || branch == "tree13h"
-        # Tree 12h has one little segment not measured for mass (4cm long...)
-        mass_A2[mass_A2 .=== nothing] .= 0.0 # We put 0.0, it is not significant.
-    end
+    id_cor_A10 = findfirst(x -> x == 0, descendants!(mtg_manual[1], :id_cor, symbol = "S", link = ("/", "<"), all = false))
+    mass_A2 = mass_A2[id_cor_A10:end]
+    # NB: the A2 axis that are not found in the LiDAR data are removed from the computation (before id_cor = 0)
 
     # But compute it only for branches where all A2 where measured:
     if !any(mass_A2 .=== nothing)

@@ -64,7 +64,7 @@ Importing the data:
 begin
 df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
 # filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_axis)
-filter!(x -> x.origin != "Pipe mod. ⌀<20", df_axis)
+filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "Pipe mod. ⌀<20", df_axis)
 end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
@@ -80,19 +80,26 @@ Make a DataFrame that matches the measurements and the predictions from LiDAR da
 
 # ╔═╡ 0c55a409-7847-4475-a1ef-39c22f459e6f
 begin
-df_meas = 
-select(
-	filter(x -> x.origin == "measurement" && x.id_cor !== missing, df_axis), 
-    :branch, :id_cor, 
+# First, put an id_cor value to the A1 (we now they match between MTGs:
+find_A1(symbol,index) = symbol == "A" && index == 1
+df_axis.id_cor[find_A1.(df_axis.symbol, df_axis.index)] .= 0
+nothing
+# Filter out the measurement data and keep only the rows with axis that were identified in both the manually-measured MTG and the LiDAR-derived MTGs, meaning the first order axis (scale = 2 & index = 1) and the manually identified order 2 axis: 
+df_meas = filter(x -> x.origin == "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis)
+
+select!(
+	df_meas, 
+	:branch, :id_cor, 
 	:length => :length_meas, 
-    :fresh_mass => :fresh_mass_meas, 
-    :volume => :volume_meas
+	:fresh_mass => :fresh_mass_meas, 
+	:volume => :volume_meas
 )
 
+# And make a new DataFrame with predictions and simulations in different columns:
 df_compare = 
 leftjoin(
 	df_meas,
-	filter(x -> x.origin != "measurement" && x.id_cor !== missing, df_axis),
+	filter(x -> x.origin != "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis),
 	on = [:branch, :id_cor]
 )
 end
@@ -110,7 +117,7 @@ Comparing the axis length measured manually and predicted from the LiDAR pointcl
 # ╔═╡ 7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 begin
 plt_len = 
-	data(dropmissing(df_compare, :length)) *
+	data(dropmissing(df_compare, [:length, :length_meas])) *
 	(
 		mapping(
 			:length_meas => (x -> x / 1000) => "Measured length (m)",
@@ -139,7 +146,7 @@ Comparing the axis volume computed from manual measurement of segments length an
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
 plt_vol = 
-	data(df_compare) *
+	data(dropmissing(df_compare, [:volume, :volume_meas])) *
 	(
 		mapping(
 			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
@@ -151,8 +158,11 @@ plt_vol =
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
-plt_volume = draw(plt_vol)
+plt_volume = draw(plt_vol) 
 end
+
+# ╔═╡ 5bcbe2ab-121f-488d-b004-a40751b9968a
+filter(x -> x.branch == "tree11l" && x.volume_meas > 0.010 * 1e9 && x.volume < 0.004 * 1e9, df_compare)
 
 # ╔═╡ 430e36cb-5ccb-4103-b587-24eca5c4143b
 md"""
@@ -167,7 +177,7 @@ Comparing the axis fresh biomass measured using a scale and predicted using the 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
 plt = 
-	data(df_compare) *
+	data(dropmissing(df_compare, [:fresh_mass, :fresh_mass_meas])) *
 	(
 		mapping(
 			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
@@ -195,7 +205,7 @@ Saving the plots:
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
 begin 
 save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit = 3)
-
+	
 save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
 
 save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit = 3)
@@ -267,7 +277,7 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
-AlgebraOfGraphics = "~0.5.1"
+AlgebraOfGraphics = "~0.5.2"
 CSV = "~0.8.5"
 CairoMakie = "~0.6.3"
 DataFrames = "~1.2.2"
@@ -296,10 +306,10 @@ uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 version = "3.3.1"
 
 [[AlgebraOfGraphics]]
-deps = ["Colors", "DataAPI", "Dates", "FileIO", "GLM", "GeoInterface", "GeometryBasics", "GridLayoutBase", "KernelDensity", "Loess", "Makie", "PlotUtils", "PooledArrays", "RelocatableFolders", "StatsBase", "StructArrays", "Tables"]
-git-tree-sha1 = "55a69964fba5bd9096542f808589a698ecd35bbc"
+deps = ["Colors", "Dates", "FileIO", "GLM", "GeoInterface", "GeometryBasics", "GridLayoutBase", "KernelDensity", "Loess", "Makie", "PlotUtils", "PooledArrays", "RelocatableFolders", "StatsBase", "StructArrays", "Tables"]
+git-tree-sha1 = "8e4d8d012a5fb4f12cf60ae8658afa3aeffe5873"
 uuid = "cbdf2221-f076-402e-a563-3d30da359d67"
-version = "0.5.1"
+version = "0.5.2"
 
 [[Animations]]
 deps = ["Colors"]
@@ -407,9 +417,9 @@ version = "0.12.8"
 
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "344f143fa0ec67e47917848795ab19c6a455f32c"
+git-tree-sha1 = "79b9563ef3f2cc5fc6d3046a5ee1a57c9de52495"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.32.0"
+version = "3.33.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -726,6 +736,11 @@ git-tree-sha1 = "15732c475062348b0165684ffe28e85ea8396afc"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 version = "1.0.0"
 
+[[IrrationalConstants]]
+git-tree-sha1 = "f76424439413893a832026ca355fe273e93bce94"
+uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
+version = "0.1.0"
+
 [[Isoband]]
 deps = ["isoband_jll"]
 git-tree-sha1 = "f9b6d97355599074dc867318950adaa6f9946137"
@@ -877,10 +892,10 @@ uuid = "4345ca2d-374a-55d4-8d30-97f9976e7612"
 version = "0.5.3"
 
 [[LogExpFunctions]]
-deps = ["DocStringExtensions", "LinearAlgebra"]
-git-tree-sha1 = "7bd5f6565d80b6bf753738d2bc40a5dfea072070"
+deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
+git-tree-sha1 = "3d682c07e6dd250ed082f883dc88aee7996bf2cc"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.2.5"
+version = "0.3.0"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -1294,10 +1309,10 @@ uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.9"
 
 [[StatsFuns]]
-deps = ["LogExpFunctions", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "30cd8c360c54081f806b1ee14d2eecbef3c04c49"
+deps = ["IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "20d1bb720b9b27636280f751746ba4abb465f19d"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "0.9.8"
+version = "0.9.9"
 
 [[StatsModels]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "ShiftedArrays", "SparseArrays", "StatsBase", "StatsFuns", "Tables"]
@@ -1610,13 +1625,14 @@ version = "0.9.1+5"
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╠═1f49c11d-678d-4b78-9038-4b5055f302bb
 # ╟─363b2bbd-7118-4819-9814-a9db29c008d7
-# ╟─7ccadb8d-940d-4550-a8ef-d38704e9ea7f
+# ╠═7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
-# ╟─81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╠═81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╠═5bcbe2ab-121f-488d-b004-a40751b9968a
 # ╟─430e36cb-5ccb-4103-b587-24eca5c4143b
 # ╟─17050294-fba5-4595-a601-6c1c7d53fcbe
-# ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
