@@ -99,7 +99,7 @@ function compute_data_mtg(mtg)
     @mutate_mtg!(mtg, cross_section_all = compute_cross_section_all(node))
 
     # Use the pipe model, but only on nodes with a cross_section <= 314 (≈20mm diameter)
-    @mutate_mtg!(mtg, cross_section_pipe_20 = pipe_model!(node, :cross_section_all, 314, allow_missing = true))
+    @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_all, 314, allow_missing = true))
 
     # Clean-up the cached variables:
     clean_cache!(mtg)
@@ -107,16 +107,16 @@ function compute_data_mtg(mtg)
     return mtg
 end
 
-function compute_cross_section_all(x)
+function compute_cross_section_all(x, var = :cross_section)
     if x.MTG.symbol == "A"
-        desc_cross_section = descendants(x, :cross_section, symbol = "S", recursivity_level = 1)
+        desc_cross_section = descendants(x, var, symbol = "S", recursivity_level = 1)
         if length(desc_cross_section) > 0
             return desc_cross_section[1]
         else
-            @warn "$(x.name) has no descendants with a value for cross_section."
+            @warn "$(x.name) has no descendants with a value for $var."
         end
     else
-        x[:cross_section]
+        x[var]
     end
 end
 
@@ -254,7 +254,7 @@ function compute_all_mtg_data(mtg_file, new_mtg_file, csv_file)
             :segment_index_on_axis, :mass_g, :volume, :volume_subtree, :cross_section,
             :cross_section_children, :cross_section_leaves, :n_segments_axis,
             :number_leaves, :pathlength_subtree, :segment_subtree,
-            :cross_section_pipe, :cross_section_pipe_20, :nleaf_proportion_siblings,
+            :cross_section_pipe, :cross_section_pipe_50, :nleaf_proportion_siblings,
             :nleaves_siblings, :cross_section_all, :comment, :id_cor
         ])
 
@@ -553,14 +553,28 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
     # Adding the cross_section to the root:
-    append!(mtg, (cross_section = first_cross_section,))
+    append!(
+        mtg,
+        (
+            cross_section = first_cross_section,
+            cross_section_pipe = first_cross_section,
+            cross_section_stat_mod = first_cross_section
+        )
+    )
     # Compute the cross-section for the axes nodes using the one measured on the S just below:
-    @mutate_mtg!(mtg, cross_section_all = compute_cross_section_all(node))
+    @mutate_mtg!(mtg, cross_section_ps3d = compute_cross_section_all(node))
+    @mutate_mtg!(mtg, cross_section_pipe = compute_cross_section_all(node, :cross_section_pipe))
 
-    # Use the pipe model, but only on nodes with a cross_section <= 314 (≈20mm diameter)
-    @mutate_mtg!(mtg, cross_section_pipe_20 = pipe_model!(node, :cross_section_all, 314, allow_missing = true))
+    # Use the pipe model, but only on nodes with a cross_section <= 1963.5 (≈50mm diameter)
+    @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_ps3d, 1963.5, allow_missing = true))
+    @mutate_mtg!(mtg, cross_section_pipe_50 = compute_cross_section_all(node, :cross_section_pipe_50))
 
-    @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod(node), symbol = "S")
+    @mutate_mtg!(mtg, cross_section_stat_mod_50 = cross_section_stat_mod(node), symbol = "S")
+    @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod_all(node), symbol = "S")
+
+    # Add the values for the axis:
+    @mutate_mtg!(mtg, cross_section_stat_mod = compute_cross_section_all(node, :cross_section_stat_mod))
+    @mutate_mtg!(mtg, cross_section_stat_mod_50 = compute_cross_section_all(node, :cross_section_stat_mod_50))
 
     # Compute the A2 lengths to match measurements =total length of all segments they bear:
     @mutate_mtg!(mtg, length_sim = compute_var_axis_A2(node, :length), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
@@ -572,26 +586,30 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
 
     @mutate_mtg!(mtg, volume_ps3d = compute_volume_stats(node, :cross_section), symbol = "S") # volume in mm3
     @mutate_mtg!(mtg, volume_stat_mod = compute_volume_stats(node, :cross_section_stat_mod), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg, volume_stat_mod_50 = compute_volume_stats(node, :cross_section_stat_mod_50), symbol = "S") # volume in mm3
     @mutate_mtg!(mtg, volume_pipe_mod = compute_volume_stats(node, :cross_section_pipe), symbol = "S") # volume in mm3
-    @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_volume_stats(node, :cross_section_pipe_20), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg, volume_pipe_mod_50 = compute_volume_stats(node, :cross_section_pipe_50), symbol = "S") # volume in mm3
 
     # Compute the A2 volume, which is the volume of all segments they hold
     @mutate_mtg!(mtg, volume_ps3d = compute_var_axis_A2(node, :volume_ps3d), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
     @mutate_mtg!(mtg, volume_stat_mod = compute_var_axis_A2(node, :volume_stat_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_stat_mod_50 = compute_var_axis_A2(node, :volume_stat_mod_50), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
     @mutate_mtg!(mtg, volume_pipe_mod = compute_var_axis_A2(node, :volume_pipe_mod), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
-    @mutate_mtg!(mtg, volume_pipe_mod_20 = compute_var_axis_A2(node, :volume_pipe_mod_20), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
+    @mutate_mtg!(mtg, volume_pipe_mod_50 = compute_var_axis_A2(node, :volume_pipe_mod_50), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
     mtg[1][:volume_ps3d] = compute_A1_axis_from_start(mtg[1], :volume_ps3d, id_cor_start = 0)
     mtg[1][:volume_stat_mod] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod, id_cor_start = 0)
+    mtg[1][:volume_stat_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod_50, id_cor_start = 0)
     mtg[1][:volume_pipe_mod] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod, id_cor_start = 0)
-    mtg[1][:volume_pipe_mod_20] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod_20, id_cor_start = 0)
+    mtg[1][:volume_pipe_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod_50, id_cor_start = 0)
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg[:volume_ps3d] = sum(descendants!(mtg, :volume_ps3d, symbol = "A", filter_fun = filter_A1_A2))
     mtg[:volume_stat_mod] = sum(descendants!(mtg, :volume_stat_mod, symbol = "A", filter_fun = filter_A1_A2))
+    mtg[:volume_stat_mod_50] = sum(descendants!(mtg, :volume_stat_mod_50, symbol = "A", filter_fun = filter_A1_A2))
     mtg[:volume_pipe_mod] = sum(descendants!(mtg, :volume_pipe_mod, symbol = "A", filter_fun = filter_A1_A2))
-    mtg[:volume_pipe_mod_20] = sum(descendants!(mtg, :volume_pipe_mod_20, symbol = "A", filter_fun = filter_A1_A2))
+    mtg[:volume_pipe_mod_50] = sum(descendants!(mtg, :volume_pipe_mod_50, symbol = "A", filter_fun = filter_A1_A2))
 
     # And the biomass:
     @mutate_mtg!(mtg, fresh_mass_ps3d = node[:volume_ps3d] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
@@ -600,11 +618,14 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, fresh_mass = node[:volume_stat_mod] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
     @mutate_mtg!(mtg, dry_mass = node[:volume_stat_mod] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
+    @mutate_mtg!(mtg, fresh_mass_50 = node[:volume_stat_mod_50] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg, dry_mass_50 = node[:volume_stat_mod_50] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+
     @mutate_mtg!(mtg, fresh_mass_pipe_mod = node[:volume_pipe_mod] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
     @mutate_mtg!(mtg, dry_mass_pipe_mod = node[:volume_pipe_mod] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
-    @mutate_mtg!(mtg, fresh_mass_pipe_mod_20 = node[:volume_pipe_mod_20] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
-    @mutate_mtg!(mtg, dry_mass_pipe_mod_20 = node[:volume_pipe_mod_20] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg, fresh_mass_pipe_mod_50 = node[:volume_pipe_mod_50] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
+    @mutate_mtg!(mtg, dry_mass_pipe_mod_50 = node[:volume_pipe_mod_50] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
     # Clean-up the cached variables:
     clean_cache!(mtg)
@@ -613,9 +634,34 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
 end
 
 function cross_section_stat_mod(x)
-    0.217432 * x[:cross_section_pipe_20] + 0.0226391 * x[:pathlength_subtree] + 19.2056 * x[:branching_order] +
-    6.99042 * x[:segment_index_on_axis] - 10.0844 * x[:number_leaves] + 3.61329 * x[:segment_subtree] +
-    0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
+    # Using all variables:
+    # 0.217432 * x[:cross_section_pipe_50] + 0.0226391 * x[:pathlength_subtree] + 19.2056 * x[:branching_order] +
+    # 6.99042 * x[:segment_index_on_axis] - 10.0844 * x[:number_leaves] + 3.61329 * x[:segment_subtree] +
+    # 0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
+
+    # All variables except the cross section from the pipe model because it is too bad from plantscan3d:
+    0.0295598 * x[:pathlength_subtree] + 19.3697 * x[:branching_order] +
+    7.41646 * x[:segment_index_on_axis] - 9.54547 * x[:number_leaves] + 3.62477 * x[:segment_subtree] +
+    0.975984 * x[:n_segments_axis] - 3.6127 * x[:nleaf_proportion_siblings]
+
+    # Last version usin diam<50mm
+    0.891909 * x[:cross_section_pipe_50] + 0.00301214 * x[:pathlength_subtree] + 6.67531 * x[:branching_order] +
+    0.586842 * x[:segment_index_on_axis]
+end
+
+function cross_section_stat_mod_all(x)
+    # Using all variables:
+    # 0.951324 * x[:cross_section_pipe] + 0.0210469 * x[:pathlength_subtree] + 7.81015 * x[:branching_order] +
+    # 9.83616 * x[:segment_index_on_axis] - 0.0107971 * x[:axis_length] - 13.1118 * x[:number_leaves] + 3.1682 * x[:segment_subtree] +
+    # 2.11951 * x[:n_segments_axis]
+
+    # All variables except the cross section from the pipe model:
+    0.0416291 * x[:pathlength_subtree] + 5.83775 * x[:branching_order] +
+    10.7246 * x[:segment_index_on_axis] - 0.00588964 * x[:axis_length] -18.945 * x[:number_leaves] + 10.0918 * x[:segment_subtree] -
+    1.15572   * x[:n_segments_axis]
+
+    # Only the pipe model with a correction factor:
+    # 0.938161 * x[:cross_section_pipe]
 end
 
 function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
@@ -629,6 +675,9 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
 
     # Gap-filling the measured values of the cross-section using the pipe-model (some segments were not measured):
     @mutate_mtg!(mtg_manual, cross_section_gap_filled = pipe_model!(node, :cross_section, -1, allow_missing = true))
+
+    # Add the cross-section to the axis:
+    @mutate_mtg!(mtg_manual, cross_section = compute_cross_section_all(node, :cross_section))
 
     # Gap-filling the Length by putting 0 (if not measured, probably broken):
     gap_fill_length(x) = x[:length] === nothing ? 0 : x[:length]
@@ -720,7 +769,7 @@ filter_A1_A2_S(x) = x.MTG.symbol == "S" || filter_A1_A2(x)
 
 function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df_lidar_raw = DataFrame(mtg_lidar_ps3d_raw, [:volume, :length, :diameter])
-    df_lidar_model = DataFrame(mtg_lidar_model, [:volume_ps3d, :volume_stat_mod, :volume_pipe_mod, :volume_pipe_mod_20, :length, :cross_section_stat_mod])
+    df_lidar_model = DataFrame(mtg_lidar_model, [:volume_ps3d, :volume_stat_mod, :volume_pipe_mod, :volume_pipe_mod_50, :length, :cross_section_stat_mod])
     df_manual = DataFrame(mtg_manual, [:volume_gf, :length_gap_filled, :cross_section_gap_filled])
 
     # Getting the densities:
@@ -741,6 +790,7 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
     tot_vol_lidar = filter(x -> x.scale == 1, df_lidar_model).volume_ps3d[1] * 1e-9 # Total volume in m3
     tot_vol_lidar_raw = filter(x -> x.scale == 1, df_lidar_raw).volume[1] * 1e-9 # Total volume in m3
     tot_vol_lidar_stat_mod = filter(x -> x.scale == 1, df_lidar_model).volume_stat_mod[1] * 1e-9 # Total volume in m3
+    tot_vol_lidar_pipe_mod = filter(x -> x.scale == 1, df_lidar_model).volume_pipe_mod[1] * 1e-9 # Total volume in m3
     tot_vol_manual = filter(x -> x.scale == 1, df_manual).volume_gf[1] * 1e-9 # Total volume in m3
 
     volume_error_pltscan3d =  tot_vol_lidar - tot_vol_manual
@@ -770,6 +820,8 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
     # Using the density re-computed using the volume manual measurement:
     fresh_biomass_actual_stat_mod = tot_vol_lidar_stat_mod * actual_fresh_density * 1000 # fresh biomass in kg
 
+    fresh_biomass_lidar_pipe_mod = tot_vol_lidar_pipe_mod * fresh_density * 1000 # fresh biomass in kg
+
     dry_biomass_manual = tot_vol_manual * dry_density * 1000 # mass in kg
     fresh_biomass_manual = tot_vol_manual * fresh_density * 1000 # fresh biomass in kg
 
@@ -785,12 +837,12 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
     biomass_norm_error_stat_model = fresh_biomass_actual_stat_mod / true_fresh_biomass
 
     DataFrame(
-        variable = ["length", "length", "length", "volume", "volume", "volume", "biomass", "biomass", "biomass"],
-        model = ["plantscan3d cor.", "plantscan3d raw", "stat. model", "plantscan3d cor.", "plantscan3d raw", "stat. model", "plantscan3d cor.", "plantscan3d raw", "stat. model"],
-        measurement = [tot_lenght_manual,tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass],
-        prediction = [tot_lenght_lidar,tot_lenght_lidar_raw,tot_lenght_lidar,tot_vol_lidar,tot_vol_lidar_raw,tot_vol_lidar_stat_mod,fresh_biomass_lidar,fresh_biomass_lidar_raw,fresh_biomass_lidar_stat_mod],
-        error = [length_error_pltscan3d,length_error_pltscan3d_raw,length_error_pltscan3d,volume_error_pltscan3d, volume_error_pltscan3d_raw, volume_error_stat_model, biomass_error_pltscan3d, biomass_error_pltscan3d_raw, biomass_error_stat_model],
-        error_norm = [length_norm_error_pltscan3d,length_norm_error_pltscan3d_raw,length_norm_error_pltscan3d,volume_norm_error_pltscan3d, volume_norm_error_pltscan3d_raw,volume_norm_error_stat_model, biomass_norm_error_pltscan3d, biomass_norm_error_pltscan3d_raw,biomass_norm_error_stat_model]
+        variable = ["length", "length", "volume", "volume", "volume", "volume", "biomass", "biomass", "biomass", "biomass"],
+        model = ["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "stat. model", "Pipe model", "plantscan3d cor.", "plantscan3d raw", "stat. model", "Pipe model"],
+        measurement = [tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass],
+        prediction = [tot_lenght_lidar,tot_lenght_lidar_raw,tot_vol_lidar,tot_vol_lidar_raw,tot_vol_lidar_stat_mod,tot_vol_lidar_pipe_mod,fresh_biomass_lidar,fresh_biomass_lidar_raw,fresh_biomass_lidar_stat_mod,fresh_biomass_lidar_pipe_mod],
+        error = [length_error_pltscan3d,length_error_pltscan3d_raw,volume_error_pltscan3d, volume_error_pltscan3d_raw, volume_error_stat_model,missing,biomass_error_pltscan3d, biomass_error_pltscan3d_raw, biomass_error_stat_model,missing],
+        error_norm = [length_norm_error_pltscan3d,length_norm_error_pltscan3d_raw,volume_norm_error_pltscan3d, volume_norm_error_pltscan3d_raw,volume_norm_error_stat_model,missing,biomass_norm_error_pltscan3d, biomass_norm_error_pltscan3d_raw,biomass_norm_error_stat_model,missing]
     )
 end
 

@@ -4,6 +4,15 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end
+
 # ╔═╡ ea69604f-847b-435f-82e2-a60f02b7a5fd
 begin
 	using CSV
@@ -55,6 +64,11 @@ md"""
 Importing the packages needed for this work:
 """
 
+# ╔═╡ 4a06b826-401c-4095-9449-f5c68915677b
+md"""
+Control wether the plots are zoomed-in to better see the prediction for smaller structures.
+"""
+
 # ╔═╡ 608c0a9f-8890-485f-ab75-cfebe5922d97
 md"""
 Importing the data:
@@ -64,7 +78,7 @@ Importing the data:
 begin
 df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
 # filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_axis)
-filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "Pipe mod. ⌀<20", df_axis)
+#filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "Pipe mod. ⌀<20", df_axis);
 end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
@@ -91,13 +105,14 @@ select!(
 	df_meas, 
 	:branch, :id_cor, 
 	:length => :length_meas, 
+	:cross_section => :cross_section_meas, 
 	:fresh_mass => :fresh_mass_meas, 
 	:volume => :volume_meas
 )
 
 # And make a new DataFrame with predictions and simulations in different columns:
 df_compare = 
-leftjoin(
+innerjoin(
 	df_meas,
 	filter(x -> x.origin != "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis),
 	on = [:branch, :id_cor]
@@ -138,10 +153,40 @@ md"""
 *Figure 1. Measured (x-axis) and predicted (y-axis) length at axis scale.*
 """
 
+# ╔═╡ 39f9b3df-1b43-40af-91b5-695a4579e32f
+@bind zoom_cs html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
+
+# ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
+begin
+df_compare2 = filter(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_compare)
+#df_compare2 = filter(x -> x.origin == "Pipe model", df_compare)
+plt_cs = 
+	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
+	(
+		mapping(
+			:cross_section_meas => "Measured cross-section (mm²)",
+			:cross_section => "Predicted cross-section (mm²)", color= :origin, marker = :branch) *
+		visual(Scatter) +
+		mapping(
+			:cross_section_meas => "Measured cross-section (mm²)",
+			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines)
+	)
+# axis = (width = 500, height = 500)
+# plt_cross_section = draw(plt; axis)
+if zoom_cs
+	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),))
+else
+	plt_cross_section = draw(plt_cs)
+end
+end
+
 # ╔═╡ 13da9f23-5729-467f-b652-2dc83627f586
 md"""
 Comparing the axis volume computed from manual measurement of segments length and diameter, and predicted from the LiDAR pointcloud using plantscan3d as-is, or re-computed using the pipe-model or our method:
 """
+
+# ╔═╡ c8a346f8-9942-4851-924a-9208cf077ba7
+@bind zoom_volume html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
 
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
@@ -158,11 +203,15 @@ plt_vol =
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
-plt_volume = draw(plt_vol) 
+if zoom_volume
+	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),))
+else
+	plt_volume = draw(plt_vol)
+end
 end
 
 # ╔═╡ 5bcbe2ab-121f-488d-b004-a40751b9968a
-filter(x -> x.branch == "tree11l" && x.volume_meas > 0.010 * 1e9 && x.volume < 0.004 * 1e9, df_compare)
+filter(x -> x.branch == "tree12h" && x.volume_meas > 0.008 * 1e9 && x.volume < 0.005 * 1e9, df_compare)
 
 # ╔═╡ 430e36cb-5ccb-4103-b587-24eca5c4143b
 md"""
@@ -173,6 +222,9 @@ md"""
 md"""
 Comparing the axis fresh biomass measured using a scale and predicted using the volumes from the different previous methods and a branch-averaged fresh wood density:
 """
+
+# ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
+@bind zoom_biomass html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
@@ -189,12 +241,16 @@ plt =
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
-plt_biomass = draw(plt)
+if zoom_biomass
+	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),))
+else 
+	plt_biomass = draw(plt)
+end
 end
 
 # ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
 md"""
-*Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale.*
+*Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale. Note that some A1 are missing. This is because the A1 were not measured for their biomass directly, but were considered as the difference between the whole branch biomass and the biomass of all A2. In some cases some A2 were not measured, so we cannot infer the biomass of A1 (e.g. for tree13h).*
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -261,8 +317,12 @@ begin
 stats =
 combine(
     groupby(df_compare, [:origin]),
-    [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
-    [:volume_meas, :volume] => EF => :EF
+	[:cross_section_meas, :cross_section] => RMSE => :RMSE_cross_section,
+	[:volume_meas, :volume] => ((x,y) -> RMSE(x,y) * 1e-9) => :RMSE_volume,
+	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
+	[:cross_section_meas, :cross_section] => EF => :EF_cross_section,
+    [:volume_meas, :volume] => EF => :EF_volume,
+    [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
 )
 end
 
@@ -1617,6 +1677,7 @@ version = "0.9.1+5"
 # ╟─930fac10-fc16-11eb-259d-6ba1a5317e77
 # ╟─95e18c61-3e56-47cf-ba5e-eb80e5f80aaf
 # ╠═ea69604f-847b-435f-82e2-a60f02b7a5fd
+# ╟─4a06b826-401c-4095-9449-f5c68915677b
 # ╟─608c0a9f-8890-485f-ab75-cfebe5922d97
 # ╠═20df87b5-9a06-4a7d-922d-873f423a4001
 # ╟─cb9cd952-7799-447d-b3e5-03fd1aab13ee
@@ -1627,12 +1688,16 @@ version = "0.9.1+5"
 # ╟─363b2bbd-7118-4819-9814-a9db29c008d7
 # ╠═7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
+# ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
+# ╟─39f9b3df-1b43-40af-91b5-695a4579e32f
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
-# ╠═81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╟─81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╟─c8a346f8-9942-4851-924a-9208cf077ba7
 # ╠═5bcbe2ab-121f-488d-b004-a40751b9968a
 # ╟─430e36cb-5ccb-4103-b587-24eca5c4143b
 # ╟─17050294-fba5-4595-a601-6c1c7d53fcbe
-# ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╟─c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2

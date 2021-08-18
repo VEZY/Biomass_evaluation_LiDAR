@@ -2,15 +2,11 @@ using MTG
 using CSV
 # using Plots
 using DataFrames
-using StatsPlots
 using Statistics
 using BrowseTables
-using Plots
-# using CairoMakie
-# using AlgebraOfGraphics
 using Revise
-includet("1-code/functions.jl")
-using Main.BiomassFromLiDAR
+includet("./functions.jl")
+using .BiomassFromLiDAR
 
 # Declaring the paths to the files directories:
 dir_path_lidar = joinpath("0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
@@ -64,6 +60,7 @@ df_all = DataFrame(
     :fresh_mass => Float64[],
     :volume => Float64[],
     :length => Float64[],
+    :cross_section => Float64[],
     :id_cor => Int[]
     )
 
@@ -76,7 +73,7 @@ for i in branches
     df_stats_branch = vcat(df_stats_branch, df)
 
     # Manual measurement:
-    df_manual = DataFrame(mtg_manual, [:mass_g, :length_meas, :fresh_mass, :volume_gf, :id_cor])
+    df_manual = DataFrame(mtg_manual, [:mass_g, :cross_section, :length_meas, :fresh_mass, :volume_gf, :id_cor])
     df_manual[!,:branch] .= i
     rename!(df_manual, Dict(:volume_gf => "volume", :length_meas => "length"))
     df_manual[!,:origin] .= "measurement"
@@ -92,14 +89,21 @@ for i in branches
         mtg_lidar_model,
         [
             :length_sim,
+            :cross_section_ps3d,
+            :cross_section_pipe,
+            :cross_section_pipe_50,
+            :cross_section_stat_mod_50,
+            :cross_section_stat_mod,
             :fresh_mass,
+            :fresh_mass_50,
             :fresh_mass_ps3d,
             :fresh_mass_pipe_mod,
-            :fresh_mass_pipe_mod_20,
+            :fresh_mass_pipe_mod_50,
             :volume_stat_mod,
+            :volume_stat_mod_50,
             :volume_ps3d,
             :volume_pipe_mod,
-            :volume_pipe_mod_20,
+            :volume_pipe_mod_50,
             :id_cor
         ]
     )
@@ -108,34 +112,59 @@ for i in branches
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
             :fresh_mass => "stat. mod.",
+            :fresh_mass_50 => "stat. mod. ⌀<50",
             :fresh_mass_ps3d => "plantscan3d",
             :fresh_mass_pipe_mod => "Pipe model",
-            :fresh_mass_pipe_mod_20 => "Pipe mod. ⌀<20"
+            :fresh_mass_pipe_mod_50 => "Pipe mod. ⌀<50"
     )
 
     df_stat_mod_biomass = stack(
             df_stat_mod_biomass,
-            ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
             [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
             variable_name = :origin,
             value_name = :fresh_mass
         )
 
+
+    df_stat_mod_cs = select(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :cross_section_stat_mod => "stat. mod.",
+            :cross_section_stat_mod_50 => "stat. mod. ⌀<50",
+            :cross_section_ps3d => "plantscan3d",
+            :cross_section_pipe => "Pipe model",
+            :cross_section_pipe_50 => "Pipe mod. ⌀<50"
+    )
+
+    df_stat_mod_cs = stack(
+            df_stat_mod_cs,
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            variable_name = :origin,
+            value_name = :cross_section
+        )
+
     select!(
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :length_sim => :length, :id_cor,
-            :volume_stat_mod => "stat. mod.", :volume_ps3d => "plantscan3d", :volume_pipe_mod => "Pipe model", :volume_pipe_mod_20 => "Pipe mod. ⌀<20"
+            :volume_stat_mod => "stat. mod.",
+            :volume_stat_mod_50 => "stat. mod. ⌀<50",
+            :volume_ps3d => "plantscan3d",
+            :volume_pipe_mod => "Pipe model",
+            :volume_pipe_mod_50 => "Pipe mod. ⌀<50"
     )
 
     df_stat_mod = stack(
             df_stat_mod,
-            ["stat. mod.", "plantscan3d", "Pipe model", "Pipe mod. ⌀<20"],
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
             [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor, :length],
             variable_name = :origin,
             value_name = :volume
         )
 
-    df_stat_mod[!, :fresh_mass] = df_stat_mod_biomass.fresh_mass
+    df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_biomass[:,[:origin, :id, :fresh_mass]], on = [:origin,:id])
+    df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_cs[:,[:origin, :id, :cross_section]], on = [:origin,:id])
     df_stat_mod[!,:branch] .= i
 
     df_all = vcat(

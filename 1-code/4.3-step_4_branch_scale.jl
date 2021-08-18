@@ -88,10 +88,6 @@ p_vol = @df filter(x -> x.variable == "volume", df_stats_branch) scatter(
     :measurement,
     :prediction,
     group = :model,
-    # label = hcat(
-    #     "plantscan3d, RMSE: $(stats_volume.RMSE[1]), EF: $(stats_volume.EF[1])",
-    #    "Stat. mod. ⌀<20mm, RMSE: $(stats_volume.RMSE[2]), EF: $(stats_volume.EF[2])"
-    #     ),
     yguide = "Predicted volume (m³)",
     xguide = "Measured volume (m³)",
     xlims = (0.0, 0.04),
@@ -105,10 +101,6 @@ p_biomass = @df filter(x -> x.variable == "biomass", df_stats_branch) scatter(
     :measurement,
     :prediction,
     group = :model,
-    #     label = hcat(
-    #    "plantscan3d, RMSE: $(stats_biomass.RMSE[1]), EF: $(stats_biomass.EF[1])",
-    #    "Stat. mod. ⌀<20mm, RMSE: $(stats_biomass.RMSE[2]), EF: $(stats_biomass.EF[2])"
-    #    ),
     yguide = "Predicted biomass (kg)",
     xguide = "Measured biomass (kg)",
     xlims = (0.0, 40),
@@ -1307,7 +1299,7 @@ version = "0.9.1+5"
 # ╟─061d3726-312d-486f-936d-2f40dfadf3a8
 # ╟─ba1b00ad-6d5f-48b3-99ca-9bcc28700d69
 # ╠═119133e0-fb56-11eb-0e70-336d051ce19a
-# ╠═e0504916-637f-4e0f-817e-21eeeb257100
+# ╟─e0504916-637f-4e0f-817e-21eeeb257100
 # ╠═ff229a61-a03d-453e-93a7-b28612622682
 # ╟─91cc83a2-65e0-40fd-a94f-33f716cfc57a
 # ╟─400ee0ec-cc8c-4811-9e40-1438b7d21523
