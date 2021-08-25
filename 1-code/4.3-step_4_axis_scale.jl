@@ -77,7 +77,7 @@ Importing the data:
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
 begin
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame)
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
 nothing
 end
 
@@ -224,6 +224,13 @@ Zoom in plot $(@bind zoom_biomass CheckBox())
 # ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
 md"""
 *Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale. Note that some A1 are missing. This is because the A1 were not measured for their biomass directly, but were considered as the difference between the whole branch biomass and the biomass of all A2. In some cases some A2 were not measured, so we cannot infer the biomass of A1 (e.g. for tree13h).*
+"""
+
+# ╔═╡ 1777a09c-2657-46a6-bf93-6b7465d6fb48
+md"""
+!!! note
+
+	The whole-branch plot is made using the sum of all measured axis because some structures were broken between the LiDAR measurement and the manual/direct measurements, making the total branch biomass measurements biased.
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -374,6 +381,26 @@ if zoom_biomass
 else 
 	plt_biomass = draw(plt, axis=(autolimitaspect = 1,))
 end
+end
+
+# ╔═╡ fea13de5-26d6-4e2e-8fed-e241c650c206
+begin
+gdf = groupby(dropmissing(df_compare4,[:fresh_mass, :fresh_mass_meas]), [:branch, :origin])
+df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols = false)
+	
+plt_branch = 
+data(df_branch) *
+(
+	mapping(
+		:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+		:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
+	visual(Scatter) +
+	mapping(
+		:fresh_mass => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+		:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
+)
+	
+draw(plt_branch, axis=(autolimitaspect = 1,))
 end
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
@@ -1766,7 +1793,7 @@ version = "0.9.1+5"
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
 # ╟─4cac9d09-5941-4352-83b7-06cb223fa280
 # ╟─37633b50-c141-45d1-b7dd-1a0eebfda64f
-# ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
+# ╠═04dd878b-2358-4fa7-8d85-1e8928b10c59
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
 # ╟─6f871718-edb4-478e-aa6e-2032dc775eda
 # ╟─c8a346f8-9942-4851-924a-9208cf077ba7
@@ -1777,6 +1804,8 @@ version = "0.9.1+5"
 # ╟─c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 # ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
+# ╟─fea13de5-26d6-4e2e-8fed-e241c650c206
+# ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
