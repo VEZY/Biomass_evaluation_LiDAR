@@ -188,6 +188,7 @@ stats =
 combine(
     gdf_branch,
     [:measurement, :prediction] => RMSE => :RMSE,
+	[:measurement, :prediction] => nRMSE => :nRMSE,
     [:measurement, :prediction] => EF => :EF
 )
 

@@ -7,8 +7,9 @@
 # Script set-up -----------------------------------------------------------
 
 # using Pkg; Pkg.add(url = "https://github.com/VEZY/MTG.jl", rev = "master")
+using Revise
 
-includet("1-code/functions.jl")
+includet("./functions.jl")
 using .BiomassFromLiDAR
 
 # Raw MTGs:

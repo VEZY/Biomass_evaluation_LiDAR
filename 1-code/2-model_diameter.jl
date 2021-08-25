@@ -46,6 +46,7 @@ min_diam = 50
 min_cross_section = π * ((min_diam / 2.0)^2)
 df_inf50 = filter(x -> x.cross_section < min_cross_section, df)
 
+
 # The formula used for the general model:
 # formula = @formula(cross_section ~ 0 + cross_section_pipe_50 + pathlength_subtree + branching_order + segment_index_on_axis + number_leaves + axis_length + segment_subtree)
 # NB: using this formula we see that number_leaves, segment_subtree and segment_index_on_axis have a Pr(>|t|) > 0.05 and a low t value

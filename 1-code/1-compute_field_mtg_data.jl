@@ -5,7 +5,7 @@
 # Imports
 
 using Revise
-includet("1-code/functions.jl")
+includet("./functions.jl")
 using .BiomassFromLiDAR
 
 # Listing the mtg files in xlsx/xlsm format:

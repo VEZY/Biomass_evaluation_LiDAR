@@ -21,6 +21,7 @@ begin
 	using Statistics
 	using AlgebraOfGraphics
 	using CairoMakie
+	using PlutoUI
 end
 
 # ╔═╡ 930fac10-fc16-11eb-259d-6ba1a5317e77
@@ -76,9 +77,8 @@ Importing the data:
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
 begin
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
-# filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_axis)
-#filter!(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "Pipe mod. ⌀<20", df_axis);
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame)
+nothing
 end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
@@ -94,10 +94,6 @@ Make a DataFrame that matches the measurements and the predictions from LiDAR da
 
 # ╔═╡ 0c55a409-7847-4475-a1ef-39c22f459e6f
 begin
-# First, put an id_cor value to the A1 (we now they match between MTGs:
-find_A1(symbol,index) = symbol == "A" && index == 1
-df_axis.id_cor[find_A1.(df_axis.symbol, df_axis.index)] .= 0
-nothing
 # Filter out the measurement data and keep only the rows with axis that were identified in both the manually-measured MTG and the LiDAR-derived MTGs, meaning the first order axis (scale = 2 & index = 1) and the manually identified order 2 axis: 
 df_meas = filter(x -> x.origin == "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis)
 
@@ -117,17 +113,30 @@ innerjoin(
 	filter(x -> x.origin != "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis),
 	on = [:branch, :id_cor]
 )
+nothing
 end
+
+# ╔═╡ d0888d85-3d81-4205-8dbe-e22b1fd37237
+md"""
+### Statistics
+
+Statistics are given for each method, and each variable. They include root mean square error in its basic form (RMSE) or normalized (nRMSE) and the modelling efficiency (EF).  
+"""
 
 # ╔═╡ c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 md"""
-Computing the statistics:
+*Table 1. Statistics according to the method used for the estimation of the cross-section of each segment / axis, given for the cross-section, the volume estimated from the cross-section and the length, and the biomass which is estimated using the volume and the average fresh wood density, and measured using a scale.*
 """
 
 # ╔═╡ 363b2bbd-7118-4819-9814-a9db29c008d7
 md"""
+### Axis total length
+
 Comparing the axis length measured manually and predicted from the LiDAR pointcloud using plantscan3d: 
 """
+
+# ╔═╡ 26f11764-67c0-4b09-904a-d253e1d0fb59
+@bind zoom_len html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
 
 # ╔═╡ 7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 begin
@@ -146,6 +155,11 @@ plt_len =
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
 plt_length = draw(plt_len)
+if zoom_len
+	plt_length = draw(plt_len, axis=(limits = (0, 1, 0, 1),))
+else
+	plt_length = draw(plt_len)
+end
 end
 
 # ╔═╡ 092ed56f-93c7-4343-a080-6ddc0da6c2ac
@@ -153,65 +167,36 @@ md"""
 *Figure 1. Measured (x-axis) and predicted (y-axis) length at axis scale.*
 """
 
-# ╔═╡ 39f9b3df-1b43-40af-91b5-695a4579e32f
-@bind zoom_cs html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
+# ╔═╡ 4cac9d09-5941-4352-83b7-06cb223fa280
+md"""
+### Axis cross-section
 
-# ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
-begin
-df_compare2 = filter(x -> x.origin != "Pipe mod. ⌀<20" && x.origin != "plantscan3d", df_compare)
-#df_compare2 = filter(x -> x.origin == "Pipe model", df_compare)
-plt_cs = 
-	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
-	(
-		mapping(
-			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section => "Predicted cross-section (mm²)", color= :origin, marker = :branch) *
-		visual(Scatter) +
-		mapping(
-			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines)
-	)
-# axis = (width = 500, height = 500)
-# plt_cross_section = draw(plt; axis)
-if zoom_cs
-	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),))
-else
-	plt_cross_section = draw(plt_cs)
-end
-end
+"""
+
+# ╔═╡ 37633b50-c141-45d1-b7dd-1a0eebfda64f
+md"""
+stat. mod. $(@bind len_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind len_2 CheckBox()) plantscan3d $(@bind len_3 CheckBox()) Pipe model $(@bind len_4 CheckBox()) Pipe mod. ⌀<50 $(@bind len_5 CheckBox())
+
+Zoom in plot $(@bind zoom_cs CheckBox())
+"""
 
 # ╔═╡ 13da9f23-5729-467f-b652-2dc83627f586
 md"""
 Comparing the axis volume computed from manual measurement of segments length and diameter, and predicted from the LiDAR pointcloud using plantscan3d as-is, or re-computed using the pipe-model or our method:
 """
 
+# ╔═╡ 6f871718-edb4-478e-aa6e-2032dc775eda
+md"""
+### Axis volume
+
+"""
+
 # ╔═╡ c8a346f8-9942-4851-924a-9208cf077ba7
-@bind zoom_volume html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
+md"""
+stat. mod. $(@bind vol_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind vol_2 CheckBox()) plantscan3d $(@bind vol_3 CheckBox()) Pipe model $(@bind vol_4 CheckBox()) Pipe mod. ⌀<50 $(@bind vol_5 CheckBox())
 
-# ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
-begin
-plt_vol = 
-	data(dropmissing(df_compare, [:volume, :volume_meas])) *
-	(
-		mapping(
-			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
-			:volume => (x -> x * 1e-9) => "Predicted volume (m³)", color= :origin, marker = :branch) *
-		visual(Scatter) +
-		mapping(
-			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
-			:volume_meas => (x -> x * 1e-9) => "Predicted volume (m³)") * visual(Lines)
-	)
-# axis = (width = 500, height = 500)
-# plt_biomass = draw(plt; axis)
-if zoom_volume
-	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),))
-else
-	plt_volume = draw(plt_vol)
-end
-end
-
-# ╔═╡ 5bcbe2ab-121f-488d-b004-a40751b9968a
-filter(x -> x.branch == "tree12h" && x.volume_meas > 0.008 * 1e9 && x.volume < 0.005 * 1e9, df_compare)
+Zoom in plot $(@bind zoom_volume CheckBox())
+"""
 
 # ╔═╡ 430e36cb-5ccb-4103-b587-24eca5c4143b
 md"""
@@ -223,30 +208,18 @@ md"""
 Comparing the axis fresh biomass measured using a scale and predicted using the volumes from the different previous methods and a branch-averaged fresh wood density:
 """
 
-# ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
-@bind zoom_biomass html"""<input type="checkbox" id="zoom" name="zoom"> <label for="zoom"> Zoom in plot</label><br>"""
+# ╔═╡ 4fdcc1f4-6596-477c-bb68-5e2385dac4a6
+md"""
+### Axis biomass
 
-# ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
-begin
-plt = 
-	data(dropmissing(df_compare, [:fresh_mass, :fresh_mass_meas])) *
-	(
-		mapping(
-			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-			:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
-		visual(Scatter) +
-		mapping(
-			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-			:fresh_mass_meas => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
-	)
-# axis = (width = 500, height = 500)
-# plt_biomass = draw(plt; axis)
-if zoom_biomass
-	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),))
-else 
-	plt_biomass = draw(plt)
-end
-end
+"""
+
+# ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
+md"""
+stat. mod. $(@bind bio_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind bio_2 CheckBox()) plantscan3d $(@bind bio_3 CheckBox()) Pipe model $(@bind bio_4 CheckBox()) Pipe mod. ⌀<50 $(@bind bio_5 CheckBox())
+
+Zoom in plot $(@bind zoom_biomass CheckBox())
+"""
 
 # ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
 md"""
@@ -255,17 +228,8 @@ md"""
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
 md"""
-Saving the plots:
+### Saving the plots
 """
-
-# ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
-begin 
-save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit = 3)
-	
-save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
-
-save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit = 3)
-end
 
 # ╔═╡ 6752ed71-b4d5-4da3-9c42-e99b92949970
 md"""
@@ -276,6 +240,18 @@ Functions used in the notebook:
 
 # ╔═╡ 668e784e-bd68-41aa-9dc7-73b13089ed46
 begin
+	
+function filter_model(x, stat, stat_50, ps3d, pipe, pipe_50)
+	x2 = copy(x)
+	selection = Dict("stat. mod." => stat, "stat. mod. ⌀<50" => stat_50, "plantscan3d" => ps3d, "Pipe model" => pipe, "Pipe mod. ⌀<50" => pipe_50)
+	for (k,value) in selection
+		if !value
+			filter!(y -> y.origin != k, x2)
+		end
+	end
+	return x2
+end
+
 """
     nRMSE(obs,sim; digits = 2)
 
@@ -316,14 +292,99 @@ end
 begin
 stats =
 combine(
-    groupby(df_compare, [:origin]),
+    groupby(dropmissing(df_compare, [:cross_section_meas,:volume]), [:origin]),
 	[:cross_section_meas, :cross_section] => RMSE => :RMSE_cross_section,
 	[:volume_meas, :volume] => ((x,y) -> RMSE(x,y) * 1e-9) => :RMSE_volume,
 	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
+	[:cross_section_meas, :cross_section] => nRMSE => :nRMSE_cross_section,
+	[:volume_meas, :volume] => nRMSE => :nRMSE_volume,
+	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
 	[:cross_section_meas, :cross_section] => EF => :EF_cross_section,
     [:volume_meas, :volume] => EF => :EF_volume,
     [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
 )
+sort(stats, :RMSE_cross_section)
+end
+
+# ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
+begin
+df_compare2 = filter_model(df_compare, len_1, len_2, len_3, len_4, len_5)
+plt_cs = 
+	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
+	(
+		mapping(
+			:cross_section_meas => "Measured cross-section (mm²)",
+			:cross_section => "Predicted cross-section (mm²)", color= :origin, marker = :branch) *
+		visual(Scatter) +
+		mapping(
+			:cross_section_meas => "Measured cross-section (mm²)",
+			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines)
+	)
+# axis = (width = 500, height = 500)
+# plt_cross_section = draw(plt; axis)
+if zoom_cs
+	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),))
+else
+	plt_cross_section = draw(plt_cs)
+end
+end
+
+# ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
+begin
+df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3, vol_4, vol_5)
+
+plt_vol = 
+	data(dropmissing(df_compare3, [:volume, :volume_meas])) *
+	(
+		mapping(
+			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
+			:volume => (x -> x * 1e-9) => "Predicted volume (m³)", color= :origin, marker = :branch) *
+		visual(Scatter) +
+		mapping(
+			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
+			:volume_meas => (x -> x * 1e-9) => "Predicted volume (m³)") * visual(Lines)
+	)
+# axis = (width = 500, height = 500)
+# plt_biomass = draw(plt; axis)
+if zoom_volume
+	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),))
+else
+	plt_volume = draw(plt_vol)
+end
+end
+
+# ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+begin
+df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3, bio_4, bio_5)
+plt = 
+	data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
+	(
+		mapping(
+			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+			:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
+		visual(Scatter) +
+		mapping(
+			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
+			:fresh_mass_meas => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
+	)
+# axis = (width = 500, height = 500)
+# plt_biomass = draw(plt; axis)
+if zoom_biomass
+	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),))
+else 
+	plt_biomass = draw(plt, axis=(autolimitaspect = 1,))
+end
+end
+
+# ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
+begin 
+save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit = 3)
+	
+save("../2-results/2-plots/step_4_compare_models_axis_scale_cross_section.png", plt_cross_section, px_per_unit = 3)
+	
+save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
+
+save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit = 3)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -334,6 +395,7 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -342,6 +404,7 @@ CSV = "~0.8.5"
 CairoMakie = "~0.6.3"
 DataFrames = "~1.2.2"
 Plots = "~1.20.1"
+PlutoUI = "~0.7.9"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -1167,6 +1230,12 @@ git-tree-sha1 = "8365fa7758e2e8e4443ce866d6106d8ecbb4474e"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 version = "1.20.1"
 
+[[PlutoUI]]
+deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
+git-tree-sha1 = "44e225d5837e2a2345e69a1d1e01ac2443ff9fcb"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.9"
+
 [[PolygonOps]]
 git-tree-sha1 = "c031d2332c9a8e1c90eca239385815dc271abb22"
 uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
@@ -1389,6 +1458,11 @@ version = "0.6.0"
 [[SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
+
+[[Suppressor]]
+git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.0"
 
 [[TOML]]
 deps = ["Dates"]
@@ -1683,21 +1757,25 @@ version = "0.9.1+5"
 # ╟─cb9cd952-7799-447d-b3e5-03fd1aab13ee
 # ╟─8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
 # ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
+# ╟─d0888d85-3d81-4205-8dbe-e22b1fd37237
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
-# ╠═1f49c11d-678d-4b78-9038-4b5055f302bb
+# ╟─1f49c11d-678d-4b78-9038-4b5055f302bb
 # ╟─363b2bbd-7118-4819-9814-a9db29c008d7
-# ╠═7ccadb8d-940d-4550-a8ef-d38704e9ea7f
+# ╟─26f11764-67c0-4b09-904a-d253e1d0fb59
+# ╟─7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
+# ╟─4cac9d09-5941-4352-83b7-06cb223fa280
+# ╟─37633b50-c141-45d1-b7dd-1a0eebfda64f
 # ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
-# ╟─39f9b3df-1b43-40af-91b5-695a4579e32f
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
-# ╟─81f64f27-3ea5-4c03-abca-f281e072b2ca
+# ╟─6f871718-edb4-478e-aa6e-2032dc775eda
 # ╟─c8a346f8-9942-4851-924a-9208cf077ba7
-# ╠═5bcbe2ab-121f-488d-b004-a40751b9968a
+# ╟─81f64f27-3ea5-4c03-abca-f281e072b2ca
 # ╟─430e36cb-5ccb-4103-b587-24eca5c4143b
 # ╟─17050294-fba5-4595-a601-6c1c7d53fcbe
-# ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╟─4fdcc1f4-6596-477c-bb68-5e2385dac4a6
 # ╟─c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
+# ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
