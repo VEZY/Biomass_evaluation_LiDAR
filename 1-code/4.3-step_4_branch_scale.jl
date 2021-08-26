@@ -36,6 +36,9 @@ Two branches from three walnut trees (*Juglans nigra*) were studied in an agrofo
 
 - The fresh biomass was measured for the whole branch as soon as it is cut from the tree, and for each second order axis as a whole. The biomass of the first order axis is considered as the total branch biomass minus the cumulated biomass of the second order axis (A2), unless there are missing measurements for A2, in which case it is not used (*i.e.* tree13h and tree13l).
 
+!!! warning
+	The direct measurements of the whole-branch length, volume and biomass are biased because there was some structure loss due to cutting and wind. 
+
 ### Computations
 
 Several methods were used to estimate the cross-section of each segment in a branch: 
@@ -71,16 +74,24 @@ md"""
 
 # ╔═╡ 400ee0ec-cc8c-4811-9e40-1438b7d21523
 md"""
-Compute some statistics:
+### Statistics
+"""
+
+# ╔═╡ 5f48b061-a072-4a58-bc61-7acc78e326e7
+md"""
+*Table 1. Statistics for the evaluation of the different methods to estimate the cross-section, shown for the estimation of different variables. RMSE: root mean square error, nRMSE: normalized RMSE, EF: modelling efficiency.*
 """
 
 # ╔═╡ f914aa41-94f6-43f5-bf0e-ac6fd145fc29
 md"""
-Preparing the plots for lengths (not used in this notebook):
+### Plots at branch scale
+
+#### Length
 """
 
 # ╔═╡ 3f9a5b83-7092-47fb-8d9b-6736d528997d
 begin
+n_fig_len = 1 # Number of the figure
 df_compare = filter(x -> x.variable == "length", df_stats_branch)
 plt_len = 
 	data(df_compare) *
@@ -96,9 +107,14 @@ plt_len =
 plt_length = draw(plt_len)
 end
 
+# ╔═╡ fd6afb55-ce85-402b-a197-e7f44654f398
+md"""
+*Figure 1. Comparison of the direct (x) and indirect (y) measurements for the total branch length. Indirect measurement is made using LiDAR point-cloud and the plantscan3d software as-is (raw) or manually corrected for obvious errors.*
+"""
+
 # ╔═╡ 8377daae-d9bd-4086-8d43-8fff3a2e40a6
 md"""
-And for volume and biomass:
+#### Volume
 """
 
 # ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
@@ -117,6 +133,16 @@ p_vol =
 )	
 plt_volume = draw(p_vol)
 end
+
+# ╔═╡ 96f4479c-853f-4534-a3f5-6f31b844e634
+md"""
+*Figure 2. Comparison of the measured volume (top) and biomass (bottom) with predicted biomass using three different methods: plantscan3d as-is (raw), plantscan3d with manual corrections on the MTG, and our statistical model based on the corrected plantscan3d MTG. The diamteter estimation in Plantscan3d was done using the mean-distance algortihm on the LiDAR point-cloud*
+"""
+
+# ╔═╡ 598c673e-1665-4b86-9ac8-7a52e8ce3d88
+md"""
+#### Biomass
+"""
 
 # ╔═╡ a7141396-04dc-4eab-b2d2-a24ab7883e43
 begin
@@ -140,9 +166,18 @@ md"""
 *Figure 1. Comparison of the measured volume (top) and biomass (bottom) with predicted biomass using three different methods: plantscan3d as-is (raw), plantscan3d with manual corrections on the MTG, and our statistical model based on the corrected plantscan3d MTG. The diamteter estimation in Plantscan3d was done using the mean-distance algortihm on the LiDAR point-cloud*
 """
 
+# ╔═╡ 13a85844-0d86-44f7-8649-0d68f6642085
+md"""
+## Discussion
+
+Our results show that the pipe model and even the estimation from plantscan3d are closer to the direct measurement. However, it is important to note that a fair part of the error comes from the tree11h branch in particular, which had many broken structures before the direct measurement, hence we expect an overestimation from the LiDAR estimation. 
+
+It is difficult to know whoch method is best when the branches are not exactly comparable between the direct and indirect measurement. It is then preferable to evaluate the methods at axis scale (see next notebook: `4.3-step_4_axis_scale.jl`). 
+"""
+
 # ╔═╡ f333b2f9-fd84-40c2-8616-053ec70eff0d
 md"""
-And saving the figure to disk:
+### Saving the figures to disk
 """
 
 # ╔═╡ c4e44b1f-3a6d-4718-b241-190504ed39c8
@@ -1648,13 +1683,18 @@ version = "0.9.1+5"
 # ╠═ff229a61-a03d-453e-93a7-b28612622682
 # ╟─91cc83a2-65e0-40fd-a94f-33f716cfc57a
 # ╟─400ee0ec-cc8c-4811-9e40-1438b7d21523
-# ╠═ad52254f-cee8-4663-a2f7-9d6a9f83112a
+# ╟─5f48b061-a072-4a58-bc61-7acc78e326e7
+# ╟─ad52254f-cee8-4663-a2f7-9d6a9f83112a
 # ╟─f914aa41-94f6-43f5-bf0e-ac6fd145fc29
 # ╠═3f9a5b83-7092-47fb-8d9b-6736d528997d
+# ╟─fd6afb55-ce85-402b-a197-e7f44654f398
 # ╟─8377daae-d9bd-4086-8d43-8fff3a2e40a6
 # ╟─808fcdb0-75dd-4856-86f4-4ecd58161442
+# ╠═96f4479c-853f-4534-a3f5-6f31b844e634
+# ╟─598c673e-1665-4b86-9ac8-7a52e8ce3d88
 # ╟─a7141396-04dc-4eab-b2d2-a24ab7883e43
-# ╟─a108212b-cb5d-46a8-a3aa-ddd617170e53
+# ╠═a108212b-cb5d-46a8-a3aa-ddd617170e53
+# ╟─13a85844-0d86-44f7-8649-0d68f6642085
 # ╟─f333b2f9-fd84-40c2-8616-053ec70eff0d
 # ╠═c4e44b1f-3a6d-4718-b241-190504ed39c8
 # ╟─04ec9bac-fcf3-4352-9a19-cb405e9e6f49
