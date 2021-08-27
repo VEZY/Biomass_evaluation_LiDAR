@@ -179,24 +179,24 @@ end
 CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
 CSV.write("2-results/1-data/df_all.csv", df_all)
 
-using Plots
+# using Plots
 
-df_manual = filter(x -> x.origin == "measurement", df_all)
-scatter(df_manual.mass_g, df_manual.fresh_mass)
-
-
-df_manual_fresh_biomass =
-    select(filter(x -> x.origin == "measurement" && x.id_cor !== missing, df_all),
-    :branch, :id_cor,
-    :fresh_mass => :fresh_mass_meas,
-    :volume => :volume_meas)
-
-df_compare = leftjoin(
-    df_manual_fresh_biomass,
-    filter(x -> x.origin != "measurement" && x.id_cor !== missing, df_all),
-    on = [:branch, :id_cor]
-    )
+# df_manual = filter(x -> x.origin == "measurement", df_all)
+# scatter(df_manual.mass_g, df_manual.fresh_mass)
 
 
-scatter(df_compare.fresh_mass_meas, df_compare.fresh_mass)
-scatter(df_compare.volume_meas, df_compare.volume)
+# df_manual_fresh_biomass =
+#     select(filter(x -> x.origin == "measurement" && x.id_cor !== missing, df_all),
+#     :branch, :id_cor,
+#     :fresh_mass => :fresh_mass_meas,
+#     :volume => :volume_meas)
+
+# df_compare = leftjoin(
+#     df_manual_fresh_biomass,
+#     filter(x -> x.origin != "measurement" && x.id_cor !== missing, df_all),
+#     on = [:branch, :id_cor]
+#     )
+
+
+# scatter(df_compare.fresh_mass_meas, df_compare.fresh_mass)
+# scatter(df_compare.volume_meas, df_compare.volume)
