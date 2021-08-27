@@ -42,10 +42,8 @@ df_stats_branch = DataFrame(
     :variable => String[],
     :measurement => Float64[],
     :prediction => Float64[],
-    :model => String[],
-    :error => Float64[],
-    :error_norm => Float64[]
-    )
+    :model => String[]
+)
 
 df_all = DataFrame(
     :origin => String[],
@@ -73,13 +71,14 @@ for i in branches
     df_stats_branch = vcat(df_stats_branch, df)
 
     # Manual measurement:
-    df_manual = DataFrame(mtg_manual, [:mass_g, :cross_section, :length_meas, :fresh_mass, :volume_gf, :id_cor])
+    df_manual = DataFrame(mtg_manual, [:mass_g, :cross_section, :length_gap_filled, :fresh_mass, :volume_gf, :id_cor])
     df_manual[!,:branch] .= i
-    rename!(df_manual, Dict(:volume_gf => "volume", :length_meas => "length"))
+    rename!(df_manual, Dict(:volume_gf => "volume", :length_gap_filled => "length"))
     df_manual[!,:origin] .= "measurement"
 
     # plantscan3d, as-is:
-    df_ps3d_raw = DataFrame(mtg_lidar_ps3d_raw, [:fresh_mass, :volume])
+    df_ps3d_raw = DataFrame(mtg_lidar_ps3d_raw, [:fresh_mass, :volume_ps3d])
+    rename!(df_ps3d_raw, Dict(:volume_ps3d => "volume"))
     df_ps3d_raw[!,:branch] .= i
     # df_ps3d_raw[!,:id_cor] .= missing
     df_ps3d_raw[!,:origin] .= "plantscan3d, raw"
@@ -176,6 +175,7 @@ for i in branches
         )
 end
 
+# sum(filter(x -> x.origin == "measurement" && x.branch == "tree11h" && x.scale == 3, df_all).length) / 1000
 CSV.write("2-results/1-data/df_stats_branch.csv", df_stats_branch)
 CSV.write("2-results/1-data/df_all.csv", df_all)
 

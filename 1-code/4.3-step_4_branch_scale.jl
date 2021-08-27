@@ -9,11 +9,10 @@ begin
 	using CSV
 	using Plots
 	using DataFrames
-	using StatsPlots
 	using Statistics
-	using Plots
 	using AlgebraOfGraphics
 	using CairoMakie
+	using ColorSchemes
 end
 
 # ╔═╡ 061d3726-312d-486f-936d-2f40dfadf3a8
@@ -64,13 +63,21 @@ Importing the data:
 """
 
 # ╔═╡ ff229a61-a03d-453e-93a7-b28612622682
-df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame)
+df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame);
 
 # ╔═╡ 91cc83a2-65e0-40fd-a94f-33f716cfc57a
 md"""
 !!! note
 	The data is computed in the `4.0-compute_volume.jl` script.
 """
+
+# ╔═╡ 7d1bf758-f8b9-4a52-9559-073e3229f138
+md"""
+Defining colors to associate with each method in the plots:
+"""
+
+# ╔═╡ b117cb32-8934-4ba2-96ea-33a8b51e5323
+colors = ["stat. model cor." => ColorSchemes.Set2_6.colors[1], "Pipe model cor." => ColorSchemes.Set2_6.colors[2], "plantscan3d cor." => ColorSchemes.Set2_6.colors[3], "stat. model raw" => ColorSchemes.Set2_6.colors[4], "Pipe model raw" => ColorSchemes.Set2_6.colors[5], "plantscan3d raw" => ColorSchemes.Set2_6.colors[6], "stat. mod." => ColorSchemes.Set2_6.colors[1], "Pipe mod." => ColorSchemes.Set2_6.colors[2]]
 
 # ╔═╡ 400ee0ec-cc8c-4811-9e40-1438b7d21523
 md"""
@@ -104,12 +111,17 @@ plt_len =
 		:measurement => "Measured length (m)",
 		:measurement => "Predicted length (m)") * visual(Lines)
 )	
-plt_length = draw(plt_len)
+plt_length = draw(plt_len, palettes=(; color=colors))
 end
 
 # ╔═╡ fd6afb55-ce85-402b-a197-e7f44654f398
 md"""
 *Figure 1. Comparison of the direct (x) and indirect (y) measurements for the total branch length. Indirect measurement is made using LiDAR point-cloud and the plantscan3d software as-is (raw) or manually corrected for obvious errors.*
+"""
+
+# ╔═╡ d6418774-17ff-403d-a700-88b8c039cd05
+md"""
+The length estimated using no corrections at all on the MTG produced by plantscan3d (raw) seems closer to the direct measurement. However we know it is not really the case, and that it is essentially coming from an error compensation. The corrected MTG from plantscan3d tends to over-estimate the length, because several elements were broken, even before the direct measurement.
 """
 
 # ╔═╡ 8377daae-d9bd-4086-8d43-8fff3a2e40a6
@@ -131,12 +143,12 @@ p_vol =
 		:measurement => "Measured volume (m³)",
 		:measurement => "Predicted volume (m³)") * visual(Lines)
 )	
-plt_volume = draw(p_vol)
+plt_volume = draw(p_vol, palettes=(; color=colors))
 end
 
 # ╔═╡ 96f4479c-853f-4534-a3f5-6f31b844e634
 md"""
-*Figure 2. Comparison of the measured volume (top) and biomass (bottom) with predicted biomass using three different methods: plantscan3d as-is (raw), plantscan3d with manual corrections on the MTG, and our statistical model based on the corrected plantscan3d MTG. The diamteter estimation in Plantscan3d was done using the mean-distance algortihm on the LiDAR point-cloud*
+*Figure 2. Comparison of the measured (x) and predicted (y) volume using different methods: plantscan3d, the pipe model and our statistical model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
 """
 
 # ╔═╡ 598c673e-1665-4b86-9ac8-7a52e8ce3d88
@@ -158,34 +170,49 @@ p_biom =
 		:measurement => "Measured biomass (kg)",
 		:measurement => "Predicted biomass (kg)") * visual(Lines)
 )	
-plt_biomass = draw(p_biom)
+plt_biomass = draw(p_biom, palettes=(; color=colors))
 end
 
 # ╔═╡ a108212b-cb5d-46a8-a3aa-ddd617170e53
 md"""
-*Figure 1. Comparison of the measured volume (top) and biomass (bottom) with predicted biomass using three different methods: plantscan3d as-is (raw), plantscan3d with manual corrections on the MTG, and our statistical model based on the corrected plantscan3d MTG. The diamteter estimation in Plantscan3d was done using the mean-distance algortihm on the LiDAR point-cloud*
+*Figure 3. Comparison of the measured (x) and predicted (y) biomass using different methods: plantscan3d, the pipe model and our statistical model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
+"""
+
+# ╔═╡ f550e258-a33a-4cb9-8a59-8a63b28d2bb3
+md"""
+### Plots at branch scale, cor. as reference
+
+The statistical model computation presents the closest estimations compared to the axis-scale measurements. We can then use it as a reference here to see how much error is added when used on the raw MTG outputed from plantscan3d. We can also compare the outputs from the pipe model to see if it is consistant with its predictions on the corrected MTG too.
+
+#### Volume
+"""
+
+# ╔═╡ dca7d576-e222-4a90-a536-dfbbff2cc486
+md"""
+*Figure 4. Comparison of the volume estimated using the corrected MTG from plantscan3d (x) or on the raw MTG (y), using two methods: the pipe model and our statistical model.*
+"""
+
+# ╔═╡ 011be90f-4534-49bf-91e6-d6619e4ded62
+md"""
+*Table 2. Statistics of the consistancy of prediction of the branche-scale volume between the raw and the corrected MTG from plantscan3d using two methods: the pipe model and the statistical model (ours).*
 """
 
 # ╔═╡ 13a85844-0d86-44f7-8649-0d68f6642085
 md"""
 ## Discussion
 
-Our results show that the pipe model and even the estimation from plantscan3d are closer to the direct measurement. However, it is important to note that a fair part of the error comes from the tree11h branch in particular, which had many broken structures before the direct measurement, hence we expect an overestimation from the LiDAR estimation. 
+Our results show that the pipe model and even the estimation from plantscan3d are closer to the direct measurement. However, it is important to note that a fair part of the error comes from the tree11h branch in particular, which had many broken structures before the direct measurement, hence we expect an overestimation from the LiDAR estimation.
 
-It is difficult to know whoch method is best when the branches are not exactly comparable between the direct and indirect measurement. It is then preferable to evaluate the methods at axis scale (see next notebook: `4.3-step_4_axis_scale.jl`). 
+!!! warning
+	Branch tree11h has a consequent structure missing from the direct measurements (see S26 on A1). 
+
+It is difficult to know which method is best when the branches are not exactly comparable between the direct and indirect measurement. It is then preferable to evaluate the methods at axis scale (see next notebook: `4.3-step_4_axis_scale.jl`). 
 """
 
 # ╔═╡ f333b2f9-fd84-40c2-8616-053ec70eff0d
 md"""
 ### Saving the figures to disk
 """
-
-# ╔═╡ c4e44b1f-3a6d-4718-b241-190504ed39c8
-begin
-save("../2-results/2-plots/step_4_compare_models_branch_scale_len.png", plt_length, px_per_unit = 3)
-save("../2-results/2-plots/step_4_compare_models_branch_scale_volume.png", plt_volume, px_per_unit = 3)
-save("../2-results/2-plots/step_4_compare_models_branch_scale_biomass.png", plt_biomass, px_per_unit = 3)
-end
 
 # ╔═╡ 04ec9bac-fcf3-4352-9a19-cb405e9e6f49
 md"""
@@ -230,6 +257,15 @@ function EF(obs, sim; digits = 2)
     SStot = sum((obs .- mean(obs)).^2)
     return round(1 - SSres / SStot, digits = digits)
 end
+	
+function Bias(obs, sim; digits = 2)
+    return round(mean((obs .- sim)), digits = digits)
+end
+	
+function nBias(obs, sim; digits = 2)
+    return round(mean((obs .- sim)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+end
+
 end
 
 # ╔═╡ ad52254f-cee8-4663-a2f7-9d6a9f83112a
@@ -250,24 +286,73 @@ stats_biomass = filter(x -> x.variable == "biomass", stats)
 stats
 end
 
+# ╔═╡ 0651e9c6-309a-425f-bba5-ea0b00c43e0b
+begin
+vol_stat_mod_cor = transform(filter(x -> x.model == "stat. model cor.", df_compare2), :branch => (x-> "stat. mod.") => :method)
+vol_stat_mod_raw = transform(filter(x -> x.model == "stat. model raw", df_compare2), :branch => (x-> "stat. mod.") => :method)
+vol_pipe_cor = transform(filter(x -> x.model == "Pipe model cor.", df_compare2), :branch => (x-> "Pipe mod.") => :method)
+# vol_pipe_cor = transform(filter(x -> x.model == "stat. model cor.", df_compare2), :branch => (x-> "Pipe mod.") => :method)
+
+vol_pipe_raw = transform(filter(x -> x.model == "Pipe model raw", df_compare2), :branch => (x-> "Pipe mod.") => :method)
+
+df_cor = select(vcat(vol_stat_mod_cor, vol_pipe_cor), :branch, :prediction => :corrected, :method)
+df_raw = select(vcat(vol_stat_mod_raw, vol_pipe_raw), :branch, :prediction => :raw, :method)
+	
+df_compare_vol = innerjoin(df_cor, df_raw, on = [:branch, :method])
+	
+stats_vol =
+combine(
+    groupby(df_compare_vol, [:method]),
+	[:raw, :corrected] => ((x,y) -> RMSE(x, y, digits = 3)) => :RMSE,
+	[:raw, :corrected] => nRMSE => :nRMSE,
+	[:raw, :corrected] => ((x,y) -> Bias(x, y, digits = 3)) => :Bias,
+	[:raw, :corrected] => nBias => :nBias
+	)
+sort(stats_vol, :nRMSE)
+end
+
+# ╔═╡ 1afd8da2-5b18-4672-aa34-d9f8e66b3bef
+begin
+p_vol2 = 
+	data(df_compare_vol) *
+(
+	mapping(
+		:corrected => "Volume, corrected MTG (m³)",
+		:raw => "Volume, raw MTG (m³)", color= :method, marker = :branch) *
+	visual(Scatter) +
+	mapping(
+		:raw => "Volume, corrected MTG (m³)",
+		:raw => "Volume, raw MTG (m³)") * visual(Lines)
+)	
+plt_volume2 = draw(p_vol2, palettes=(; color=colors))
+end
+
+# ╔═╡ c4e44b1f-3a6d-4718-b241-190504ed39c8
+begin
+save("../2-results/2-plots/step_4_compare_models_branch_scale_len.png", plt_length, px_per_unit = 3)
+save("../2-results/2-plots/step_4_compare_models_branch_scale_volume.png", plt_volume, px_per_unit = 3)
+save("../2-results/2-plots/step_4_compare_models_branch_scale_biomass.png", plt_biomass, px_per_unit = 3)
+save("../2-results/2-plots/step_4_compare_models_branch_scale_volume_consistancy.png", plt_volume2, px_per_unit = 3)
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 AlgebraOfGraphics = "~0.5.2"
 CSV = "~0.8.5"
 CairoMakie = "~0.6.4"
+ColorSchemes = "~3.14.0"
 DataFrames = "~1.2.2"
 Plots = "~1.20.0"
-StatsPlots = "~0.14.26"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -305,18 +390,6 @@ version = "0.4.1"
 
 [[ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-
-[[Arpack]]
-deps = ["Arpack_jll", "Libdl", "LinearAlgebra"]
-git-tree-sha1 = "2ff92b71ba1747c5fdd541f8fc87736d82f40ec9"
-uuid = "7d9fca2a-8960-54d3-9f78-7d1dccf2cb97"
-version = "0.4.0"
-
-[[Arpack_jll]]
-deps = ["Libdl", "OpenBLAS_jll", "Pkg"]
-git-tree-sha1 = "e214a9b9bd1b4e1b4f15b22c0994862b66af7ff7"
-uuid = "68821587-b530-5797-8361-c406ea357684"
-version = "3.5.0+3"
 
 [[ArrayInterface]]
 deps = ["IfElse", "LinearAlgebra", "Requires", "SparseArrays", "Static"]
@@ -382,12 +455,6 @@ deps = ["Compat", "LinearAlgebra", "SparseArrays"]
 git-tree-sha1 = "bdc0937269321858ab2a4f288486cb258b9a0af7"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 version = "1.3.0"
-
-[[Clustering]]
-deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "75479b7df4167267d75294d14b58244695beb2ac"
-uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-version = "0.14.2"
 
 [[ColorBrewer]]
 deps = ["Colors", "JSON", "Test"]
@@ -461,12 +528,6 @@ version = "0.18.10"
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
 uuid = "e2d170a0-9d28-54be-80f0-106bbe20a464"
 version = "1.0.0"
-
-[[DataValues]]
-deps = ["DataValueInterfaces", "Dates"]
-git-tree-sha1 = "d88a19299eba280a6d062e135a43f00323ae70bf"
-uuid = "e7dc6d0d-1eca-5fa6-8ad6-5aecde8b7ea5"
-version = "0.4.13"
 
 [[Dates]]
 deps = ["Printf"]
@@ -993,22 +1054,10 @@ version = "0.3.3"
 [[MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
-[[MultivariateStats]]
-deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "8d958ff1854b166003238fe191ec34b9d592860a"
-uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
-version = "0.8.0"
-
 [[NaNMath]]
 git-tree-sha1 = "bfe47e760d60b82b66b61d2d44128b62e3a369fb"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "0.3.5"
-
-[[NearestNeighbors]]
-deps = ["Distances", "StaticArrays"]
-git-tree-sha1 = "16baacfdc8758bc374882566c9187e785e85c2f0"
-uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.9"
 
 [[Netpbm]]
 deps = ["FileIO", "ImageCore"]
@@ -1035,10 +1084,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "7937eda4681660b4d6aeeecc2f7e1c81c8ee4e2f"
 uuid = "e7412a2a-1a6e-54c0-be00-318e2571c051"
 version = "1.3.5+0"
-
-[[OpenBLAS_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
-uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 
 [[OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -1364,12 +1409,6 @@ git-tree-sha1 = "a209a68f72601f8aa0d3a7c4e50ba3f67e32e6f8"
 uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 version = "0.6.24"
 
-[[StatsPlots]]
-deps = ["Clustering", "DataStructures", "DataValues", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
-git-tree-sha1 = "e7d1e79232310bd654c7cef46465c537562af4fe"
-uuid = "f3b207a7-027a-5e70-b257-86293d7955fd"
-version = "0.14.26"
-
 [[StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]
 git-tree-sha1 = "000e168f5cc9aded17b6999a560b7c11dda69095"
@@ -1383,12 +1422,6 @@ uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 [[TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-
-[[TableOperations]]
-deps = ["SentinelArrays", "Tables", "Test"]
-git-tree-sha1 = "019acfd5a4a6c5f0f38de69f2ff7ed527f1881da"
-uuid = "ab02a1b2-a7df-11e8-156e-fb1833f50b87"
-version = "1.1.0"
 
 [[TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
@@ -1457,12 +1490,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg", "Wayland_jll"]
 git-tree-sha1 = "2839f1c1296940218e35df0bbb220f2a79686670"
 uuid = "2381bf8a-dfd0-557d-9999-79630e7b1b91"
 version = "1.18.0+4"
-
-[[Widgets]]
-deps = ["Colors", "Dates", "Observables", "OrderedCollections"]
-git-tree-sha1 = "eae2fbbc34a79ffd57fb4c972b08ce50b8f6a00d"
-uuid = "cc8bc4a8-27d6-5769-a93b-9d913e69aa62"
-version = "0.6.3"
 
 [[WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1682,19 +1709,27 @@ version = "0.9.1+5"
 # ╟─e0504916-637f-4e0f-817e-21eeeb257100
 # ╠═ff229a61-a03d-453e-93a7-b28612622682
 # ╟─91cc83a2-65e0-40fd-a94f-33f716cfc57a
+# ╟─7d1bf758-f8b9-4a52-9559-073e3229f138
+# ╟─b117cb32-8934-4ba2-96ea-33a8b51e5323
 # ╟─400ee0ec-cc8c-4811-9e40-1438b7d21523
 # ╟─5f48b061-a072-4a58-bc61-7acc78e326e7
 # ╟─ad52254f-cee8-4663-a2f7-9d6a9f83112a
 # ╟─f914aa41-94f6-43f5-bf0e-ac6fd145fc29
-# ╠═3f9a5b83-7092-47fb-8d9b-6736d528997d
+# ╟─3f9a5b83-7092-47fb-8d9b-6736d528997d
 # ╟─fd6afb55-ce85-402b-a197-e7f44654f398
+# ╟─d6418774-17ff-403d-a700-88b8c039cd05
 # ╟─8377daae-d9bd-4086-8d43-8fff3a2e40a6
 # ╟─808fcdb0-75dd-4856-86f4-4ecd58161442
-# ╠═96f4479c-853f-4534-a3f5-6f31b844e634
+# ╟─96f4479c-853f-4534-a3f5-6f31b844e634
 # ╟─598c673e-1665-4b86-9ac8-7a52e8ce3d88
 # ╟─a7141396-04dc-4eab-b2d2-a24ab7883e43
-# ╠═a108212b-cb5d-46a8-a3aa-ddd617170e53
-# ╟─13a85844-0d86-44f7-8649-0d68f6642085
+# ╟─a108212b-cb5d-46a8-a3aa-ddd617170e53
+# ╟─f550e258-a33a-4cb9-8a59-8a63b28d2bb3
+# ╟─1afd8da2-5b18-4672-aa34-d9f8e66b3bef
+# ╟─dca7d576-e222-4a90-a536-dfbbff2cc486
+# ╟─011be90f-4534-49bf-91e6-d6619e4ded62
+# ╟─0651e9c6-309a-425f-bba5-ea0b00c43e0b
+# ╠═13a85844-0d86-44f7-8649-0d68f6642085
 # ╟─f333b2f9-fd84-40c2-8616-053ec70eff0d
 # ╠═c4e44b1f-3a6d-4718-b241-190504ed39c8
 # ╟─04ec9bac-fcf3-4352-9a19-cb405e9e6f49

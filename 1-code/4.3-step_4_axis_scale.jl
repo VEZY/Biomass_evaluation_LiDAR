@@ -22,6 +22,7 @@ begin
 	using AlgebraOfGraphics
 	using CairoMakie
 	using PlutoUI
+	using ColorSchemes
 end
 
 # ╔═╡ 930fac10-fc16-11eb-259d-6ba1a5317e77
@@ -105,16 +106,35 @@ select!(
 	:fresh_mass => :fresh_mass_meas, 
 	:volume => :volume_meas
 )
-
+	
+	
 # And make a new DataFrame with predictions and simulations in different columns:
-df_compare = 
+df_compare_tmp = 
 innerjoin(
 	df_meas,
 	filter(x -> x.origin != "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis),
 	on = [:branch, :id_cor]
 )
-nothing
+
+# Change the units to better match with our values (mass in kg and volume in m³):
+df_compare = transform(
+	df_compare_tmp, 
+	:mass_g => x -> x * 1e-3,
+	:fresh_mass_meas => x -> x * 1e-3,
+	:fresh_mass => x -> x * 1e-3,
+	:volume => x -> x * 1e-9,
+	:volume_meas => x -> x * 1e-9,
+	renamecols = false
+);
 end
+
+# ╔═╡ 0a19d625-9b12-4565-a51f-f0dd96f2af40
+md"""
+Defining colors to associate with each method in the plots:
+"""
+
+# ╔═╡ 29fa4d06-f5d5-434c-9b98-bc6243d5f55c
+colors = ["stat. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "stat. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5]]
 
 # ╔═╡ d0888d85-3d81-4205-8dbe-e22b1fd37237
 md"""
@@ -251,9 +271,14 @@ begin
 function filter_model(x, stat, stat_50, ps3d, pipe, pipe_50)
 	x2 = copy(x)
 	selection = Dict("stat. mod." => stat, "stat. mod. ⌀<50" => stat_50, "plantscan3d" => ps3d, "Pipe model" => pipe, "Pipe mod. ⌀<50" => pipe_50)
+	color = Dict("stat. mod." => "#fbb4ae", "stat. mod. ⌀<50" => "#b3cde3", "plantscan3d" => "#ccebc5", "Pipe model" => "#decbe4", "Pipe mod. ⌀<50" => "#fed9a6")
+
+	x2[!,:color] .= "#fbb4ae"
 	for (k,value) in selection
 		if !value
 			filter!(y -> y.origin != k, x2)
+		else	
+			x2[x2.origin .== k, :color] .= color[k]
 		end
 	end
 	return x2
@@ -299,23 +324,21 @@ end
 begin
 stats =
 combine(
-    groupby(dropmissing(df_compare, [:cross_section_meas,:volume]), [:origin]),
-	[:cross_section_meas, :cross_section] => RMSE => :RMSE_cross_section,
-	[:volume_meas, :volume] => ((x,y) -> RMSE(x,y) * 1e-9) => :RMSE_volume,
+    groupby(dropmissing(df_compare, [:volume]), [:origin]),
+	[:volume_meas, :volume] => RMSE => :RMSE_volume,
 	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
-	[:cross_section_meas, :cross_section] => nRMSE => :nRMSE_cross_section,
 	[:volume_meas, :volume] => nRMSE => :nRMSE_volume,
 	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
-	[:cross_section_meas, :cross_section] => EF => :EF_cross_section,
     [:volume_meas, :volume] => EF => :EF_volume,
     [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
 )
-sort(stats, :RMSE_cross_section)
+sort(stats, :RMSE_volume)
 end
 
 # ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
 begin
 df_compare2 = filter_model(df_compare, len_1, len_2, len_3, len_4, len_5)
+	
 plt_cs = 
 	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
 	(
@@ -330,33 +353,33 @@ plt_cs =
 # axis = (width = 500, height = 500)
 # plt_cross_section = draw(plt; axis)
 if zoom_cs
-	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),))
+	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),), palettes=(; color=colors))
 else
-	plt_cross_section = draw(plt_cs)
+	plt_cross_section = draw(plt_cs, palettes=(; color=colors))
 end
 end
 
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
 df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3, vol_4, vol_5)
-
+	
 plt_vol = 
 	data(dropmissing(df_compare3, [:volume, :volume_meas])) *
 	(
 		mapping(
-			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
-			:volume => (x -> x * 1e-9) => "Predicted volume (m³)", color= :origin, marker = :branch) *
+			:volume_meas => "Measured volume (m³)",
+			:volume => "Predicted volume (m³)", color= :origin, marker = :branch) *
 		visual(Scatter) +
 		mapping(
-			:volume_meas => (x -> x * 1e-9) => "Measured volume (m³)",
-			:volume_meas => (x -> x * 1e-9) => "Predicted volume (m³)") * visual(Lines)
+			:volume_meas => "Measured volume (m³)",
+			:volume_meas => "Predicted volume (m³)") * visual(Lines)
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
 if zoom_volume
-	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),))
+	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),), palettes=(; color=colors))
 else
-	plt_volume = draw(plt_vol)
+	plt_volume = draw(plt_vol, palettes=(; color=colors))
 end
 end
 
@@ -367,40 +390,40 @@ plt =
 	data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
 	(
 		mapping(
-			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-			:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
+			:fresh_mass_meas => "Measured fresh biomass (kg)",
+			:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
 		visual(Scatter) +
 		mapping(
-			:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-			:fresh_mass_meas => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
+			:fresh_mass_meas => "Measured fresh biomass (kg)",
+			:fresh_mass_meas => "Predicted fresh biomass (kg)") * visual(Lines)
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
 if zoom_biomass
-	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),))
+	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),), palettes=(; color=colors))
 else 
-	plt_biomass = draw(plt, axis=(autolimitaspect = 1,))
+	plt_biomass = draw(plt, axis=(autolimitaspect = 1,), palettes=(; color=colors))
 end
 end
 
 # ╔═╡ fea13de5-26d6-4e2e-8fed-e241c650c206
 begin
-gdf = groupby(dropmissing(df_compare4,[:fresh_mass, :fresh_mass_meas]), [:branch, :origin])
+gdf = groupby(df_compare4, [:branch, :origin])
 df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols = false)
-	
+
 plt_branch = 
 data(df_branch) *
 (
 	mapping(
-		:fresh_mass_meas => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-		:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
+		:fresh_mass_meas => "Measured fresh biomass (kg)",
+		:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
 	visual(Scatter) +
 	mapping(
-		:fresh_mass => (x -> x * 1e-3) => "Measured fresh biomass (kg)",
-		:fresh_mass => (x -> x * 1e-3) => "Predicted fresh biomass (kg)") * visual(Lines)
+		:fresh_mass => "Measured fresh biomass (kg)",
+		:fresh_mass => "Predicted fresh biomass (kg)") * visual(Lines)
 )
 	
-draw(plt_branch, axis=(autolimitaspect = 1,))
+plot_branch = draw(plt_branch, axis=(autolimitaspect = 1,), palettes=(; color=colors))
 end
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
@@ -412,6 +435,8 @@ save("../2-results/2-plots/step_4_compare_models_axis_scale_cross_section.png", 
 save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
 
 save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit = 3)
+	
+save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass_branch.png", plot_branch, px_per_unit = 3)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -420,6 +445,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
@@ -429,6 +455,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 AlgebraOfGraphics = "~0.5.2"
 CSV = "~0.8.5"
 CairoMakie = "~0.6.3"
+ColorSchemes = "~3.14.0"
 DataFrames = "~1.2.2"
 Plots = "~1.20.1"
 PlutoUI = "~0.7.9"
@@ -1783,7 +1810,9 @@ version = "0.9.1+5"
 # ╠═20df87b5-9a06-4a7d-922d-873f423a4001
 # ╟─cb9cd952-7799-447d-b3e5-03fd1aab13ee
 # ╟─8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
-# ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
+# ╟─0c55a409-7847-4475-a1ef-39c22f459e6f
+# ╟─0a19d625-9b12-4565-a51f-f0dd96f2af40
+# ╟─29fa4d06-f5d5-434c-9b98-bc6243d5f55c
 # ╟─d0888d85-3d81-4205-8dbe-e22b1fd37237
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╟─1f49c11d-678d-4b78-9038-4b5055f302bb
@@ -1793,7 +1822,7 @@ version = "0.9.1+5"
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
 # ╟─4cac9d09-5941-4352-83b7-06cb223fa280
 # ╟─37633b50-c141-45d1-b7dd-1a0eebfda64f
-# ╠═04dd878b-2358-4fa7-8d85-1e8928b10c59
+# ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
 # ╟─6f871718-edb4-478e-aa6e-2032dc775eda
 # ╟─c8a346f8-9942-4851-924a-9208cf077ba7
@@ -1802,7 +1831,7 @@ version = "0.9.1+5"
 # ╟─17050294-fba5-4595-a601-6c1c7d53fcbe
 # ╟─4fdcc1f4-6596-477c-bb68-5e2385dac4a6
 # ╟─c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
-# ╠═b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
+# ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─fea13de5-26d6-4e2e-8fed-e241c650c206
 # ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
