@@ -4,6 +4,15 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end
+
 # ╔═╡ 119133e0-fb56-11eb-0e70-336d051ce19a
 begin
 	using CSV
@@ -13,6 +22,7 @@ begin
 	using AlgebraOfGraphics
 	using CairoMakie
 	using ColorSchemes
+	using PlutoUI
 end
 
 # ╔═╡ 061d3726-312d-486f-936d-2f40dfadf3a8
@@ -25,27 +35,27 @@ The purpose of this notebook is to evaluate the estimation of the branches volum
 
 ## Material and methods
 
-### Measurements 
+### Measurements
 
 Two branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology:
 
-- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement). 
+- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement).
 
 - The dimensions included a measurement of the diameter and length for each segment on the branch. They are used to compute a reference volume for each segment. See the previous notebook for more details (`4.2-step_2_check_manual_measurement.jl`).
 
 - The fresh biomass was measured for the whole branch as soon as it is cut from the tree, and for each second order axis as a whole. The biomass of the first order axis is considered as the total branch biomass minus the cumulated biomass of the second order axis (A2), unless there are missing measurements for A2, in which case it is not used (*i.e.* tree13h and tree13l).
 
 !!! warning
-	The direct measurements of the whole-branch length, volume and biomass are biased because there was some structure loss due to cutting and wind. 
+	The direct measurements of the whole-branch length, volume and biomass are biased because there was some structure loss due to cutting and wind.
 
 ### Computations
 
-Several methods were used to estimate the cross-section of each segment in a branch: 
+Several methods were used to estimate the cross-section of each segment in a branch:
 
-- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings. 
+- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings.
 - the pipe model applied to all segments below 20mm diameter. This method is the same as the regular pipe model but considers all segments with a diameter higher than 20mm as well-measured by the LiDAR, and start computing the cross-section only below this given threshold.
-- the statistical model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data. 
-- the statistical model applied to segments below 20mm diameter. This is the same strategy as for the pipe model. 
+- the statistical model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data.
+- the statistical model applied to segments below 20mm diameter. This is the same strategy as for the pipe model.
 
 ## Results
 """
@@ -100,7 +110,7 @@ md"""
 begin
 n_fig_len = 1 # Number of the figure
 df_compare = filter(x -> x.variable == "length", df_stats_branch)
-plt_len = 
+plt_len =
 	data(df_compare) *
 (
 	mapping(
@@ -110,7 +120,7 @@ plt_len =
 	mapping(
 		:measurement => "Measured length (m)",
 		:measurement => "Predicted length (m)") * visual(Lines)
-)	
+)
 plt_length = draw(plt_len, palettes=(; color=colors))
 end
 
@@ -129,22 +139,10 @@ md"""
 #### Volume
 """
 
-# ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
-begin
-df_compare2 = filter(x -> x.variable == "volume", df_stats_branch)
-p_vol = 
-	data(df_compare2) *
-(
-	mapping(
-		:measurement => "Measured volume (m³)",
-		:prediction => "Predicted volume (m³)", color= :model, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:measurement => "Measured volume (m³)",
-		:measurement => "Predicted volume (m³)") * visual(Lines)
-)	
-plt_volume = draw(p_vol, palettes=(; color=colors))
-end
+# ╔═╡ f1babd1c-0151-4266-ad7b-beae5e5f977f
+md"""
+stat. model raw $(@bind vol_1 CheckBox(default = true)) stat. model cor. $(@bind vol_2 CheckBox()) plantscan3d raw $(@bind vol_3 CheckBox()) plantscan3d cor. $(@bind vol_4 CheckBox()) Pipe model raw $(@bind vol_5 CheckBox()) Pipe model cor. $(@bind vol_6 CheckBox())
+"""
 
 # ╔═╡ 96f4479c-853f-4534-a3f5-6f31b844e634
 md"""
@@ -156,22 +154,10 @@ md"""
 #### Biomass
 """
 
-# ╔═╡ a7141396-04dc-4eab-b2d2-a24ab7883e43
-begin
-df_compare3 = filter(x -> x.variable == "biomass", df_stats_branch)
-p_biom = 
-	data(df_compare3) *
-(
-	mapping(
-		:measurement => "Measured biomass (kg)",
-		:prediction => "Predicted biomass (kg)", color= :model, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:measurement => "Measured biomass (kg)",
-		:measurement => "Predicted biomass (kg)") * visual(Lines)
-)	
-plt_biomass = draw(p_biom, palettes=(; color=colors))
-end
+# ╔═╡ f164ffb7-296e-477b-bb18-0fa1e82329e2
+md"""
+stat. model raw $(@bind bio_1 CheckBox(default = true)) stat. model cor. $(@bind bio_2 CheckBox()) plantscan3d raw $(@bind bio_3 CheckBox()) plantscan3d cor. $(@bind bio_4 CheckBox()) Pipe model raw $(@bind bio_5 CheckBox()) Pipe model cor. $(@bind bio_6 CheckBox())
+"""
 
 # ╔═╡ a108212b-cb5d-46a8-a3aa-ddd617170e53
 md"""
@@ -204,9 +190,9 @@ md"""
 Our results show that the pipe model and even the estimation from plantscan3d are closer to the direct measurement. However, it is important to note that a fair part of the error comes from the tree11h branch in particular, which had many broken structures before the direct measurement, hence we expect an overestimation from the LiDAR estimation.
 
 !!! warning
-	Branch tree11h has a consequent structure missing from the direct measurements (see S26 on A1). 
+	Branch tree11h has a consequent structure missing from the direct measurements (see S26 on A1).
 
-It is difficult to know which method is best when the branches are not exactly comparable between the direct and indirect measurement. It is then preferable to evaluate the methods at axis scale (see next notebook: `4.3-step_4_axis_scale.jl`). 
+It is difficult to know which method is best when the branches are not exactly comparable between the direct and indirect measurement. It is then preferable to evaluate the methods at axis scale (see next notebook: `4.3-step_4_axis_scale.jl`).
 """
 
 # ╔═╡ f333b2f9-fd84-40c2-8616-053ec70eff0d
@@ -223,6 +209,19 @@ Functions used in the notebook:
 
 # ╔═╡ c49a2264-3ec3-4e60-a159-6cca2c479e61
 begin
+
+function filter_model(x, stat_raw, stat_cor, ps3d_raw, ps3d_cor, pipe_raw, pipe_cor)
+	x2 = copy(x)
+	selection = Dict("stat. model raw" => stat_raw, "stat. model cor." => stat_cor, "plantscan3d raw" => ps3d_raw, "plantscan3d cor." => ps3d_cor, "Pipe model raw" => pipe_raw, "Pipe model cor." => pipe_cor)
+
+	for (k,value) in selection
+		if !value
+			filter!(y -> y.model != k, x2)
+		end
+	end
+	return x2
+end
+
 """
     nRMSE(obs,sim; digits = 2)
 
@@ -257,13 +256,13 @@ function EF(obs, sim; digits = 2)
     SStot = sum((obs .- mean(obs)).^2)
     return round(1 - SSres / SStot, digits = digits)
 end
-	
+
 function Bias(obs, sim; digits = 2)
-    return round(mean((obs .- sim)), digits = digits)
+    return round(mean((sim .- obs)), digits = digits)
 end
-	
+
 function nBias(obs, sim; digits = 2)
-    return round(mean((obs .- sim)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
 end
 
 end
@@ -286,20 +285,59 @@ stats_biomass = filter(x -> x.variable == "biomass", stats)
 stats
 end
 
+# ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
+begin
+df_compare2 = filter(x -> x.variable == "volume", df_stats_branch)
+df_compare2 = filter_model(df_compare2, vol_1, vol_2, vol_3, vol_4, vol_5, vol_6)
+
+p_vol =
+	data(df_compare2) *
+(
+	mapping(
+		:measurement => "Measured volume (m³)",
+		:prediction => "Predicted volume (m³)", color= :model, marker = :branch) *
+	visual(Scatter) +
+	mapping(
+		:measurement => "Measured volume (m³)",
+		:measurement => "Predicted volume (m³)") * visual(Lines)
+)
+plt_volume = draw(p_vol, palettes=(; color=colors))
+end
+
+# ╔═╡ a7141396-04dc-4eab-b2d2-a24ab7883e43
+begin
+df_compare3 = filter(x -> x.variable == "biomass", df_stats_branch)
+df_compare3 = filter_model(df_compare3, bio_1, bio_2, bio_3, bio_4, bio_5, bio_6)
+
+p_biom =
+	data(df_compare3) *
+(
+	mapping(
+		:measurement => "Measured biomass (kg)",
+		:prediction => "Predicted biomass (kg)", color= :model, marker = :branch) *
+	visual(Scatter) +
+	mapping(
+		:measurement => "Measured biomass (kg)",
+		:measurement => "Predicted biomass (kg)") * visual(Lines)
+)
+plt_biomass = draw(p_biom, palettes=(; color=colors))
+end
+
 # ╔═╡ 0651e9c6-309a-425f-bba5-ea0b00c43e0b
 begin
-vol_stat_mod_cor = transform(filter(x -> x.model == "stat. model cor.", df_compare2), :branch => (x-> "stat. mod.") => :method)
-vol_stat_mod_raw = transform(filter(x -> x.model == "stat. model raw", df_compare2), :branch => (x-> "stat. mod.") => :method)
-vol_pipe_cor = transform(filter(x -> x.model == "Pipe model cor.", df_compare2), :branch => (x-> "Pipe mod.") => :method)
-# vol_pipe_cor = transform(filter(x -> x.model == "stat. model cor.", df_compare2), :branch => (x-> "Pipe mod.") => :method)
+df_vol_tmp = filter(x -> x.variable == "volume", df_stats_branch)
+vol_stat_mod_cor = transform(filter(x -> x.model == "stat. model cor.", df_vol_tmp), :branch => (x-> "stat. mod.") => :method)
+vol_stat_mod_raw = transform(filter(x -> x.model == "stat. model raw", df_vol_tmp), :branch => (x-> "stat. mod.") => :method)
+vol_pipe_cor = transform(filter(x -> x.model == "Pipe model cor.", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
+# vol_pipe_cor = transform(filter(x -> x.model == "stat. model cor.", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
 
-vol_pipe_raw = transform(filter(x -> x.model == "Pipe model raw", df_compare2), :branch => (x-> "Pipe mod.") => :method)
+vol_pipe_raw = transform(filter(x -> x.model == "Pipe model raw", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
 
 df_cor = select(vcat(vol_stat_mod_cor, vol_pipe_cor), :branch, :prediction => :corrected, :method)
 df_raw = select(vcat(vol_stat_mod_raw, vol_pipe_raw), :branch, :prediction => :raw, :method)
-	
+
 df_compare_vol = innerjoin(df_cor, df_raw, on = [:branch, :method])
-	
+
 stats_vol =
 combine(
     groupby(df_compare_vol, [:method]),
@@ -313,7 +351,7 @@ end
 
 # ╔═╡ 1afd8da2-5b18-4672-aa34-d9f8e66b3bef
 begin
-p_vol2 = 
+p_vol2 =
 	data(df_compare_vol) *
 (
 	mapping(
@@ -323,7 +361,7 @@ p_vol2 =
 	mapping(
 		:raw => "Volume, corrected MTG (m³)",
 		:raw => "Volume, raw MTG (m³)") * visual(Lines)
-)	
+)
 plt_volume2 = draw(p_vol2, palettes=(; color=colors))
 end
 
@@ -344,6 +382,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -353,6 +392,7 @@ CairoMakie = "~0.6.4"
 ColorSchemes = "~3.14.0"
 DataFrames = "~1.2.2"
 Plots = "~1.20.0"
+PlutoUI = "~0.7.9"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -1196,6 +1236,12 @@ git-tree-sha1 = "e39bea10478c6aff5495ab522517fae5134b40e3"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 version = "1.20.0"
 
+[[PlutoUI]]
+deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
+git-tree-sha1 = "44e225d5837e2a2345e69a1d1e01ac2443ff9fcb"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.9"
+
 [[PolygonOps]]
 git-tree-sha1 = "c031d2332c9a8e1c90eca239385815dc271abb22"
 uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
@@ -1418,6 +1464,11 @@ version = "0.6.0"
 [[SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
+
+[[Suppressor]]
+git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.0"
 
 [[TOML]]
 deps = ["Dates"]
@@ -1719,9 +1770,11 @@ version = "0.9.1+5"
 # ╟─fd6afb55-ce85-402b-a197-e7f44654f398
 # ╟─d6418774-17ff-403d-a700-88b8c039cd05
 # ╟─8377daae-d9bd-4086-8d43-8fff3a2e40a6
+# ╟─f1babd1c-0151-4266-ad7b-beae5e5f977f
 # ╟─808fcdb0-75dd-4856-86f4-4ecd58161442
 # ╟─96f4479c-853f-4534-a3f5-6f31b844e634
 # ╟─598c673e-1665-4b86-9ac8-7a52e8ce3d88
+# ╟─f164ffb7-296e-477b-bb18-0fa1e82329e2
 # ╟─a7141396-04dc-4eab-b2d2-a24ab7883e43
 # ╟─a108212b-cb5d-46a8-a3aa-ddd617170e53
 # ╟─f550e258-a33a-4cb9-8a59-8a63b28d2bb3
@@ -1729,7 +1782,7 @@ version = "0.9.1+5"
 # ╟─dca7d576-e222-4a90-a536-dfbbff2cc486
 # ╟─011be90f-4534-49bf-91e6-d6619e4ded62
 # ╟─0651e9c6-309a-425f-bba5-ea0b00c43e0b
-# ╠═13a85844-0d86-44f7-8649-0d68f6642085
+# ╟─13a85844-0d86-44f7-8649-0d68f6642085
 # ╟─f333b2f9-fd84-40c2-8616-053ec70eff0d
 # ╠═c4e44b1f-3a6d-4718-b241-190504ed39c8
 # ╟─04ec9bac-fcf3-4352-9a19-cb405e9e6f49

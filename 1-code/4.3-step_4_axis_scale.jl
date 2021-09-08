@@ -187,6 +187,11 @@ md"""
 *Figure 1. Measured (x-axis) and predicted (y-axis) length at axis scale.*
 """
 
+# ╔═╡ 88f93111-7982-4b0b-baf1-ece14a51e3bc
+md"""
+Table 2. Statistics for evaluating the lenght predicted using LiDAR+plantscan3d with the direct measurement for each identified axis.
+"""
+
 # ╔═╡ 4cac9d09-5941-4352-83b7-06cb223fa280
 md"""
 ### Axis cross-section
@@ -253,6 +258,11 @@ md"""
 	The whole-branch plot is made using the sum of all measured axis because some structures were broken between the LiDAR measurement and the manual/direct measurements, making the total branch biomass measurements biased.
 """
 
+# ╔═╡ 710ae2b2-4fcb-4727-899b-e2a921fa6b75
+md"""
+Table 3. Statistics for evaluating the biomass predicted using LiDAR+plantscan3d with the direct measurement for each identified axis.
+"""
+
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
 md"""
 ### Saving the plots
@@ -271,19 +281,23 @@ begin
 function filter_model(x, stat, stat_50, ps3d, pipe, pipe_50)
 	x2 = copy(x)
 	selection = Dict("stat. mod." => stat, "stat. mod. ⌀<50" => stat_50, "plantscan3d" => ps3d, "Pipe model" => pipe, "Pipe mod. ⌀<50" => pipe_50)
-	color = Dict("stat. mod." => "#fbb4ae", "stat. mod. ⌀<50" => "#b3cde3", "plantscan3d" => "#ccebc5", "Pipe model" => "#decbe4", "Pipe mod. ⌀<50" => "#fed9a6")
-
-	x2[!,:color] .= "#fbb4ae"
+	
 	for (k,value) in selection
 		if !value
 			filter!(y -> y.origin != k, x2)
-		else	
-			x2[x2.origin .== k, :color] .= color[k]
 		end
 	end
 	return x2
 end
 
+function Bias(obs, sim; digits = 2)
+    return round(mean((sim .- obs)), digits = digits)
+end
+	
+function nBias(obs, sim; digits = 2)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+end
+	
 """
     nRMSE(obs,sim; digits = 2)
 
@@ -334,6 +348,16 @@ combine(
 )
 sort(stats, :RMSE_volume)
 end
+
+# ╔═╡ 19c9eb91-d077-4eb0-85ee-5a80dd539bc0
+combine(
+    filter(x -> x.origin == "plantscan3d", dropmissing(df_compare, [:length, :length_meas])),
+	[:length_meas, :length] => RMSE => :RMSE,
+	[:length_meas, :length] => nRMSE => :nRMSE,
+    [:length_meas, :length] => EF => :EF,
+	[:length_meas, :length] => Bias => :Bias,
+	[:length_meas, :length] => nBias => :nBias
+)
 
 # ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
 begin
@@ -438,6 +462,16 @@ save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_bi
 	
 save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass_branch.png", plot_branch, px_per_unit = 3)
 end
+
+# ╔═╡ 116a150d-708d-4161-873d-6f92a83e3ed1
+combine(
+    groupby(df_branch, :origin),
+	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+    [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+	[:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+	[:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1820,6 +1854,8 @@ version = "0.9.1+5"
 # ╟─26f11764-67c0-4b09-904a-d253e1d0fb59
 # ╟─7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 # ╟─092ed56f-93c7-4343-a080-6ddc0da6c2ac
+# ╟─88f93111-7982-4b0b-baf1-ece14a51e3bc
+# ╟─19c9eb91-d077-4eb0-85ee-5a80dd539bc0
 # ╟─4cac9d09-5941-4352-83b7-06cb223fa280
 # ╟─37633b50-c141-45d1-b7dd-1a0eebfda64f
 # ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
@@ -1835,6 +1871,8 @@ version = "0.9.1+5"
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
 # ╟─fea13de5-26d6-4e2e-8fed-e241c650c206
 # ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
+# ╟─710ae2b2-4fcb-4727-899b-e2a921fa6b75
+# ╟─116a150d-708d-4161-873d-6f92a83e3ed1
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
