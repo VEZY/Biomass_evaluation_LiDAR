@@ -12,13 +12,13 @@ using Plots
 using Plots:abline!
 using GLM
 using Statistics
-using StatsPlots
+# using StatsPlots
 using MLBase
 using BrowseTables
 using TerminalPager
 using Revise
 
-includet("1-code/functions.jl")
+includet("1-code/functions.jl") # Do not execute with alt+Enter, but rather with ctrl+Enter
 using .BiomassFromLiDAR
 
 # plotlyjs()
@@ -26,7 +26,8 @@ using .BiomassFromLiDAR
 # Listing the csv files:
 csv_files =
     filter(
-        x -> endswith(x, ".csv"),
+        x -> endswith(x, ".csv"), # all MTGs
+        # x -> endswith(x, r"tree[1,3].\.csv"), # train only on 2020 MTGs
         readdir(joinpath("0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join = true)
     )
 
@@ -75,13 +76,14 @@ df[df.cross_section .>= min_cross_section,:pred_cross_section_50] =
 
 # Plotting the measured VS simulated cros-section with different methods:
 df_plot = dropmissing(df, [:cross_section_pipe_50, :pred_cross_section, :pred_cross_section_50])
-RMSEs =
+
+nRMSEs =
 combine(
      filter(x -> x.cross_section < min_cross_section, df_plot),
-    [:cross_section, :cross_section_pipe] => RMSE => :pipe_model,
-    [:cross_section, :pred_cross_section] => RMSE => :stat_model,
-    [:cross_section, :cross_section_pipe_50] => RMSE => :pipe_model_50,
-    [:cross_section, :pred_cross_section_50] => RMSE => :stat_model_50
+    [:cross_section, :cross_section_pipe] => nRMSE => :pipe_model,
+    [:cross_section, :pred_cross_section] => nRMSE => :stat_model,
+    [:cross_section, :cross_section_pipe_50] => nRMSE => :pipe_model_50,
+    [:cross_section, :pred_cross_section_50] => nRMSE => :stat_model_50
 )
 
 EFs =
@@ -93,24 +95,25 @@ combine(
     [:cross_section, :pred_cross_section_50] => EF => :stat_model_50
 )
 
+df_plot = dropmissing(select(df, :pred_cross_section, :cross_section, :cross_section_pipe), [:pred_cross_section])
+
 scatter(
     df_plot[!,:cross_section],
-    Array(select(df_plot, :cross_section_pipe, :cross_section_pipe_50, :pred_cross_section, :pred_cross_section_50)),
+    Array(select(df_plot, :cross_section_pipe, :pred_cross_section)),
     label = hcat(
-        "Pipe model, RMSE: $(RMSEs.pipe_model[1]), EF: $(EFs.pipe_model[1])",
-        "Pipe model ⌀<50mm, RMSE: $(RMSEs.pipe_model_50[1]), EF: $(EFs.pipe_model_50[1])",
-        "Stat. mod. all segments, RMSE: $(RMSEs.stat_model[1]), EF: $(EFs.stat_model[1])",
-        "Stat. mod. ⌀<50mm, RMSE: $(RMSEs.stat_model_50[1]), EF: $(EFs.stat_model_50[1])"
+        "Pipe model, nRMSE: $(nRMSEs.pipe_model[1]), EF: $(EFs.pipe_model[1])",
+        "Stat. mod., nRMSE: $(nRMSEs.stat_model[1]), EF: $(EFs.stat_model[1])"
         ),
     yguide = "Predicted cross-section (mm²)",
     xguide = "Measured cross section (mm²)",
-    legend = :topleft
+    legend = :topleft,
+    dpi = 300
 )
 Plots.abline!(1,0, line = :dash, label = "identity")
 
 scatter!(
     df_plot[!,:cross_section],
-    Array(select(df_plot, :cross_section_pipe, :cross_section_pipe_50, :pred_cross_section, :pred_cross_section_50)),
+    Array(select(df_plot, :cross_section_pipe, :pred_cross_section)),
     label = "",
     link = :both,
     xlims = (-Inf, min_cross_section),
@@ -119,6 +122,39 @@ scatter!(
     subplot = 2
 )
 Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
+
+
+# scatter(
+#     df_plot[!,:cross_section],
+#     Array(select(df_plot, :cross_section_pipe, :cross_section_pipe_50, :pred_cross_section, :pred_cross_section_50)),
+#     label = hcat(
+#         "Pipe model, nRMSE: $(nRMSEs.pipe_model[1]), EF: $(EFs.pipe_model[1])",
+#         "Pipe model ⌀<50mm, nRMSE: $(nRMSEs.pipe_model_50[1]), EF: $(EFs.pipe_model_50[1])",
+#         "Stat. mod. all segments, nRMSE: $(nRMSEs.stat_model[1]), EF: $(EFs.stat_model[1])",
+#         "Stat. mod. ⌀<50mm, nRMSE: $(nRMSEs.stat_model_50[1]), EF: $(EFs.stat_model_50[1])"
+#         ),
+#     yguide = "Predicted cross-section (mm²)",
+#     xguide = "Measured cross section (mm²)",
+#     legend = :topleft,
+#     dpi = 300
+# )
+# Plots.abline!(1,0, line = :dash, label = "identity")
+
+# scatter!(
+#     df_plot[!,:cross_section],
+#     Array(select(df_plot, :cross_section_pipe, :cross_section_pipe_50, :pred_cross_section, :pred_cross_section_50)),
+#     label = "",
+#     link = :both,
+#     xlims = (-Inf, min_cross_section),
+#     ylims = (-Inf, min_cross_section),
+#     inset = (1, bbox(0.0, 0.1, 0.4, 0.4, :bottom, :right)),
+#     subplot = 2
+# )
+# Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
+
+
+savefig("2-results/2-plots/step_3_fit_statistic_model.png")
+
 
 # Other plots:
 scatter(df[!,:diameter], df[!,:pathlength_subtree], label = "")

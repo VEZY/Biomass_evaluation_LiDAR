@@ -9,7 +9,7 @@ export compute_all_mtg_data
 export bind_csv_files
 export segmentize_mtgs
 export compute_volume, compute_var_axis
-export NRMSE, RMSE, EF
+export NRMSE, RMSE, EF, nRMSE
 export compute_volume_model, volume_stats
 
 ###############################################
@@ -449,17 +449,6 @@ function S_indexing(node)
 end
 
 """
-    NRMSE(obs,sim)
-
-Returns the Normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
-Normalization is performed using division by observations range (max-min).
-Output: Float/Particles
-"""
-function NRMSE(obs, sim)
-    return sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1])
-end
-
-"""
     RMSE(obs,sim)
 
 Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
@@ -469,6 +458,15 @@ function RMSE(obs, sim, digits = 2)
     return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
 end
 
+"""
+    nRMSE(obs,sim)
+
+Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
+The closer to 0 the better.
+"""
+function nRMSE(obs, sim; digits = 2)
+    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+end
 
 """
     EF(obs,sim)
