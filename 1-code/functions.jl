@@ -1,6 +1,6 @@
 module BiomassFromLiDAR
 
-using MTG
+using MultiScaleTreeGraph
 using Statistics:mean
 using CSV
 using DataFrames
@@ -638,11 +638,11 @@ function cross_section_stat_mod(x)
     # 0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
 
     # All variables except the cross section from the pipe model because it is too bad from plantscan3d:
-    0.0295598 * x[:pathlength_subtree] + 19.3697 * x[:branching_order] +
-    7.41646 * x[:segment_index_on_axis] - 9.54547 * x[:number_leaves] + 3.62477 * x[:segment_subtree] +
-    0.975984 * x[:n_segments_axis] - 3.6127 * x[:nleaf_proportion_siblings]
+    # 0.0295598 * x[:pathlength_subtree] + 19.3697 * x[:branching_order] +
+    # 7.41646 * x[:segment_index_on_axis] - 9.54547 * x[:number_leaves] + 3.62477 * x[:segment_subtree] +
+    # 0.975984 * x[:n_segments_axis] - 3.6127 * x[:nleaf_proportion_siblings]
 
-    # Last version usin diam<50mm
+    # Last version using diam<50mm
     0.891909 * x[:cross_section_pipe_50] + 0.00301214 * x[:pathlength_subtree] + 6.67531 * x[:branching_order] +
     0.586842 * x[:segment_index_on_axis]
 end
@@ -653,13 +653,19 @@ function cross_section_stat_mod_all(x)
     # 9.83616 * x[:segment_index_on_axis] - 0.0107971 * x[:axis_length] - 13.1118 * x[:number_leaves] + 3.1682 * x[:segment_subtree] +
     # 2.11951 * x[:n_segments_axis]
 
-    # All variables except the cross section from the pipe model:
-    0.0416291 * x[:pathlength_subtree] + 5.83775 * x[:branching_order] +
-    10.7246 * x[:segment_index_on_axis] - 0.00588964 * x[:axis_length] -18.945 * x[:number_leaves] + 10.0918 * x[:segment_subtree] -
-    1.15572   * x[:n_segments_axis]
+    # All variables except the cross section from the pipe model, trained on data from 2020 and 2021:
+    # 0.0416291 * x[:pathlength_subtree] + 5.83775 * x[:branching_order] +
+    # 10.7246 * x[:segment_index_on_axis] - 0.00588964 * x[:axis_length] -18.945 * x[:number_leaves] + 10.0918 * x[:segment_subtree] -
+    # 1.15572   * x[:n_segments_axis]
 
     # Only the pipe model with a correction factor:
     # 0.938161 * x[:cross_section_pipe]
+
+    # All variables except the cross section from the pipe model, trained on data from 2020 only:
+    0.990968 * x[:cross_section_pipe] + 0.017808 * x[:pathlength_subtree] + 4.58425 * x[:branching_order] +
+    6.99065 * x[:segment_index_on_axis] - 0.00942602 * x[:axis_length] - 1.89791 * x[:number_leaves] -
+    2.0631 * x[:segment_subtree] + 2.41539 * x[:n_segments_axis]
+
 end
 
 function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)

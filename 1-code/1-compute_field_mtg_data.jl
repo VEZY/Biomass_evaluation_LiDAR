@@ -27,9 +27,10 @@ for i in mtg_files
     )
 end
 
+# using MultiScaleTreeGraph
+# mtg_file = "0-data\\1.1-mtg_manual_measurement_corrected_id\\tree2h.xlsx"
+# mtg = MultiScaleTreeGraph.read_mtg(mtg_file)
 
-# mtg_file = "0-data\\1-xlsx\\tree11l.xlsm"
-# mtg = read_mtg(mtg_file)
 # node = get_node(mtg, "node_13")
 # compute_data_mtg(mtg)
 # node.MTG

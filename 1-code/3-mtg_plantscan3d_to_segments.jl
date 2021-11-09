@@ -6,7 +6,7 @@
 
 # Script set-up -----------------------------------------------------------
 
-# using Pkg; Pkg.add(url = "https://github.com/VEZY/MTG.jl", rev = "master")
+# using Pkg; Pkg.add(url = "https://github.com/VEZY/MultiScaleTreeGraph.jl", rev = "master")
 using Revise
 
 includet("./functions.jl")

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.16.4
 
 using Markdown
 using InteractiveUtils
@@ -78,7 +78,7 @@ Importing the data:
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
 begin
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame);
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame)
 nothing
 end
 
@@ -805,9 +805,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[GLFW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libglvnd_jll", "Pkg", "Xorg_libXcursor_jll", "Xorg_libXi_jll", "Xorg_libXinerama_jll", "Xorg_libXrandr_jll"]
-git-tree-sha1 = "dba1e8614e98949abfa60480b13653813d8f0157"
+git-tree-sha1 = "0c603255764a1fa0b61752d2bec14cfbd18f7fe8"
 uuid = "0656b61e-2033-5cc2-a64a-77c0f6c09b89"
-version = "3.3.5+0"
+version = "3.3.5+1"
 
 [[GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "StatsModels"]
@@ -1876,6 +1876,6 @@ version = "0.9.1+5"
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
-# ╠═668e784e-bd68-41aa-9dc7-73b13089ed46
+# ╟─668e784e-bd68-41aa-9dc7-73b13089ed46
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

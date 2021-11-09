@@ -40,7 +40,7 @@ All data related to the project are stored in the `0-data` folder. You can find 
 
 ### Code
 
-The code related to the project is stored in the `1-code` folder. All computations are made using the Julia programming language and the [MTG.jl](https://vezy.github.io/MTG.jl/dev/) package. The computations are made in the Julia scripts as follows:
+The code related to the project is stored in the `1-code` folder. All computations are made using the Julia programming language and the [MultiScaleTreeGraph.jl](https://vezy.github.io/MultiScaleTreeGraph.jl/dev/) package. The computations are made in the Julia scripts as follows:
 
 - `1-compute_field_mtg_data.jl`: compute new variables into the manually measured MTG, and export the results as CSV and MTG files in `0-data/1.2-mtg_manual_measurement_corrected_enriched`;
 - `2-model_diameter.jl`: fit a model using all variables that can be computed from LiDAR;

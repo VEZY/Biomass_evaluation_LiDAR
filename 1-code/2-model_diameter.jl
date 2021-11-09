@@ -65,6 +65,51 @@ formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtr
 ols_all = lm(formula_all, df)
 df[!,:pred_cross_section] = predict(ols_all, df)
 
+node = mtg[1][1]
+attr_names = ["XX", "YY"]
+# attr_names = coefnames(ols_all)
+attr_values = zeros(Float64, length(attr_names))
+
+
+for (i, j) in enumerate(attr_names)
+    attr_values[i] = node[j]
+end
+
+DataFrame(zip(attr_names, attr_values))
+
+
+
+mtg[1][1].attributes
+
+macro make_model(mtg, args...)
+    arguments = (args...,)
+    # Get the value of the filters if any:
+    flt, kwargs, args = MultiScaleTreeGraph.parse_macro_args(arguments)
+
+    expr = quote
+        # Check the filters consistency with the mtg:
+        check_filters($(mtg), scale = $(flt.scale), symbol = $(flt.symbol), link = $(flt.link))
+        # Traverse the mtg:
+        traversed_mtg = $(kwargs[:traversal])($(mtg))
+        for i00000000 in traversed_mtg
+            # NB: using i00000000 to avoid naming clash with variables when using rewrite_expr!(i,...)
+            if is_filtered(i00000000, $(flt.scale), $(flt.symbol), $(flt.link), $(flt.filter_fun))
+                @mutate_node!(i00000000, $(args...))
+            elseif !$(kwargs[:all])
+                # In this case (all == false) we stop as soon as we reached the
+                # first filtered-out value. The default behavior is defined in parse_macro_args
+                # and is equal to true.
+                break
+            end
+        end
+    end
+    esc(expr)
+end
+
+0.891909 * x[:cross_section_pipe_50] + 0.00301214 * x[:pathlength_subtree] + 6.67531 * x[:branching_order] +
+    0.586842 * x[:segment_index_on_axis]
+
+
 # Same but only for segments < 50mm
 formula_50 = @formula(cross_section ~ 0 + cross_section_pipe_50 + pathlength_subtree + branching_order + n_segments_axis)
 # formula_50 = @formula(cross_section ~ 0 + pathlength_subtree + branching_order  + segment_index_on_axis + number_leaves + segment_subtree + n_segments_axis + nleaf_proportion_siblings)

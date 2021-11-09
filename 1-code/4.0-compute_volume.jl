@@ -1,4 +1,4 @@
-using MTG
+using MultiScaleTreeGraph
 using CSV
 # using Plots
 using DataFrames
