@@ -78,8 +78,7 @@ Importing the data:
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
 begin
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame)
-nothing
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim = ";");
 end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee

@@ -73,8 +73,8 @@ First, we define which variables will be used in our model. In our case we will 
 """
 
 # ╔═╡ 3d0a6b24-f11b-4f4f-b59b-5c40ea9be838
-formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
-# formula_all = @formula(cross_section ~ pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
+# formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
+formula_all = @formula(cross_section ~ 0 + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
 
 # ╔═╡ bde004a8-d54c-4049-98f6-87c579785641
 md"""
@@ -265,8 +265,9 @@ end
 df = let
 	x = dropmissing(bind_csv_files(csv_files), :cross_section)
 	filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE", ]), x)
+	# filter!(x -> !in(x.tree, ["1","3"]), x)
 	x
-end;
+end
 
 # ╔═╡ edea4013-7041-473b-bdf3-a5710884926e
 begin
@@ -294,7 +295,7 @@ df_plot_in_sample = let x = deepcopy(df_in_sample)
 	stack(
 	dropmissing(x, ["Pipe mod.", "Stat. mod.", "cross_section"]),
 	["Pipe mod.", "Stat. mod."],
-	[:unique_branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
+	[:tree, :unique_branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
 	variable_name = :origin,
 	value_name = :cross_section_pred
 )
@@ -307,7 +308,7 @@ plt_cs =
 	(
 		mapping(
 			:cross_section => "Measured cross-section (mm²)",
-			:cross_section_pred => "Predicted cross-section (mm²)", color= :origin, marker = :unique_branch) *
+			:cross_section_pred => "Predicted cross-section (mm²)", color= :origin, marker = :tree) *
 		visual(Scatter) +
 		mapping(
 			:cross_section => "Measured cross-section (mm²)",
@@ -502,13 +503,22 @@ function cross_section_stat_mod(node, model)
 
 	# Get the node attributes as a DataFrame for the model:
 	attr_names = coefnames(model)
-	attr_values = zeros(Float64, length(attr_names))
+	attr_values = []
 
-	for (i, j) in enumerate(attr_names)
-		attr_values[i] = node[j]
+	for i in attr_names
+		if i == "(Intercept)"
+			next
+		end
+		node_val = node[i]
+		if node_val === nothing
+			# No missing values allowed for predicting
+			return missing
+		end
+		
+		push!(attr_values, node_val)
 	end
-
-	predict(model, DataFrame(Pair.(attr_names, attr_values)))
+	
+	predict(model, DataFrame(Pair.(attr_names, attr_values)))[1]
 end
 
 # ╔═╡ 666e9daf-e28f-4e14-b52a-bcc6b5aadb67
@@ -600,7 +610,10 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_ps3d, 1963.5, allow_missing = true))
     @mutate_mtg!(mtg, cross_section_pipe_50 = compute_cross_section_all(node, :cross_section_pipe_50))
 
-    @mutate_mtg!(mtg, cross_section_stat_mod_50 = cross_section_stat_mod(node,model), symbol = "S")
+    # @mutate_mtg!(mtg, cross_section_stat_mod_50 = cross_section_stat_mod(node,model), symbol = "S")
+	
+	transform!(mtg, (x -> cross_section_stat_mod(x,model)) => :cross_section_stat_mod_50, symbol = "S")
+	
     @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod_all(node,model), symbol = "S")
 
     # Add the values for the axis:
@@ -951,12 +964,12 @@ function summarize_data(mtg_files,dir_path_lidar,dir_path_lidar_raw,dir_path_man
 end
 
 # ╔═╡ 87140df4-3fb5-443c-a667-be1f19b016f6
-df_all_branches, df_stats_branch = summarize_data(mtg_files,dir_path_lidar,dir_path_lidar_raw,dir_path_manual)
+df_all_branches, df_stats_branch = summarize_data(mtg_files,dir_path_lidar,dir_path_lidar_raw,dir_path_manual);
 
 # ╔═╡ 73515bd3-0124-42a4-9997-3730e7dcbf4c
 begin
-	CSV.write("../2-results/1-data/df_stats_branch.csv", df_stats_branch);
-	CSV.write("../2-results/1-data/df_all.csv", df_all);
+	CSV.write("../2-results/1-data/df_stats_branch.csv", df_stats_branch)
+	CSV.write("../2-results/1-data/df_all.csv", df_all_branches, delim = ";")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2244,7 +2257,7 @@ version = "3.5.0+0"
 # ╟─120ca586-b543-480f-ad72-c8c59eed6afe
 # ╟─2abfbfe6-8fca-4347-9736-5febd6ba2ae4
 # ╟─37c83505-2128-4c5d-a3ba-92dd88b79c3a
-# ╟─1a7f5955-0a4f-411b-976c-1e84ffd9103f
+# ╠═1a7f5955-0a4f-411b-976c-1e84ffd9103f
 # ╟─c6b5a1db-1d80-49d2-ad58-6f6684f19de5
 # ╟─a06d3946-a88a-4d93-a639-23a4f2ae3dc8
 # ╟─6c63611e-5f70-4a90-87f6-b5b921dbacd8
