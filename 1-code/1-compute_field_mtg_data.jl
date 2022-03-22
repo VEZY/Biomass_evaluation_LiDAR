@@ -1,5 +1,5 @@
 # Aim: Compute new variables in the MTG and export the results in a CSV and a new mtg.
-# Author: A. Bonnet & M. Millan and R. Vezy
+# Author: A. Bonnet & M. Millan & R. Vezy
 # Date of creation: 22/07/2021
 
 # Imports
@@ -12,8 +12,8 @@ using .BiomassFromLiDAR
 
 mtg_files =
     filter(
-        x -> splitext(basename(x))[2] in [".xlsx",".xlsm"],
-        readdir(joinpath("0-data", "1.1-mtg_manual_measurement_corrected_id"), join = true)
+        x -> splitext(basename(x))[2] in [".xlsx", ".xlsm"],
+        readdir(joinpath("0-data", "1.1-mtg_manual_measurement_corrected_id"), join=true)
     )
 
 # Computing new variables for each mtg and saving the results in "0-data/5-enriched_manual_mtg":

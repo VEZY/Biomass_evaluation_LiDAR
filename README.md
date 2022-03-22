@@ -25,7 +25,7 @@ The manual measurements are used for two purposes:
 
 This project is divided into several steps:
 
-1. Check the measured lenght from the LiDAR data is close to the manual measurements. This is crucial as length are considered well estimated by LiDAR;
+1. Check the measured length from the LiDAR data is close to the manual measurements. This is crucial as length are considered well estimated by LiDAR;
 2. Check the integrity of the manual measurements by evaluating if the biomass estimated from manual dimensions measurements (length and diameters) at segment scale and an average fresh wood density are close to the reference biomass measured using a scale on the field. This step helps us check if the volumes/biomass estimated using manual measurements can be used as a reference for evaluating the different methods to estimate them from LiDAR point-clouds;
 3. Find the variables explaining the cross-section at segment scale. This step is done to fit a statistical model onto the manual measurements dataset;
 4. Evaluate the different methods for the evaluation of the tree biomass
