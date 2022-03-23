@@ -6,17 +6,17 @@ using InteractiveUtils
 
 # ╔═╡ 8d606a5d-4d1f-4754-98f2-80097817c479
 begin
-	using CSV
-	using MultiScaleTreeGraph
-	using DataFrames
-	using GLM
-	using Statistics
-	using StatsBase
-	using Random
-	using AlgebraOfGraphics
-	using CairoMakie
-	using ColorSchemes
-	using MLBase
+    using CSV
+    using MultiScaleTreeGraph
+    using DataFrames
+    using GLM
+    using Statistics
+    using StatsBase
+    using Random
+    using AlgebraOfGraphics
+    using CairoMakie
+    using ColorSchemes
+    using MLBase
 end
 
 # ╔═╡ 393b8020-3743-11ec-2da9-d1600147f3d1
@@ -49,7 +49,7 @@ csv_files =
     filter(
         x -> endswith(x, ".csv"), # all MTGs
         # x -> endswith(x, r"tree[1,3].\.csv"), # train only on 2020 MTGs
-        readdir(joinpath("../0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join = true)
+        readdir(joinpath("../0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join=true)
     )
 
 # ╔═╡ 220dfbff-15fc-4e75-a6a2-39e60c08e8dc
@@ -83,7 +83,7 @@ md"""
 
 The first step is to evaluate our model using a k-fold validation to get a better estimate of its statistics. It helps us evaluate the structure of the model (*e.g.* which variables to use), while getting a good idea of its prediction capability. The model is trained and evaluated k-times on sub-samples of the data. The output statistic is then an out-of-sample statistic, which is much more conservative than the in-sample one.
 
-Here's the nRMSE resultiong from the cross-validation:
+Here's the nRMSE resulting from the cross-validation:
 """
 
 # ╔═╡ bde004a8-d54c-4049-98f6-87c579785641
@@ -132,20 +132,20 @@ Importing the wood density data
 
 # ╔═╡ 7de574d4-a8b8-4945-a2f1-5b2928b9d231
 df_density = let
-df_dens1 = CSV.read("../0-data/0-raw/2-manual_measurements/2-wood_density_measurements/sample-data-2-branches-juin.csv", DataFrame, normalizenames = true)
-df_dens2 = CSV.read("../0-data/0-raw/2-manual_measurements/2-wood_density_measurements/sample-data-4-branches-avril.csv", DataFrame, normalizenames = true)
+    df_dens1 = CSV.read("../0-data/0-raw/2-manual_measurements/2-wood_density_measurements/sample-data-2-branches-juin.csv", DataFrame, normalizenames=true)
+    df_dens2 = CSV.read("../0-data/0-raw/2-manual_measurements/2-wood_density_measurements/sample-data-4-branches-avril.csv", DataFrame, normalizenames=true)
 
-x = vcat(df_dens1, df_dens2)
+    x = vcat(df_dens1, df_dens2)
 
-select!(
-    x,
-    :branches,
-    [:dry_weight_g, :volume_without_parafilm_cm3] => ((x, y) -> x ./ y) => :dry_density,
-    :conventional_method_density => :fresh_density
-)
+    select!(
+        x,
+        :branches,
+        [:dry_weight_g, :volume_without_parafilm_cm3] => ((x, y) -> x ./ y) => :dry_density,
+        :conventional_method_density => :fresh_density
+    )
 
-x = groupby(x, :branches)
-combine(x, :dry_density => mean, :fresh_density => mean, renamecols = false)
+    x = groupby(x, :branches)
+    combine(x, :dry_density => mean, :fresh_density => mean, renamecols=false)
 end
 
 # ╔═╡ f26a28b2-d70e-4543-b58e-2d640c2a0c0d
@@ -155,15 +155,15 @@ Importing the MTG files
 
 # ╔═╡ 9290e9bf-4c43-47c7-96ec-8b44ad3c6b23
 begin
-dir_path_lidar = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
-dir_path_lidar_raw = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
-dir_path_manual = joinpath("..", "0-data", "1.2-mtg_manual_measurement_corrected_enriched")
+    dir_path_lidar = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
+    dir_path_lidar_raw = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
+    dir_path_manual = joinpath("..", "0-data", "1.2-mtg_manual_measurement_corrected_enriched")
 
-mtg_files =
-	filter(
-		x -> splitext(basename(x))[2] in [".xlsx"],
-		readdir(dir_path_lidar)
-	)
+    mtg_files =
+        filter(
+            x -> splitext(basename(x))[2] in [".xlsx"],
+            readdir(dir_path_lidar)
+        )
 end
 
 # ╔═╡ 466aa3b3-4c78-4bb7-944d-5d55128f8cf6
@@ -174,6 +174,11 @@ md"""
 # ╔═╡ f50a2242-64ee-4c91-8c9d-3d2d3f11ac5d
 md"""
 Write the data to disk:
+"""
+
+# ╔═╡ 1103b80b-7dc6-41ed-b5bd-a6ef739d0624
+md"""
+Write the plot to disk:
 """
 
 # ╔═╡ 30f8608f-564e-4ffc-91b2-1f104fb46c1e
@@ -188,9 +193,9 @@ md"""
 	Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
 	The closer to 0 the better.
 	"""
-	function nRMSE(obs, sim; digits = 4)
-	    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
-	end
+function nRMSE(obs, sim; digits=4)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
+end
 
 # ╔═╡ 12d7aca9-4fa8-4461-8077-c79a99864391
 """
@@ -199,11 +204,11 @@ md"""
 	Returns the Efficiency Factor between observations `obs` and simulations `sim` using [NSE (Nash-Sutcliffe efficiency) model](https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient).
 	The closer to 1 the better.
 	"""
-	function EF(obs, sim, digits = 4)
-	    SSres = sum((obs - sim).^2)
-	    SStot = sum((obs .- mean(obs)).^2)
-	    return round(1 - SSres / SStot, digits = digits)
-	end
+function EF(obs, sim, digits=4)
+    SSres = sum((obs - sim) .^ 2)
+    SStot = sum((obs .- mean(obs)) .^ 2)
+    return round(1 - SSres / SStot, digits=digits)
+end
 
 # ╔═╡ b6fa2e19-1375-45eb-8f28-32e1d00b5243
 """
@@ -212,9 +217,9 @@ md"""
 	Relative mean error between observations `obs` and simulations `sim`.
 	The closer to 0 the better.
 	"""
-	function RME(obs, sim, digits = 4)		
-	    return round(mean((sim .- obs) ./ obs) , digits = digits)
-	end
+function RME(obs, sim, digits=4)
+    return round(mean((sim .- obs) ./ obs), digits=digits)
+end
 
 # ╔═╡ 21fd863d-61ed-497e-ba3c-5f327e354cee
 """
@@ -223,76 +228,76 @@ md"""
 	Returns the bias between observations `obs` and simulations `sim`.
 	The closer to 0 the better.
 	"""
-	function Bias(obs, sim, digits = 4)		
-	    return round(mean(sim .- obs), digits = digits)
-	end
+function Bias(obs, sim, digits=4)
+    return round(mean(sim .- obs), digits=digits)
+end
 
 # ╔═╡ 0195ac30-b64f-409a-91ad-e68cf37d7c3b
-	function bind_csv_files(csv_files)
-	    dfs = []
-	    for i in csv_files
-	        df_i = CSV.read(i, DataFrame)
-	        df_i[:,:branch] .= splitext(basename(i))[1]
+function bind_csv_files(csv_files)
+    dfs = []
+    for i in csv_files
+        df_i = CSV.read(i, DataFrame)
+        df_i[:, :branch] .= splitext(basename(i))[1]
 
-	        transform!(
-	            df_i,
-	            :branch => ByRow(x -> x[5:end - 1]) => :tree
-	        )
+        transform!(
+            df_i,
+            :branch => ByRow(x -> x[5:end-1]) => :tree
+        )
 
-	        rename!(
-	            df_i,
-	            :branch => :unique_branch
-	        )
+        rename!(
+            df_i,
+            :branch => :unique_branch
+        )
 
-	        transform!(
-	            df_i,
-	            :unique_branch => ByRow(x -> x[end]) => :branch
-	        )
-	        push!(dfs, df_i)
-	    end
+        transform!(
+            df_i,
+            :unique_branch => ByRow(x -> x[end]) => :branch
+        )
+        push!(dfs, df_i)
+    end
 
-	    df = dfs[1]
-	    for i in 2:length(dfs)
-	        df = vcat(df, dfs[i])
-	    end
+    df = dfs[1]
+    for i in 2:length(dfs)
+        df = vcat(df, dfs[i])
+    end
 
-	    return df
-	end
+    return df
+end
 
 
 # ╔═╡ 492fc741-7a3b-4992-a453-fcac2bbf35ad
 df = let
-	x = dropmissing(bind_csv_files(csv_files), :cross_section)
-	filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE", ]), x)
-	filter!(x -> x.symbol == "S", x)
-	# filter!(x -> !in(x.tree, ["1","3"]), x)
-	x
+    x = dropmissing(bind_csv_files(csv_files), :cross_section)
+    filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE",]), x)
+    filter!(x -> x.symbol == "S", x)
+    # filter!(x -> !in(x.tree, ["2","4"]), x) # Remove pruned trees
+    x
 end
 
 # ╔═╡ 68fdcbf2-980a-4d44-b1f9-46b8fcd5bea1
 begin
-# Define the function to compute the RMSE for each cross-validation fold:
-function compute_rmse(mod, df_ref)
-	x = deepcopy(df_ref)
-	x[!,"Stat. mod."] = predict(mod, x)
-	x = dropmissing(x, ["Stat. mod.", "cross_section"])
-	nRMSE(x[:,"Stat. mod."], x[:,:cross_section])
-end
+    # Define the function to compute the RMSE for each cross-validation fold:
+    function compute_rmse(mod, df_ref)
+        x = deepcopy(df_ref)
+        x[!, "Stat. mod."] = predict(mod, x)
+        x = dropmissing(x, ["Stat. mod.", "cross_section"])
+        nRMSE(x[:, "Stat. mod."], x[:, :cross_section])
+    end
 
-# Sample size
-const n = size(df,1)
-Random.seed!(1234)
-# cross validation
-scores = cross_validate(
-    inds -> lm(formula_all, df[inds,:]),        # training function
-    (mod, inds) -> compute_rmse(mod, df[inds,:]),  # evaluation function
-    n,              # total number of samples
-    Kfold(n, 10)    # 10-fold cross validation plan
-)
-# get the mean and std of the scores
-(m, s) = round.(mean_and_std(scores), digits = 4)
+    # Sample size
+    const n = size(df, 1)
+    Random.seed!(1234)
+    # cross validation
+    scores = cross_validate(
+        inds -> lm(formula_all, df[inds, :]),        # training function
+        (mod, inds) -> compute_rmse(mod, df[inds, :]),  # evaluation function
+        n,              # total number of samples
+        Kfold(n, 10)    # 10-fold cross validation plan
+    )
+    # get the mean and std of the scores
+    (m, s) = round.(mean_and_std(scores), digits=4)
 
-"nRMSE: $m ± sd $s"
+    "nRMSE: $m ± sd $s"
 end
 
 # ╔═╡ aaa829ee-ec36-4116-8424-4b40c581c2fc
@@ -300,50 +305,55 @@ model = lm(formula_all, df)
 
 # ╔═╡ b49c4235-a09e-4b8c-a392-d423d7ed7d4c
 df_all = let x = deepcopy(df)
-	x[:,"Stat. mod."] = predict(model, x);
-	rename!(x, Dict(:cross_section_pipe => "Pipe mod."));
-	stack(
-	dropmissing(x, ["Pipe mod.", "Stat. mod.", "cross_section"]),
-	["Pipe mod.", "Stat. mod."],
-	[:unique_branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
-	variable_name = :origin,
-	value_name = :cross_section_pred
-)
+    x[:, "Stat. mod."] = predict(model, x)
+    rename!(x, Dict(:cross_section_pipe => "Pipe mod."))
+    stack(
+        dropmissing(x, ["Pipe mod.", "Stat. mod.", "cross_section"]),
+        ["Pipe mod.", "Stat. mod."],
+        [:unique_branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
+        variable_name=:origin,
+        value_name=:cross_section_pred
+    )
 end;
 
 # ╔═╡ d587f110-86d5-41c0-abc7-2671d711fbdf
 begin
-plt_cs_all =
-	data(df_all) *
-	(
-		mapping(
-			:cross_section => "Measured cross-section (mm²)",
-			:cross_section_pred => "Predicted cross-section (mm²)", color= :origin, marker = :unique_branch) *
-		visual(Scatter) +
-		mapping(
-			:cross_section => "Measured cross-section (mm²)",
-			:cross_section => "Predicted cross-section (mm²)") * visual(Lines)
-	)
-draw(plt_cs_all, axis=(limits = (-200, 8000, -200, 8000),), palettes = (; color = colors))
+    plt_cs_all =
+        data(df_all) *
+        (
+            mapping(
+                :cross_section => "Measured cross-section (mm²)",
+                :cross_section_pred => "Predicted cross-section (mm²)",
+                color=:origin => "Model",
+                marker=:unique_branch => "Branch") *
+            visual(Scatter) +
+            mapping(
+                :cross_section => "Measured cross-section (mm²)",
+                :cross_section => "Predicted cross-section (mm²)") * visual(Lines)
+        )
+    p = draw(plt_cs_all, axis=(limits=(-200, 8000, -200, 8000),), palettes=(; color=colors))
 end
+
+# ╔═╡ 806c5fba-6166-41d9-a109-9fac15eb107a
+save("../2-results/2-plots/step_3_statistical_model_evaluation.png", p, px_per_unit=3)
 
 # ╔═╡ dc2bd8f0-c321-407f-9592-7bcdf45f9634
 begin
-stats_all =
-	combine(
-	    groupby(df_all, [:origin]),
-		[:cross_section_pred, :cross_section] => nRMSE => :nRMSE,
-	    [:cross_section_pred, :cross_section] => EF => :EF,
-		[:cross_section_pred, :cross_section] => Bias => :Bias,
-		[:cross_section_pred, :cross_section] => RME => :RME
-	)
-sort(stats_all, :nRMSE)
+    stats_all =
+        combine(
+            groupby(df_all, [:origin]),
+            [:cross_section_pred, :cross_section] => nRMSE => :nRMSE,
+            [:cross_section_pred, :cross_section] => EF => :EF,
+            [:cross_section_pred, :cross_section] => Bias => :Bias,
+            [:cross_section_pred, :cross_section] => RME => :RME
+        )
+    sort(stats_all, :nRMSE)
 end
 
 # ╔═╡ d7a3c496-0ef0-454b-9e32-e5835928f4d5
-function compute_cross_section_all(x, var = :cross_section)
+function compute_cross_section_all(x, var=:cross_section)
     if x.MTG.symbol == "A"
-        desc_cross_section = descendants(x, var, symbol = "S", recursivity_level = 1)
+        desc_cross_section = descendants(x, var, symbol="S", recursivity_level=1)
         if length(desc_cross_section) > 0
             return desc_cross_section[1]
         else
@@ -360,15 +370,15 @@ end
 
 Compute the sum of a variable over the axis starting from node that has `id_cor_start` value.
 """
-function compute_A1_axis_from_start(x, vol_col = :volume; id_cor_start)
-	length_gf_A1 = descendants!(x, vol_col, symbol = "S", link = ("/", "<"), all = false)
-	id_cor_A1 = descendants!(x, :id_cor, symbol = "S", link = ("/", "<"), all = false)
-	sum(length_gf_A1[findfirst(x -> x == id_cor_start, id_cor_A1):end])
+function compute_A1_axis_from_start(x, vol_col=:volume; id_cor_start)
+    length_gf_A1 = descendants!(x, vol_col, symbol="S", link=("/", "<"), all=false)
+    id_cor_A1 = descendants!(x, :id_cor, symbol="S", link=("/", "<"), all=false)
+    sum(length_gf_A1[findfirst(x -> x == id_cor_start, id_cor_A1):end])
 end
 
 # ╔═╡ ee46e359-36bd-49c4-853c-d3ff29888473
-function compute_var_axis_A2(x, vol_col = :volume)
-	sum(descendants!(x, vol_col, symbol = "S"))
+function compute_var_axis_A2(x, vol_col=:volume)
+    sum(descendants!(x, vol_col, symbol="S"))
 end
 
 # ╔═╡ b2e75112-be43-4df9-86df-2eeeb58f47c3
@@ -379,13 +389,13 @@ filter_A1_A2_S(x) = x.MTG.symbol == "S" || filter_A1_A2(x)
 
 # ╔═╡ 14fde936-fa95-471a-aafb-5d69871e5a87
 function compute_axis_length(x)
-    length_descendants = filter(x -> x !== nothing, descendants!(x, :length, symbol = "S", link = ("/", "<"), all = false))
+    length_descendants = filter(x -> x !== nothing, descendants!(x, :length, symbol="S", link=("/", "<"), all=false))
     length(length_descendants) > 0 ? sum(length_descendants) : nothing
 end
 
 # ╔═╡ e3ba9fec-c8b3-46e6-8b1d-29ab19198c9c
 function get_axis_length(x)
-    axis_length = ancestors(x, :axis_length, symbol = "A", recursivity_level = 1)
+    axis_length = ancestors(x, :axis_length, symbol="A", recursivity_level=1)
     if length(axis_length) > 0
         axis_length[1]
     else
@@ -409,45 +419,45 @@ end
 
 # ╔═╡ 43967391-6580-4aac-9ac1-c9effbf3c948
 function compute_cross_section_children(x)
-    cross_section_child = filter(x -> x !== nothing, descendants!(x, :cross_section, symbol = "S", recursivity_level = 1))
+    cross_section_child = filter(x -> x !== nothing, descendants!(x, :cross_section, symbol="S", recursivity_level=1))
 
     return length(cross_section_child) > 0 ? sum(cross_section_child) : nothing
 end
 
 # ╔═╡ de63abdd-3879-4b7c-86f7-844f6288f987
 function compute_cross_section_leaves(x)
-    cross_section_leaves = filter(x -> x !== nothing, descendants!(x, :cross_section; filter_fun = isleaf))
+    cross_section_leaves = filter(x -> x !== nothing, descendants!(x, :cross_section; filter_fun=isleaf))
 
     return length(cross_section_leaves) > 0 ? sum(cross_section_leaves) : nothing
 end
 
 # ╔═╡ d17d7e96-bd15-4a79-9ccb-6182e7d7c023
 function compute_volume_subtree(x)
-    volume_descendants = filter(x -> x !== nothing, descendants!(x, :volume, symbol = "S", self = true))
+    volume_descendants = filter(x -> x !== nothing, descendants!(x, :volume, symbol="S", self=true))
     length(volume_descendants) > 0 ? sum(volume_descendants) : nothing
 end
 
 # ╔═╡ 27a0dcef-260c-4a0c-bef3-04a7d1b79805
 function cross_section_stat_mod(node, model)
 
-	# Get the node attributes as a DataFrame for the model:
-	attr_names = coefnames(model)
-	attr_values = []
+    # Get the node attributes as a DataFrame for the model:
+    attr_names = coefnames(model)
+    attr_values = []
 
-	for i in attr_names
-		if i == "(Intercept)"
-			next
-		end
-		node_val = node[i]
-		if node_val === nothing
-			# No missing values allowed for predicting
-			return missing
-		end
-		
-		push!(attr_values, node_val)
-	end
-	
-	predict(model, DataFrame(Pair.(attr_names, attr_values)))[1]
+    for i in attr_names
+        if i == "(Intercept)"
+            continue
+        end
+        node_val = node[i]
+        if node_val === nothing
+            # No missing values allowed for predicting
+            return missing
+        end
+
+        push!(attr_values, i => node_val)
+    end
+
+    predict(model, DataFrame(attr_values...))[1]
 end
 
 # ╔═╡ 666e9daf-e28f-4e14-b52a-bcc6b5aadb67
@@ -461,34 +471,34 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
 
     @mutate_mtg!(
         mtg,
-        pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol = "S", self = true))),
+        pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol="S", self=true))),
         symbol = "S",
         filter_fun = x -> x[:length] !== nothing
     )
 
     @mutate_mtg!(
         mtg,
-        segment_subtree = length(descendants!(node, :length, symbol = "S", self = true)),
+        segment_subtree = length(descendants!(node, :length, symbol="S", self=true)),
         number_leaves = nleaves!(node),
         symbol = "S"
     )
 
-    branching_order!(mtg, ascend = false)
+    branching_order!(mtg, ascend=false)
     # We use basipetal topological order (from tip to base) to allow comparisons between branches of
     # different ages (the last emitted segment will always be of order 1).
 
     # Compute the index of each segment on the axis in a basipetal way (from tip to base)
     @mutate_mtg!(
         mtg,
-        n_segments = length(descendants!(node, :length, symbol = "S", link = ("/", "<"), all = false)),
+        n_segments = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)),
         symbol = "A"
     )
 
     # now use n_segments to compute the index of the segment on the axis (tip = 1, base = n_segments)
     @mutate_mtg!(
         mtg,
-        n_segments_axis = ancestors(node, :n_segments, symbol = "A")[1],
-        segment_index_on_axis = length(descendants!(node, :length, symbol = "S", link = ("/", "<"), all = false)) + 1,
+        n_segments_axis = ancestors(node, :n_segments, symbol="A")[1],
+        segment_index_on_axis = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)) + 1,
         symbol = "S"
     )
 
@@ -519,16 +529,16 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # How many leaves the node has in proportion to its siblings + itself:
     @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
 
-    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level = 5))[1]
+    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level=5))[1]
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
     # Adding the cross_section to the root:
     append!(
         mtg,
         (
-            cross_section = first_cross_section,
-            cross_section_pipe = first_cross_section,
-            cross_section_stat_mod = first_cross_section
+            cross_section=first_cross_section,
+            cross_section_pipe=first_cross_section,
+            cross_section_stat_mod=first_cross_section
         )
     )
     # Compute the cross-section for the axes nodes using the one measured on the S just below:
@@ -536,14 +546,14 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, cross_section_pipe = compute_cross_section_all(node, :cross_section_pipe))
 
     # Use the pipe model, but only on nodes with a cross_section <= 1963.5 (≈50mm diameter)
-    @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_ps3d, 1963.5, allow_missing = true))
+    @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_ps3d, 1963.5, allow_missing=true))
     @mutate_mtg!(mtg, cross_section_pipe_50 = compute_cross_section_all(node, :cross_section_pipe_50))
 
     # @mutate_mtg!(mtg, cross_section_stat_mod_50 = cross_section_stat_mod(node,model), symbol = "S")
-	
-	transform!(mtg, (x -> cross_section_stat_mod(x,model)) => :cross_section_stat_mod_50, symbol = "S")
-	
-    @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod_all(node,model), symbol = "S")
+
+    transform!(mtg, (x -> cross_section_stat_mod(x, model)) => :cross_section_stat_mod_50, symbol="S")
+
+    @mutate_mtg!(mtg, cross_section_stat_mod = cross_section_stat_mod_all(node, model), symbol = "S")
 
     # Add the values for the axis:
     @mutate_mtg!(mtg, cross_section_stat_mod = compute_cross_section_all(node, :cross_section_stat_mod))
@@ -552,7 +562,7 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # Compute the A2 lengths to match measurements =total length of all segments they bear:
     @mutate_mtg!(mtg, length_sim = compute_var_axis_A2(node, :length), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
     # A1 length in mm (just itself, excluding A2 length):
-    mtg[1][:length_sim] = compute_A1_axis_from_start(mtg[1], :length, id_cor_start = 0)
+    mtg[1][:length_sim] = compute_A1_axis_from_start(mtg[1], :length, id_cor_start=0)
 
     # Recompute the volume:
     compute_volume_stats(x, var) = x[var] * x[:length]
@@ -571,18 +581,18 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     @mutate_mtg!(mtg, volume_pipe_mod_50 = compute_var_axis_A2(node, :volume_pipe_mod_50), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes:
-    mtg[1][:volume_ps3d] = compute_A1_axis_from_start(mtg[1], :volume_ps3d, id_cor_start = 0)
-    mtg[1][:volume_stat_mod] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod, id_cor_start = 0)
-    mtg[1][:volume_stat_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod_50, id_cor_start = 0)
-    mtg[1][:volume_pipe_mod] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod, id_cor_start = 0)
-    mtg[1][:volume_pipe_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod_50, id_cor_start = 0)
+    mtg[1][:volume_ps3d] = compute_A1_axis_from_start(mtg[1], :volume_ps3d, id_cor_start=0)
+    mtg[1][:volume_stat_mod] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod, id_cor_start=0)
+    mtg[1][:volume_stat_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_stat_mod_50, id_cor_start=0)
+    mtg[1][:volume_pipe_mod] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod, id_cor_start=0)
+    mtg[1][:volume_pipe_mod_50] = compute_A1_axis_from_start(mtg[1], :volume_pipe_mod_50, id_cor_start=0)
 
     # Branch-scale volume, the sum of A1 and all the A2:
-    mtg[:volume_ps3d] = sum(descendants!(mtg, :volume_ps3d, symbol = "A", filter_fun = filter_A1_A2))
-    mtg[:volume_stat_mod] = sum(descendants!(mtg, :volume_stat_mod, symbol = "A", filter_fun = filter_A1_A2))
-    mtg[:volume_stat_mod_50] = sum(descendants!(mtg, :volume_stat_mod_50, symbol = "A", filter_fun = filter_A1_A2))
-    mtg[:volume_pipe_mod] = sum(descendants!(mtg, :volume_pipe_mod, symbol = "A", filter_fun = filter_A1_A2))
-    mtg[:volume_pipe_mod_50] = sum(descendants!(mtg, :volume_pipe_mod_50, symbol = "A", filter_fun = filter_A1_A2))
+    mtg[:volume_ps3d] = sum(descendants!(mtg, :volume_ps3d, symbol="A", filter_fun=filter_A1_A2))
+    mtg[:volume_stat_mod] = sum(descendants!(mtg, :volume_stat_mod, symbol="A", filter_fun=filter_A1_A2))
+    mtg[:volume_stat_mod_50] = sum(descendants!(mtg, :volume_stat_mod_50, symbol="A", filter_fun=filter_A1_A2))
+    mtg[:volume_pipe_mod] = sum(descendants!(mtg, :volume_pipe_mod, symbol="A", filter_fun=filter_A1_A2))
+    mtg[:volume_pipe_mod_50] = sum(descendants!(mtg, :volume_pipe_mod_50, symbol="A", filter_fun=filter_A1_A2))
 
     # And the biomass:
     @mutate_mtg!(mtg, fresh_mass_ps3d = node[:volume_ps3d] * fresh_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
@@ -617,7 +627,7 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     mtg_manual = read_mtg(joinpath(dir_path_manual, branch * ".mtg"))
 
     # Gap-filling the measured values of the cross-section using the pipe-model (some segments were not measured):
-    @mutate_mtg!(mtg_manual, cross_section_gap_filled = pipe_model!(node, :cross_section, -1, allow_missing = true))
+    @mutate_mtg!(mtg_manual, cross_section_gap_filled = pipe_model!(node, :cross_section, -1, allow_missing=true))
 
     # Add the cross-section to the axis:
     @mutate_mtg!(mtg_manual, cross_section = compute_cross_section_all(node, :cross_section))
@@ -629,7 +639,7 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     # Compute the A2 length, which is the total length of all segments they bear:
     @mutate_mtg!(mtg_manual, length_gap_filled = compute_var_axis_A2(node, :length_gap_filled), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
     # A1 length in mm (just itself, excluding A2 length and segments not present in the LiDAR measurement):
-    mtg_manual[1][:length_gap_filled] = compute_A1_axis_from_start(mtg_manual[1], :length_gap_filled, id_cor_start = 0)
+    mtg_manual[1][:length_gap_filled] = compute_A1_axis_from_start(mtg_manual[1], :length_gap_filled, id_cor_start=0)
 
     # Recompute the volume:
     compute_volume_gapfilled(x) = x[:cross_section_gap_filled] * x[:length_gap_filled]
@@ -639,20 +649,20 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     @mutate_mtg!(mtg_manual, volume_gf = compute_var_axis_A2(node, :volume_gf), symbol = "A", filter_fun = x -> x.MTG.index == 2) # Axis volume in mm3
 
     # A1 volume in mm3 (just itself, excluding A2 volumes, but also excluding the first segment because we don't know:
-    mtg_manual[1][:volume_gf] = compute_A1_axis_from_start(mtg_manual[1], :volume_gf, id_cor_start = 0)
+    mtg_manual[1][:volume_gf] = compute_A1_axis_from_start(mtg_manual[1], :volume_gf, id_cor_start=0)
 
     # NB: the first matching segment is identified with a value of 0 in the `id_cor` column.
 
     # Branch-scale volume, the sum of A1 and all the A2:
     mtg_manual[:volume_gf] =
-    sum(
-        descendants!(
-            mtg_manual,
-            :volume_gf,
-            symbol = "A",
-            filter_fun = filter_A1_A2
+        sum(
+            descendants!(
+                mtg_manual,
+                :volume_gf,
+                symbol="A",
+                filter_fun=filter_A1_A2
+            )
         )
-    )
 
     # fresh_density = mtg_manual.attributes[:mass_g] / (mtg_manual.attributes[:volume_gf] * 1e-3)
     # println("Density = $fresh_density")
@@ -661,8 +671,8 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     @mutate_mtg!(mtg_manual, dry_mass = node[:volume_gf] * dry_density * 1e-3, filter_fun = filter_A1_A2_S) # in g
 
     # Compute the mass of A1 using A1 = tot_mass - ∑A2:
-    mass_A2 = descendants!(mtg_manual, :mass_g, symbol = "A", filter_fun = x -> x.MTG.index == 2)
-    id_cor_A10 = findfirst(x -> x == 0, descendants!(mtg_manual[1], :id_cor, symbol = "S", link = ("/", "<"), all = false))
+    mass_A2 = descendants!(mtg_manual, :mass_g, symbol="A", filter_fun=x -> x.MTG.index == 2)
+    id_cor_A10 = findfirst(x -> x == 0, descendants!(mtg_manual[1], :id_cor, symbol="S", link=("/", "<"), all=false))
     mass_A2 = mass_A2[id_cor_A10:end]
     # NB: the A2 axis that are not found in the LiDAR data are removed from the computation (before id_cor = 0)
 
@@ -740,165 +750,165 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
     true_fresh_biomass = mtg_manual.attributes[:mass_g] / 1000
 
     DataFrame(
-        variable = ["length", "length", "volume", "volume", "volume", "volume", "volume", "volume", "biomass", "biomass", "biomass", "biomass", "biomass", "biomass"],
-        model = ["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw","plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw"],
-        measurement = [tot_lenght_manual,tot_lenght_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,tot_vol_manual,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass,true_fresh_biomass],
-        prediction = [tot_lenght_lidar,tot_lenght_lidar_raw,tot_vol_lidar,tot_vol_lidar_raw,tot_vol_lidar_stat_mod,tot_vol_lidar_pipe_mod,tot_vol_lidar_stat_mod_raw,tot_vol_lidar_pipe_mod_raw,fresh_biomass_lidar,fresh_biomass_lidar_raw,fresh_biomass_lidar_stat_mod,fresh_biomass_lidar_pipe_mod,fresh_biomass_lidar_stat_mod_raw,fresh_biomass_lidar_pipe_mod_raw]
+        variable=["length", "length", "volume", "volume", "volume", "volume", "volume", "volume", "biomass", "biomass", "biomass", "biomass", "biomass", "biomass"],
+        model=["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw"],
+        measurement=[tot_lenght_manual, tot_lenght_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass],
+        prediction=[tot_lenght_lidar, tot_lenght_lidar_raw, tot_vol_lidar, tot_vol_lidar_raw, tot_vol_lidar_stat_mod, tot_vol_lidar_pipe_mod, tot_vol_lidar_stat_mod_raw, tot_vol_lidar_pipe_mod_raw, fresh_biomass_lidar, fresh_biomass_lidar_raw, fresh_biomass_lidar_stat_mod, fresh_biomass_lidar_pipe_mod, fresh_biomass_lidar_stat_mod_raw, fresh_biomass_lidar_pipe_mod_raw]
     )
 end
 
 # ╔═╡ 0a19ac96-a706-479d-91b5-4ea3e091c3e8
-function summarize_data(mtg_files,dir_path_lidar,dir_path_lidar_raw,dir_path_manual)
-	branches = first.(splitext.(mtg_files))
+function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual)
+    branches = first.(splitext.(mtg_files))
 
-	df_stats_branch = DataFrame(
-	    :branch => String[],
-	    :variable => String[],
-	    :measurement => Float64[],
-	    :prediction => Float64[],
-	    :model => String[]
-	)
+    df_stats_branch = DataFrame(
+        :branch => String[],
+        :variable => String[],
+        :measurement => Float64[],
+        :prediction => Float64[],
+        :model => String[]
+    )
 
-	df_all = DataFrame(
-	    :origin => String[],
-	    :branch => String[],
-	    :id => Int[],
-	    :symbol => String[],
-	    :scale => Int[],
-	    :index => Int[],
-	    :parent_id => Int[],
-	    :link => Float64[],
-	    :mass_g => Float64[],
-	    :fresh_mass => Float64[],
-	    :volume => Float64[],
-	    :length => Float64[],
-	    :cross_section => Float64[],
-	    :id_cor => Int[]
-	    )
+    df_all = DataFrame(
+        :origin => String[],
+        :branch => String[],
+        :id => Int[],
+        :symbol => String[],
+        :scale => Int[],
+        :index => Int[],
+        :parent_id => Int[],
+        :link => Float64[],
+        :mass_g => Float64[],
+        :fresh_mass => Float64[],
+        :volume => Float64[],
+        :length => Float64[],
+        :cross_section => Float64[],
+        :id_cor => Int[]
+    )
 
-	for i in branches
-	    println("Computing branch $i")
-	    (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
-	        compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
-	    df = volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
-	    df[!,:branch] .= i
-	    df_stats_branch = vcat(df_stats_branch, df)
+    for i in branches
+        println("Computing branch $i")
+        (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
+            compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
+        df = volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
+        df[!, :branch] .= i
+        df_stats_branch = vcat(df_stats_branch, df)
 
-	    # Manual measurement:
-	    df_manual = DataFrame(mtg_manual, [:mass_g, :cross_section, :length_gap_filled, :fresh_mass, :volume_gf, :id_cor])
-	    df_manual[!,:branch] .= i
-	    rename!(df_manual, Dict(:volume_gf => "volume", :length_gap_filled => "length"))
-	    df_manual[!,:origin] .= "measurement"
+        # Manual measurement:
+        df_manual = DataFrame(mtg_manual, [:mass_g, :cross_section, :length_gap_filled, :fresh_mass, :volume_gf, :id_cor])
+        df_manual[!, :branch] .= i
+        rename!(df_manual, Dict(:volume_gf => "volume", :length_gap_filled => "length"))
+        df_manual[!, :origin] .= "measurement"
 
-	    # plantscan3d, as-is:
-	    df_ps3d_raw = DataFrame(mtg_lidar_ps3d_raw, [:fresh_mass, :volume_ps3d])
-	    rename!(df_ps3d_raw, Dict(:volume_ps3d => "volume"))
-	    df_ps3d_raw[!,:branch] .= i
-	    # df_ps3d_raw[!,:id_cor] .= missing
-	    df_ps3d_raw[!,:origin] .= "plantscan3d, raw"
+        # plantscan3d, as-is:
+        df_ps3d_raw = DataFrame(mtg_lidar_ps3d_raw, [:fresh_mass, :volume_ps3d])
+        rename!(df_ps3d_raw, Dict(:volume_ps3d => "volume"))
+        df_ps3d_raw[!, :branch] .= i
+        # df_ps3d_raw[!,:id_cor] .= missing
+        df_ps3d_raw[!, :origin] .= "plantscan3d, raw"
 
-	    # statistical model:
-	    df_stat_mod = DataFrame(
-	        mtg_lidar_model,
-	        [
-	            :length_sim,
-	            :cross_section_ps3d,
-	            :cross_section_pipe,
-	            :cross_section_pipe_50,
-	            :cross_section_stat_mod_50,
-	            :cross_section_stat_mod,
-	            :fresh_mass,
-	            :fresh_mass_50,
-	            :fresh_mass_ps3d,
-	            :fresh_mass_pipe_mod,
-	            :fresh_mass_pipe_mod_50,
-	            :volume_stat_mod,
-	            :volume_stat_mod_50,
-	            :volume_ps3d,
-	            :volume_pipe_mod,
-	            :volume_pipe_mod_50,
-	            :id_cor
-	        ]
-	    )
+        # statistical model:
+        df_stat_mod = DataFrame(
+            mtg_lidar_model,
+            [
+                :length_sim,
+                :cross_section_ps3d,
+                :cross_section_pipe,
+                :cross_section_pipe_50,
+                :cross_section_stat_mod_50,
+                :cross_section_stat_mod,
+                :fresh_mass,
+                :fresh_mass_50,
+                :fresh_mass_ps3d,
+                :fresh_mass_pipe_mod,
+                :fresh_mass_pipe_mod_50,
+                :volume_stat_mod,
+                :volume_stat_mod_50,
+                :volume_ps3d,
+                :volume_pipe_mod,
+                :volume_pipe_mod_50,
+                :id_cor
+            ]
+        )
 
-	    df_stat_mod_biomass = select(
-	            df_stat_mod,
-	            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
-	            :fresh_mass => "stat. mod.",
-	            :fresh_mass_50 => "stat. mod. ⌀<50",
-	            :fresh_mass_ps3d => "plantscan3d",
-	            :fresh_mass_pipe_mod => "Pipe model",
-	            :fresh_mass_pipe_mod_50 => "Pipe mod. ⌀<50"
-	    )
+        df_stat_mod_biomass = select(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :fresh_mass => "stat. mod.",
+            :fresh_mass_50 => "stat. mod. ⌀<50",
+            :fresh_mass_ps3d => "plantscan3d",
+            :fresh_mass_pipe_mod => "Pipe model",
+            :fresh_mass_pipe_mod_50 => "Pipe mod. ⌀<50"
+        )
 
-	    df_stat_mod_biomass = stack(
-	            df_stat_mod_biomass,
-	            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
-	            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
-	            variable_name = :origin,
-	            value_name = :fresh_mass
-	        )
+        df_stat_mod_biomass = stack(
+            df_stat_mod_biomass,
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            variable_name=:origin,
+            value_name=:fresh_mass
+        )
 
 
-	    df_stat_mod_cs = select(
-	            df_stat_mod,
-	            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
-	            :cross_section_stat_mod => "stat. mod.",
-	            :cross_section_stat_mod_50 => "stat. mod. ⌀<50",
-	            :cross_section_ps3d => "plantscan3d",
-	            :cross_section_pipe => "Pipe model",
-	            :cross_section_pipe_50 => "Pipe mod. ⌀<50"
-	    )
+        df_stat_mod_cs = select(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
+            :cross_section_stat_mod => "stat. mod.",
+            :cross_section_stat_mod_50 => "stat. mod. ⌀<50",
+            :cross_section_ps3d => "plantscan3d",
+            :cross_section_pipe => "Pipe model",
+            :cross_section_pipe_50 => "Pipe mod. ⌀<50"
+        )
 
-	    df_stat_mod_cs = stack(
-	            df_stat_mod_cs,
-	            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
-	            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
-	            variable_name = :origin,
-	            value_name = :cross_section
-	        )
+        df_stat_mod_cs = stack(
+            df_stat_mod_cs,
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
+            variable_name=:origin,
+            value_name=:cross_section
+        )
 
-	    select!(
-	            df_stat_mod,
-	            :id, :symbol, :scale, :index, :parent_id, :link, :length_sim => :length, :id_cor,
-	            :volume_stat_mod => "stat. mod.",
-	            :volume_stat_mod_50 => "stat. mod. ⌀<50",
-	            :volume_ps3d => "plantscan3d",
-	            :volume_pipe_mod => "Pipe model",
-	            :volume_pipe_mod_50 => "Pipe mod. ⌀<50"
-	    )
+        select!(
+            df_stat_mod,
+            :id, :symbol, :scale, :index, :parent_id, :link, :length_sim => :length, :id_cor,
+            :volume_stat_mod => "stat. mod.",
+            :volume_stat_mod_50 => "stat. mod. ⌀<50",
+            :volume_ps3d => "plantscan3d",
+            :volume_pipe_mod => "Pipe model",
+            :volume_pipe_mod_50 => "Pipe mod. ⌀<50"
+        )
 
-	    df_stat_mod = stack(
-	            df_stat_mod,
-	            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
-	            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor, :length],
-	            variable_name = :origin,
-	            value_name = :volume
-	        )
+        df_stat_mod = stack(
+            df_stat_mod,
+            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor, :length],
+            variable_name=:origin,
+            value_name=:volume
+        )
 
-	    df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_biomass[:,[:origin, :id, :fresh_mass]], on = [:origin,:id])
-	    df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_cs[:,[:origin, :id, :cross_section]], on = [:origin,:id])
-	    df_stat_mod[!,:branch] .= i
+        df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_biomass[:, [:origin, :id, :fresh_mass]], on=[:origin, :id])
+        df_stat_mod = leftjoin(df_stat_mod, df_stat_mod_cs[:, [:origin, :id, :cross_section]], on=[:origin, :id])
+        df_stat_mod[!, :branch] .= i
 
-	    df_all = vcat(
-	        df_all,
-	        df_manual[:,Not(:tree)],
-	        df_ps3d_raw[:,Not(:tree)],
-	        df_stat_mod,
-	        cols = :union
-	        )
-	end
-	
-	return df_all, df_stats_branch
+        df_all = vcat(
+            df_all,
+            df_manual[:, Not(:tree)],
+            df_ps3d_raw[:, Not(:tree)],
+            df_stat_mod,
+            cols=:union
+        )
+    end
+
+    return df_all, df_stats_branch
 end
 
 # ╔═╡ 87140df4-3fb5-443c-a667-be1f19b016f6
-df_all_branches, df_stats_branch = summarize_data(mtg_files,dir_path_lidar,dir_path_lidar_raw,dir_path_manual);
+df_all_branches, df_stats_branch = summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual);
 
 # ╔═╡ 73515bd3-0124-42a4-9997-3730e7dcbf4c
 begin
-	CSV.write("../2-results/1-data/df_stats_branch.csv", df_stats_branch)
-	CSV.write("../2-results/1-data/df_all.csv", df_all_branches, delim = ";")
+    CSV.write("../2-results/1-data/df_stats_branch.csv", df_stats_branch)
+    CSV.write("../2-results/1-data/df_all.csv", df_all_branches, delim=";")
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -2260,7 +2270,7 @@ version = "3.5.0+0"
 # ╟─6b8d93de-2fb4-411d-befe-29cb29132b40
 # ╟─796a13d2-a65c-46f6-ad42-5fd42811c8a8
 # ╟─220dfbff-15fc-4e75-a6a2-39e60c08e8dc
-# ╟─492fc741-7a3b-4992-a453-fcac2bbf35ad
+# ╠═492fc741-7a3b-4992-a453-fcac2bbf35ad
 # ╟─068bccf7-7d01-40f5-b06b-97f6f51abcdd
 # ╟─0b8d39b2-9255-4bd7-a02f-2cc055bf61fd
 # ╟─fa9cf6f4-eb79-4c70-ba1f-4d80b3c3e62a
@@ -2287,6 +2297,8 @@ version = "3.5.0+0"
 # ╟─0a19ac96-a706-479d-91b5-4ea3e091c3e8
 # ╟─f50a2242-64ee-4c91-8c9d-3d2d3f11ac5d
 # ╠═73515bd3-0124-42a4-9997-3730e7dcbf4c
+# ╟─1103b80b-7dc6-41ed-b5bd-a6ef739d0624
+# ╠═806c5fba-6166-41d9-a109-9fac15eb107a
 # ╟─30f8608f-564e-4ffc-91b2-1f104fb46c1e
 # ╟─ffe53b41-96bd-4f44-b313-94aabdc8b1a6
 # ╟─12d7aca9-4fa8-4461-8077-c79a99864391
