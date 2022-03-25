@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.16.4
+# v0.18.4
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,9 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
 end
@@ -206,9 +207,12 @@ md"""
 Functions used in the notebook:
 """
 
-# ╔═╡ c49a2264-3ec3-4e60-a159-6cca2c479e61
-begin
+# ╔═╡ 49e2cfaf-6e4e-42b3-9c5f-f14ac548f876
+"""
+	filter_model(x, stat_raw, stat_cor, ps3d_raw, ps3d_cor, pipe_raw, pipe_cor)
 
+Filter x with the models set to `true`.
+"""
 function filter_model(x, stat_raw, stat_cor, ps3d_raw, ps3d_cor, pipe_raw, pipe_cor)
 	x2 = copy(x)
 	selection = Dict("stat. model raw" => stat_raw, "stat. model cor." => stat_cor, "plantscan3d raw" => ps3d_raw, "plantscan3d cor." => ps3d_cor, "Pipe model raw" => pipe_raw, "Pipe model cor." => pipe_cor)
@@ -219,69 +223,6 @@ function filter_model(x, stat_raw, stat_cor, ps3d_raw, ps3d_cor, pipe_raw, pipe_
 		end
 	end
 	return x2
-end
-
-"""
-    nRMSE(obs,sim; digits = 2)
-
-Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
-Normalization is performed using division by observations range (max-min).
-Output: Float/Particles
-"""
-function nRMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
-end
-
-"""
-    RMSE(obs,sim; digits = 2)
-
-Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
-The closer to 0 the better.
-"""
-function RMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
-end
-
-
-"""
-    EF(obs,sim; digits = 2)
-
-Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
-More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
-The closer to 1 the better.
-"""
-function EF(obs, sim; digits = 2)
-    SSres = sum((obs - sim).^2)
-    SStot = sum((obs .- mean(obs)).^2)
-    return round(1 - SSres / SStot, digits = digits)
-end
-
-function Bias(obs, sim; digits = 2)
-    return round(mean((sim .- obs)), digits = digits)
-end
-
-function nBias(obs, sim; digits = 2)
-    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
-end
-
-end
-
-# ╔═╡ ad52254f-cee8-4663-a2f7-9d6a9f83112a
-begin
-gdf_branch = groupby(df_stats_branch, [:variable, :model])
-
-stats =
-combine(
-    gdf_branch,
-    [:measurement, :prediction] => RMSE => :RMSE,
-	[:measurement, :prediction] => nRMSE => :nRMSE,
-    [:measurement, :prediction] => EF => :EF
-)
-
-stats_length = filter(x -> x.variable == "length", stats)
-stats_volume = filter(x -> x.variable == "volume", stats)
-stats_biomass = filter(x -> x.variable == "biomass", stats)
-stats
 end
 
 # ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
@@ -320,6 +261,83 @@ p_biom =
 		:measurement => "Predicted biomass (kg)") * visual(Lines)
 )
 plt_biomass = draw(p_biom, palettes=(; color=colors))
+end
+
+# ╔═╡ f7392326-f346-4aeb-ab61-5d1973f11526
+"""
+    nRMSE(obs,sim; digits = 2)
+
+Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
+Normalization is performed using division by observations range (max-min).
+Output: Float/Particles
+"""
+function nRMSE(obs, sim; digits = 2)
+    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+end
+
+# ╔═╡ 617272d3-5ecc-45c3-ae0d-9e32d23ad7b9
+"""
+    RMSE(obs,sim; digits = 2)
+
+Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
+The closer to 0 the better.
+"""
+function RMSE(obs, sim; digits = 2)
+    return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
+end
+
+# ╔═╡ 360d9c28-40f2-493e-bf98-5ab51aba8214
+"""
+    EF(obs,sim; digits = 2)
+
+Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
+More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
+The closer to 1 the better.
+"""
+function EF(obs, sim; digits = 2)
+    SSres = sum((obs - sim).^2)
+    SStot = sum((obs .- mean(obs)).^2)
+    return round(1 - SSres / SStot, digits = digits)
+end
+
+# ╔═╡ ad52254f-cee8-4663-a2f7-9d6a9f83112a
+begin
+gdf_branch = groupby(df_stats_branch, [:variable, :model])
+
+stats =
+combine(
+    gdf_branch,
+    [:measurement, :prediction] => RMSE => :RMSE,
+	[:measurement, :prediction] => nRMSE => :nRMSE,
+    [:measurement, :prediction] => EF => :EF
+)
+
+stats_length = filter(x -> x.variable == "length", stats)
+stats_volume = filter(x -> x.variable == "volume", stats)
+stats_biomass = filter(x -> x.variable == "biomass", stats)
+stats
+end
+
+# ╔═╡ 5c3d5f5b-f49b-41c8-bbd5-0540faec7f07
+"""
+    Bias(obs,sim; digits = 2)
+
+Returns the bias between observations `obs` and simulations `sim`.
+The closer to 0 the better.
+"""
+function Bias(obs, sim; digits = 2)
+    return round(mean((sim .- obs)), digits = digits)
+end
+
+# ╔═╡ 33ff497e-afd4-46b7-b984-e37730108144
+"""
+    nBias(obs,sim; digits = 2)
+
+Returns the normalized bias (%) between observations `obs` and simulations `sim`.
+The closer to 0 the better.
+"""
+function nBias(obs, sim; digits = 2)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
 end
 
 # ╔═╡ 0651e9c6-309a-425f-bba5-ea0b00c43e0b
@@ -726,9 +744,9 @@ version = "0.21.0+0"
 
 [[Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "7bf67e9a481712b3dbe9cb3dac852dc4b1162e02"
+git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+0"
+version = "2.68.3+2"
 
 [[Graphics]]
 deps = ["Colors", "LinearAlgebra", "NaNMath"]
@@ -755,9 +773,9 @@ version = "1.0.2"
 
 [[HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
-git-tree-sha1 = "8a954fed8ac097d5be04921d595f741115c1b2ad"
+git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
-version = "2.8.1+0"
+version = "2.8.1+1"
 
 [[IfElse]]
 git-tree-sha1 = "28e837ff3e7a6c3cdb252ce49fb412c8eb3caeef"
@@ -907,9 +925,9 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [[Libffi_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "761a393aeccd6aa92ec3515e428c26bf99575b3b"
+git-tree-sha1 = "0b4a5d71f3e5200a7dff793393e09dfc2d874290"
 uuid = "e9f186c6-92d2-5b65-8a66-fee21dc1b490"
-version = "3.2.2+0"
+version = "3.2.2+1"
 
 [[Libgcrypt_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgpg_error_jll", "Pkg"]
@@ -942,7 +960,7 @@ uuid = "38a345b3-de98-5d2b-a5d3-14cd9215e700"
 version = "2.36.0+0"
 
 [[LinearAlgebra]]
-deps = ["Libdl"]
+deps = ["Libdl", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Loess]]
@@ -1047,9 +1065,13 @@ version = "1.10.5"
 
 [[Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "7937eda4681660b4d6aeeecc2f7e1c81c8ee4e2f"
+git-tree-sha1 = "887579a3eb005446d514ab7aeac5d1d027658b8f"
 uuid = "e7412a2a-1a6e-54c0-be00-318e2571c051"
-version = "1.3.5+0"
+version = "1.3.5+1"
+
+[[OpenBLAS_jll]]
+deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
+uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 
 [[OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -1200,7 +1222,7 @@ deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[Random]]
-deps = ["Serialization"]
+deps = ["SHA", "Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[Ratios]]
@@ -1509,6 +1531,10 @@ git-tree-sha1 = "acc685bcf777b2202a904cdcb49ad34c2fa1880c"
 uuid = "0ac62f75-1d6f-5e53-bd7c-93b484bb37c0"
 version = "0.14.0+4"
 
+[[libblastrampoline_jll]]
+deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
+
 [[libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "7a5780a0d9c6864184b3a2eeeb833a0c871f00ab"
@@ -1523,9 +1549,9 @@ version = "1.6.38+0"
 
 [[libvorbis_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Ogg_jll", "Pkg"]
-git-tree-sha1 = "c45f4e40e7aafe9d086379e5578947ec8b95a8fb"
+git-tree-sha1 = "b910cb81ef3fe6e78bf6acee440bda86fd6ae00c"
 uuid = "f27f6e37-5d2b-51aa-960f-b287f2bc3b7a"
-version = "1.3.7+0"
+version = "1.3.7+1"
 
 [[nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1570,7 +1596,7 @@ version = "3.0.0+3"
 # ╟─96f4479c-853f-4534-a3f5-6f31b844e634
 # ╟─598c673e-1665-4b86-9ac8-7a52e8ce3d88
 # ╟─f164ffb7-296e-477b-bb18-0fa1e82329e2
-# ╟─a7141396-04dc-4eab-b2d2-a24ab7883e43
+# ╠═a7141396-04dc-4eab-b2d2-a24ab7883e43
 # ╟─a108212b-cb5d-46a8-a3aa-ddd617170e53
 # ╟─f550e258-a33a-4cb9-8a59-8a63b28d2bb3
 # ╟─1afd8da2-5b18-4672-aa34-d9f8e66b3bef
@@ -1581,6 +1607,11 @@ version = "3.0.0+3"
 # ╟─f333b2f9-fd84-40c2-8616-053ec70eff0d
 # ╠═c4e44b1f-3a6d-4718-b241-190504ed39c8
 # ╟─04ec9bac-fcf3-4352-9a19-cb405e9e6f49
-# ╠═c49a2264-3ec3-4e60-a159-6cca2c479e61
+# ╟─49e2cfaf-6e4e-42b3-9c5f-f14ac548f876
+# ╟─f7392326-f346-4aeb-ab61-5d1973f11526
+# ╟─617272d3-5ecc-45c3-ae0d-9e32d23ad7b9
+# ╟─360d9c28-40f2-493e-bf98-5ab51aba8214
+# ╟─5c3d5f5b-f49b-41c8-bbd5-0540faec7f07
+# ╟─33ff497e-afd4-46b7-b984-e37730108144
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

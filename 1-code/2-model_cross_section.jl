@@ -74,8 +74,8 @@ First, we define which variables will be used in our model. In our case we will 
 """
 
 # ╔═╡ 3d0a6b24-f11b-4f4f-b59b-5c40ea9be838
-# formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
-formula_all = @formula(cross_section ~ cross_section_pipe + pathlength_subtree + branching_order + segment_subtree)
+formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis) 
+# formula_all = @formula(cross_section ~ 0 + pathlength_subtree + segment_index_on_axis + number_leaves)
 
 # ╔═╡ b8800a04-dedb-44b3-82fe-385e3db1d0d5
 md"""
@@ -268,9 +268,10 @@ end
 # ╔═╡ 492fc741-7a3b-4992-a453-fcac2bbf35ad
 df = let
     x = dropmissing(bind_csv_files(csv_files), :cross_section)
-    filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE",]), x)
+    filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE","Portait aussi un axe peut-être cassé lors de la manip"]), x)
     filter!(x -> x.symbol == "S", x)
     # filter!(x -> !in(x.tree, ["2","4"]), x) # Remove pruned trees
+    filter!(x -> !in(x.tree, ["1", "2", "3", "4"]), x) # Remove pruned trees
     x
 end
 
@@ -529,6 +530,7 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # How many leaves the node has in proportion to its siblings + itself:
     @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
 
+	# Use the first cross-section for the first value to apply the pipe-model:
     first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level=5))[1]
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
@@ -698,6 +700,36 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
 
     return (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model)
 end
+
+# ╔═╡ b3b229c9-f6dd-4e9b-bede-4f33e8240bf3
+(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) = compute_volume_model("tree13h", dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
+
+# ╔═╡ f0abc15b-9815-4e1d-b394-2834623ff83e
+get_node(mtg_manual,3)[:cross_section]
+
+# ╔═╡ 5a6832c5-6614-4bf5-a1c6-e4f6c5b3a167
+get_node(mtg_manual,5)[:diameter]
+
+# ╔═╡ 11439e22-2706-4751-9735-3dbadcc73f18
+get_node(mtg_manual,3)[2][:cross_section]
+
+# ╔═╡ 652ffcc2-3aa0-410f-90f2-a9e132394e24
+get_node(mtg_lidar_model,3)[:cross_section_stat_mod]
+
+# ╔═╡ 380218ce-8808-43d4-9ed9-dddcb74b16af
+get_node(mtg_lidar_model,4)[:cross_section_stat_mod] # Child of A3, why so low???
+
+# ╔═╡ c269cc61-7a23-4140-b57c-2b94d9aab991
+get_node(mtg_lidar_model,6)[:cross_section_stat_mod]
+
+# ╔═╡ 2a17ddc8-6dd6-447a-97fc-770477e50256
+get_node(mtg_lidar_model,313)[:cross_section_stat_mod] # Other child of A5
+
+# ╔═╡ f8dbc5c8-0a1c-4624-9897-d413f9d17a36
+names(mtg_lidar_model)
+
+# ╔═╡ 29210878-aad3-49ad-b1b8-0a0de1b6d386
+keys(get_node(mtg_lidar_model,3).children)
 
 # ╔═╡ 073e32dd-c880-479c-8933-d53c9655a04d
 function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
@@ -2270,7 +2302,7 @@ version = "3.5.0+0"
 # ╟─6b8d93de-2fb4-411d-befe-29cb29132b40
 # ╟─796a13d2-a65c-46f6-ad42-5fd42811c8a8
 # ╟─220dfbff-15fc-4e75-a6a2-39e60c08e8dc
-# ╠═492fc741-7a3b-4992-a453-fcac2bbf35ad
+# ╟─492fc741-7a3b-4992-a453-fcac2bbf35ad
 # ╟─068bccf7-7d01-40f5-b06b-97f6f51abcdd
 # ╟─0b8d39b2-9255-4bd7-a02f-2cc055bf61fd
 # ╟─fa9cf6f4-eb79-4c70-ba1f-4d80b3c3e62a
@@ -2291,8 +2323,18 @@ version = "3.5.0+0"
 # ╟─d66aebf5-3681-420c-a342-166ea05dda2e
 # ╟─7de574d4-a8b8-4945-a2f1-5b2928b9d231
 # ╟─f26a28b2-d70e-4543-b58e-2d640c2a0c0d
-# ╠═9290e9bf-4c43-47c7-96ec-8b44ad3c6b23
+# ╟─9290e9bf-4c43-47c7-96ec-8b44ad3c6b23
 # ╟─466aa3b3-4c78-4bb7-944d-5d55128f8cf6
+# ╠═b3b229c9-f6dd-4e9b-bede-4f33e8240bf3
+# ╠═f0abc15b-9815-4e1d-b394-2834623ff83e
+# ╠═5a6832c5-6614-4bf5-a1c6-e4f6c5b3a167
+# ╠═11439e22-2706-4751-9735-3dbadcc73f18
+# ╠═652ffcc2-3aa0-410f-90f2-a9e132394e24
+# ╠═380218ce-8808-43d4-9ed9-dddcb74b16af
+# ╠═c269cc61-7a23-4140-b57c-2b94d9aab991
+# ╠═2a17ddc8-6dd6-447a-97fc-770477e50256
+# ╠═f8dbc5c8-0a1c-4624-9897-d413f9d17a36
+# ╠═29210878-aad3-49ad-b1b8-0a0de1b6d386
 # ╠═87140df4-3fb5-443c-a667-be1f19b016f6
 # ╟─0a19ac96-a706-479d-91b5-4ea3e091c3e8
 # ╟─f50a2242-64ee-4c91-8c9d-3d2d3f11ac5d

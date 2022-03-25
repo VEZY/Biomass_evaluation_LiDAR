@@ -34,6 +34,8 @@ md"""
 
 The purpose of this notebook is to evaluate the estimation of the branches volume and biomass using different methods, at axis scale.
 
+The outputs of the models in this notebook differs from the ones presented in `2-model_cross_section` because the models were applied to the manual measurements on the othe notebook, and on the LiDAR data in this one. The results in this notebook are then quite independent because the measurement method and the reconstruction both add some error.
+
 ## Material and methods
 
 ### Measurements 
@@ -78,14 +80,12 @@ Importing the data:
 """
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
-begin
 df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim = ";");
-end
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
 md"""
 !!! note
-	The data is computed in the `4.0-compute_volume.jl` script.
+	The data is computed in the `2-model_cross_section.jl` script.
 """
 
 # ╔═╡ 8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
@@ -148,6 +148,21 @@ md"""
 *Table 1. Statistics according to the method used for the estimation of the cross-section of each segment / axis, given for the cross-section, the volume estimated from the cross-section and the length, and the biomass which is estimated using the volume and the average fresh wood density, and measured using a scale.*
 """
 
+# ╔═╡ 1f49c11d-678d-4b78-9038-4b5055f302bb
+begin
+stats =
+combine(
+    groupby(dropmissing(df_compare, [:volume]), [:origin]),
+	[:volume_meas, :volume] => RMSE => :RMSE_volume,
+	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
+	[:volume_meas, :volume] => nRMSE => :nRMSE_volume,
+	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
+    [:volume_meas, :volume] => EF => :EF_volume,
+    [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
+)
+sort(stats, :RMSE_volume)
+end
+
 # ╔═╡ 363b2bbd-7118-4819-9814-a9db29c008d7
 md"""
 ### Axis total length
@@ -189,7 +204,7 @@ md"""
 
 # ╔═╡ 88f93111-7982-4b0b-baf1-ece14a51e3bc
 md"""
-Table 2. Statistics for evaluating the lenght predicted using LiDAR+plantscan3d with the direct measurement for each identified axis.
+*Table 2. Statistics for evaluating the lenght predicted using LiDAR+plantscan3d with the direct measurement for each identified axis.*
 """
 
 # ╔═╡ 4cac9d09-5941-4352-83b7-06cb223fa280
@@ -251,6 +266,16 @@ md"""
 *Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale. Note that some A1 are missing. This is because the A1 were not measured for their biomass directly, but were considered as the difference between the whole branch biomass and the biomass of all A2. In some cases some A2 were not measured, so we cannot infer the biomass of A1 (e.g. for tree13h).*
 """
 
+# ╔═╡ 9dac320d-5d89-4c37-8ff4-4fdd005658a5
+md"""
+Table 3. Statistics of the fress biomass prediction of all identified axes. These statistics are related to figure 3.
+"""
+
+# ╔═╡ 316bd7fb-c49e-47b2-9fd6-015158ce8926
+md"""
+*Figure 4. Measured (x-axis) and predicted (y-axis) fresh biomass at branch scale. Branch scale is defined here as the sum of all identified axis biomass to control for the error induced by missing structures between LiDAR scans and manual measurements.*
+"""
+
 # ╔═╡ 1777a09c-2657-46a6-bf93-6b7465d6fb48
 md"""
 !!! note
@@ -260,7 +285,7 @@ md"""
 
 # ╔═╡ 710ae2b2-4fcb-4727-899b-e2a921fa6b75
 md"""
-Table 3. Statistics for evaluating the biomass predicted using LiDAR+plantscan3d with the direct measurement for each identified axis.
+Table 4. Statistics of the fress biomass prediction at branch scale. These statistics are usually more interesting than the ones in Table 3 because they show how the prediction error propagates at a larger scale. These statistics are related to figure 4.
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -334,21 +359,6 @@ function EF(obs, sim; digits = 2)
 end
 end
 
-# ╔═╡ 1f49c11d-678d-4b78-9038-4b5055f302bb
-begin
-stats =
-combine(
-    groupby(dropmissing(df_compare, [:volume]), [:origin]),
-	[:volume_meas, :volume] => RMSE => :RMSE_volume,
-	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
-	[:volume_meas, :volume] => nRMSE => :nRMSE_volume,
-	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
-    [:volume_meas, :volume] => EF => :EF_volume,
-    [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
-)
-sort(stats, :RMSE_volume)
-end
-
 # ╔═╡ 19c9eb91-d077-4eb0-85ee-5a80dd539bc0
 combine(
     filter(x -> x.origin == "plantscan3d", dropmissing(df_compare, [:length, :length_meas])),
@@ -368,11 +378,12 @@ plt_cs =
 	(
 		mapping(
 			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section => "Predicted cross-section (mm²)", color= :origin, marker = :branch) *
-		visual(Scatter) +
+			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines) +
 		mapping(
 			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines)
+			:cross_section => "Predicted cross-section (mm²)", 
+			color= :origin, marker = :branch) *
+		visual(Scatter, markersize = 15, alpha = 0.9)
 	)
 # axis = (width = 500, height = 500)
 # plt_cross_section = draw(plt; axis)
@@ -392,11 +403,11 @@ plt_vol =
 	(
 		mapping(
 			:volume_meas => "Measured volume (m³)",
-			:volume => "Predicted volume (m³)", color= :origin, marker = :branch) *
-		visual(Scatter) +
+			:volume_meas => "Predicted volume (m³)") * visual(Lines) +
 		mapping(
 			:volume_meas => "Measured volume (m³)",
-			:volume_meas => "Predicted volume (m³)") * visual(Lines)
+			:volume => "Predicted volume (m³)", color= :origin, marker = :branch) *
+		visual(Scatter, markersize = 15, alpha = 0.9)		
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
@@ -415,11 +426,12 @@ plt =
 	(
 		mapping(
 			:fresh_mass_meas => "Measured fresh biomass (kg)",
-			:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
-		visual(Scatter) +
+			:fresh_mass_meas => "Predicted fresh biomass (kg)"
+		) * visual(Lines) +
 		mapping(
 			:fresh_mass_meas => "Measured fresh biomass (kg)",
-			:fresh_mass_meas => "Predicted fresh biomass (kg)") * visual(Lines)
+			:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
+		visual(Scatter, markersize = 15, alpha = 0.9)
 	)
 # axis = (width = 500, height = 500)
 # plt_biomass = draw(plt; axis)
@@ -439,12 +451,13 @@ plt_branch =
 data(df_branch) *
 (
 	mapping(
+		:fresh_mass => "Measured fresh biomass (kg)",
+		:fresh_mass => "Predicted fresh biomass (kg)"
+	) * visual(Lines) +
+	mapping(
 		:fresh_mass_meas => "Measured fresh biomass (kg)",
 		:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:fresh_mass => "Measured fresh biomass (kg)",
-		:fresh_mass => "Predicted fresh biomass (kg)") * visual(Lines)
+	visual(Scatter, markersize = 15, alpha = 0.9)
 )
 	
 plot_branch = draw(plt_branch, axis=(autolimitaspect = 1,), palettes=(; color=colors))
@@ -463,15 +476,25 @@ save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_bi
 save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass_branch.png", plot_branch, px_per_unit = 3)
 end
 
+# ╔═╡ b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
+sort(combine(
+    groupby(df_compare4, :origin),
+	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+    [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+	[:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+	[:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+), :nRMSE)
+
 # ╔═╡ 116a150d-708d-4161-873d-6f92a83e3ed1
-combine(
+sort(combine(
     groupby(df_branch, :origin),
 	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
 	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
     [:fresh_mass_meas, :fresh_mass] => EF => :EF,
 	[:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
 	[:fresh_mass_meas, :fresh_mass] => nBias => :nBias
-)
+), :nRMSE)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1872,7 +1895,7 @@ version = "0.9.1+5"
 # ╟─19c9eb91-d077-4eb0-85ee-5a80dd539bc0
 # ╟─4cac9d09-5941-4352-83b7-06cb223fa280
 # ╟─37633b50-c141-45d1-b7dd-1a0eebfda64f
-# ╠═04dd878b-2358-4fa7-8d85-1e8928b10c59
+# ╟─04dd878b-2358-4fa7-8d85-1e8928b10c59
 # ╟─13da9f23-5729-467f-b652-2dc83627f586
 # ╟─6f871718-edb4-478e-aa6e-2032dc775eda
 # ╟─c8a346f8-9942-4851-924a-9208cf077ba7
@@ -1883,7 +1906,10 @@ version = "0.9.1+5"
 # ╟─c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 # ╟─b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 # ╟─a410b364-486f-493c-aa01-f2a82163b75f
+# ╟─9dac320d-5d89-4c37-8ff4-4fdd005658a5
+# ╟─b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
 # ╟─fea13de5-26d6-4e2e-8fed-e241c650c206
+# ╟─316bd7fb-c49e-47b2-9fd6-015158ce8926
 # ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
 # ╟─710ae2b2-4fcb-4727-899b-e2a921fa6b75
 # ╟─116a150d-708d-4161-873d-6f92a83e3ed1
