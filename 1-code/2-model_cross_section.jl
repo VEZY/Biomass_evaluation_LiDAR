@@ -158,7 +158,7 @@ begin
     dir_path_lidar = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
     dir_path_lidar_raw = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
     dir_path_manual = joinpath("..", "0-data", "1.2-mtg_manual_measurement_corrected_enriched")
-
+	dir_path_lidar_new = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "6-corrected_segmentized_id_enriched")
     mtg_files =
         filter(
             x -> splitext(basename(x))[2] in [".xlsx"],
@@ -701,36 +701,6 @@ function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_pa
     return (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model)
 end
 
-# ╔═╡ b3b229c9-f6dd-4e9b-bede-4f33e8240bf3
-(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) = compute_volume_model("tree13h", dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
-
-# ╔═╡ f0abc15b-9815-4e1d-b394-2834623ff83e
-get_node(mtg_manual,3)[:cross_section]
-
-# ╔═╡ 5a6832c5-6614-4bf5-a1c6-e4f6c5b3a167
-get_node(mtg_manual,5)[:diameter]
-
-# ╔═╡ 11439e22-2706-4751-9735-3dbadcc73f18
-get_node(mtg_manual,3)[2][:cross_section]
-
-# ╔═╡ 652ffcc2-3aa0-410f-90f2-a9e132394e24
-get_node(mtg_lidar_model,3)[:cross_section_stat_mod]
-
-# ╔═╡ 380218ce-8808-43d4-9ed9-dddcb74b16af
-get_node(mtg_lidar_model,4)[:cross_section_stat_mod] # Child of A3, why so low???
-
-# ╔═╡ c269cc61-7a23-4140-b57c-2b94d9aab991
-get_node(mtg_lidar_model,6)[:cross_section_stat_mod]
-
-# ╔═╡ 2a17ddc8-6dd6-447a-97fc-770477e50256
-get_node(mtg_lidar_model,313)[:cross_section_stat_mod] # Other child of A5
-
-# ╔═╡ f8dbc5c8-0a1c-4624-9897-d413f9d17a36
-names(mtg_lidar_model)
-
-# ╔═╡ 29210878-aad3-49ad-b1b8-0a0de1b6d386
-keys(get_node(mtg_lidar_model,3).children)
-
 # ╔═╡ 073e32dd-c880-479c-8933-d53c9655a04d
 function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
     df_lidar_raw = DataFrame(mtg_lidar_ps3d_raw, [:volume_ps3d, :volume_stat_mod, :volume_pipe_mod, :volume_pipe_mod_50, :length, :cross_section_stat_mod])
@@ -790,7 +760,7 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
 end
 
 # ╔═╡ 0a19ac96-a706-479d-91b5-4ea3e091c3e8
-function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual)
+function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual,dir_path_lidar_new)
     branches = first.(splitext.(mtg_files))
 
     df_stats_branch = DataFrame(
@@ -822,6 +792,10 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         println("Computing branch $i")
         (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
             compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
+
+		# Write the computed LiDAR MTG to disk:
+		write_mtg(joinpath(dir_path_lidar_new,i*".mtg"), mtg_lidar_model)
+		
         df = volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
         df[!, :branch] .= i
         df_stats_branch = vcat(df_stats_branch, df)
@@ -935,7 +909,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
 end
 
 # ╔═╡ 87140df4-3fb5-443c-a667-be1f19b016f6
-df_all_branches, df_stats_branch = summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual);
+df_all_branches, df_stats_branch = summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual,dir_path_lidar_new);
 
 # ╔═╡ 73515bd3-0124-42a4-9997-3730e7dcbf4c
 begin
@@ -2325,16 +2299,6 @@ version = "3.5.0+0"
 # ╟─f26a28b2-d70e-4543-b58e-2d640c2a0c0d
 # ╟─9290e9bf-4c43-47c7-96ec-8b44ad3c6b23
 # ╟─466aa3b3-4c78-4bb7-944d-5d55128f8cf6
-# ╠═b3b229c9-f6dd-4e9b-bede-4f33e8240bf3
-# ╠═f0abc15b-9815-4e1d-b394-2834623ff83e
-# ╠═5a6832c5-6614-4bf5-a1c6-e4f6c5b3a167
-# ╠═11439e22-2706-4751-9735-3dbadcc73f18
-# ╠═652ffcc2-3aa0-410f-90f2-a9e132394e24
-# ╠═380218ce-8808-43d4-9ed9-dddcb74b16af
-# ╠═c269cc61-7a23-4140-b57c-2b94d9aab991
-# ╠═2a17ddc8-6dd6-447a-97fc-770477e50256
-# ╠═f8dbc5c8-0a1c-4624-9897-d413f9d17a36
-# ╠═29210878-aad3-49ad-b1b8-0a0de1b6d386
 # ╠═87140df4-3fb5-443c-a667-be1f19b016f6
 # ╟─0a19ac96-a706-479d-91b5-4ea3e091c3e8
 # ╟─f50a2242-64ee-4c91-8c9d-3d2d3f11ac5d

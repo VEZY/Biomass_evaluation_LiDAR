@@ -41,7 +41,7 @@ The purpose of this notebook is to vizualise the LiDAR point clouds of the branc
 LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
 
 # ╔═╡ 636d0ed6-1c7c-489a-a139-943f2c812b95
-MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/5-corrected_segmentized_id"
+MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/6-corrected_segmentized_id_enriched"
 
 # ╔═╡ 279013c5-6651-4bba-b301-b1f6198886e2
 LiDAR_files =
@@ -53,12 +53,12 @@ LiDAR_files =
 # ╔═╡ 5d7596b7-cf2b-4e86-8dfe-38142d14481f
 MTG_files =
     filter(
-        x -> endswith(x, ".xlsx"), # all MTGs
+        x -> endswith(x, ".mtg"), # all MTGs
         readdir(MTG_directory)
     )
 
 # ╔═╡ 09a748ff-8557-48c6-8580-17a2a9bfc648
-branches_MTG = sort!(replace.(MTG_files, ".xlsx" => ""))
+branches_MTG = sort!(replace.(MTG_files, ".mtg" => ""))
 
 # ╔═╡ 58f797c7-7548-4c76-95a4-456aaa3fe47c
 branches_LiDAR = sort!([match(r"tree[0-9]{1,2}[a-z]", i).match for i in LiDAR_files])
@@ -74,7 +74,7 @@ end
 @bind branch Select(branches_MTG)
 
 # ╔═╡ e886ae94-6075-4fe4-acbc-62b2d945a740
-LiDAR = CSV.read(joinpath(LiDAR_directory,branch*".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"])
+LiDAR = CSV.read(joinpath(LiDAR_directory,branch*".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
 # ╔═╡ 98157cc8-0567-4589-ad24-5095a1ba4ba4
 md"""
@@ -98,7 +98,7 @@ function cylinder(node::MultiScaleTreeGraph.Node)
         Cylinder(
             Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
             Point3((node[:XX], node[:YY], node[:ZZ])),
-            node[:radius]
+            sqrt(node[:cross_section_stat_mod]/π)*1e-3 # radius in meter
         )
 
     end
@@ -106,13 +106,10 @@ end
 
 # ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
 begin
-mtg = read_mtg(joinpath(MTG_directory,branch*".xlsx"))
+mtg = read_mtg(joinpath(MTG_directory,branch*".mtg"))
 transform!(mtg, cylinder => :cyl, symbol="S")
 mtg
 end
-
-# ╔═╡ ac997c2b-61ef-4966-8063-8832ea47fcd1
-names(mtg)
 
 # ╔═╡ 5d4ed4ad-a0cf-4a33-a3ec-77bc70485728
 begin
@@ -1549,15 +1546,14 @@ version = "3.5.0+0"
 # ╠═636d0ed6-1c7c-489a-a139-943f2c812b95
 # ╟─279013c5-6651-4bba-b301-b1f6198886e2
 # ╟─5d7596b7-cf2b-4e86-8dfe-38142d14481f
-# ╠═09a748ff-8557-48c6-8580-17a2a9bfc648
-# ╠═58f797c7-7548-4c76-95a4-456aaa3fe47c
+# ╟─09a748ff-8557-48c6-8580-17a2a9bfc648
+# ╟─58f797c7-7548-4c76-95a4-456aaa3fe47c
 # ╟─4dd5b561-1e68-4c6d-bf14-bf3ffde78726
 # ╠═29c32624-b0b7-4d9b-b9d1-1836393317ec
-# ╠═087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
-# ╠═ac997c2b-61ef-4966-8063-8832ea47fcd1
+# ╟─087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
 # ╠═e886ae94-6075-4fe4-acbc-62b2d945a740
 # ╟─98157cc8-0567-4589-ad24-5095a1ba4ba4
-# ╠═3e3dcc9c-016a-45b8-8e10-d6377fb106d7
+# ╟─3e3dcc9c-016a-45b8-8e10-d6377fb106d7
 # ╟─64406a16-243b-4e0d-b632-84b0b2c2fa88
 # ╟─5d4ed4ad-a0cf-4a33-a3ec-77bc70485728
 # ╠═004960ba-a598-4808-bc7e-e87b4a1156d9
