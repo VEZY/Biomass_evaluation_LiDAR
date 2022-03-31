@@ -29,5 +29,3 @@ segmentize_mtgs(
     "0-data/3-mtg_lidar_plantscan3d/7-tree_scale",
     "0-data/3-mtg_lidar_plantscan3d/8-tree_scale_segmentized"
 )
-
-# mtg = read_mtg("E:/Agrobranche_Alexis_Bonnet/Biomass_evaluation_LiDAR/0-data/3-mtg_lidar_plantscan3d/1-raw_output/tree11h.mtg")

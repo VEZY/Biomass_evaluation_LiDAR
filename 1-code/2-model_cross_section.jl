@@ -74,8 +74,7 @@ First, we define which variables will be used in our model. In our case we will 
 """
 
 # ╔═╡ 3d0a6b24-f11b-4f4f-b59b-5c40ea9be838
-formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis) 
-# formula_all = @formula(cross_section ~ 0 + pathlength_subtree + segment_index_on_axis + number_leaves)
+formula_all = @formula(cross_section ~ 0 + cross_section_pipe + pathlength_subtree + branching_order + segment_index_on_axis + axis_length + number_leaves + segment_subtree + n_segments_axis)
 
 # ╔═╡ b8800a04-dedb-44b3-82fe-385e3db1d0d5
 md"""
