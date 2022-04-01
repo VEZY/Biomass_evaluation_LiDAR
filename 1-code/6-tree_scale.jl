@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ c3e21bd7-6ac3-4daf-99b0-ceab8ff86696
-using MultiScaleTreeGraph,AlgebraOfGraphics, CairoMakie, DataFrames, CategoricalArrays
+using MultiScaleTreeGraph,AlgebraOfGraphics, CairoMakie, DataFrames, CategoricalArrays, Statistics
 
 # ╔═╡ 1493298e-b10e-11ec-1c86-4d659a9cf10e
 md"""
@@ -16,18 +16,57 @@ md"""
 This notebook is used to apply our model to estimate the biomass of whole trees and investigate how it is distributed along the structures with different diameters.  
 """
 
+# ╔═╡ 511b592b-a690-4c92-b6a6-7bb092bb039a
+md"""
+Defining the classes into which we categorize the segment diameters:
+"""
+
+# ╔═╡ 4e664783-1275-4240-81c3-90dff1db1ba3
+classes = [0., 50., 150., 500.]
+
+# ╔═╡ aa5ebb6e-9799-465b-8999-99182272e72c
+md"""
+Getting all trees in the folder:
+"""
+
+# ╔═╡ a4faf453-d879-481c-a3c9-cf4f5bd3a897
+mtg_trees_paths = filter(
+	x -> endswith(x, ".mtg"), # all MTGs
+	readdir(
+		"../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched", 
+		join = true
+	)
+)
+
+# ╔═╡ 50a9595e-fb98-4d12-a892-eafb1872d48f
+md"""
+Import the trees mtg:
+"""
+
 # ╔═╡ ddcd55c6-fb0f-4c95-aa85-cb2770ad4578
-mtg_tree11 = read_mtg("../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched/all_scans_tree_11.mtg")
+mtg_trees = [read_mtg(mtg) for mtg in mtg_trees_paths]
 
-# ╔═╡ 9780d6b2-1822-41d8-8f17-a397dfb2820e
-names(mtg_tree11)
+# ╔═╡ 53f0acce-fa3c-4d37-aac5-063c456632c2
+md"""
+*Output 1. Diagram of the trees MTGs.*
+"""
 
-# ╔═╡ 297fba9b-b341-4b57-aab7-91f32e5ed4d6
+# ╔═╡ f7cacf20-f5b4-43a9-8b24-ff4660fe0498
+md"""
+Compute a DataFrame out of them:
+"""
 
-
-# ╔═╡ 82b8d6ce-555f-4cc9-bb0f-4d8bcaaa217a
+# ╔═╡ e1d56b58-a5e9-4694-a19c-3fb6915701fb
 begin
-	df = DataFrame(mtg_tree11, [:cross_section_stat_mod, :dry_mass, :fresh_mass])
+	df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees] 
+	
+	df = df_vec[1]
+	if length(mtg_trees) > 1
+		for i in df_vec[2:end]
+			append!(df, i)
+		end
+	end
+
 	transform!(
 		df,
 		:cross_section_stat_mod => ByRow(x -> !ismissing(x) && x < 0.0 ? 0.0 : x) => :cross_section_stat_mod
@@ -40,36 +79,128 @@ begin
 
 	transform!(
 		df,
-		:diameter_stat_mod => (x -> cut(x, [50.,150.,350.], extend=true)) => :diameter_class
+		:diameter_stat_mod => (x -> cut(x, classes)) => :diameter_class
 	)
+
 end
 
-# ╔═╡ b28cfe08-a422-4461-896e-8898041c3fa4
+# ╔═╡ 56cd3b5a-3881-4b1f-ad5c-1641d64fa97d
+md"""
+*Table 1. DataFrame of the trees MTG.*
+"""
+
+# ╔═╡ 408e01f8-5c39-4e47-a15e-971a949493ee
+md"""
+## Diameter distribution
+
+The number of structures with a low diameter is staggeringly high compared to others.
+"""
+
+# ╔═╡ 09a901f8-b68c-451b-9f80-2cabbeeec98d
 begin
-	specs = data(df) * mapping(:diameter_stat_mod) * histogram(bins=range(0, 450, length=10))
-	draw(specs)
+	df_count = combine(groupby(df, :diameter_class), nrow => :count)
+	transform!(df_count, :count => sum)
+	transform!(df_count, [:count, :count_sum] => ((x,y) -> x ./y .* 100) => :count_rel)
+	nothing
 end
+
+# ╔═╡ 138ac4e5-5033-44ba-ab77-4f3101d71e76
+md"""
+They represent $(round(df_count.count_rel[1], digits = 1))% of all segments in the trees (Fig 1).
+"""
 
 # ╔═╡ 7ef18685-e1ef-41b3-bd7d-372adb622cb7
 begin
-axis = (width = 800, height = 800)
 cs_frequency = data(df) * frequency() * mapping(:diameter_class)
 
-draw(cs_frequency; axis)
+draw(cs_frequency; axis = (xlabel = "Diameter class (mm)",))
 end
 
+# ╔═╡ aff93e62-0347-46fa-8d58-e8e9a9e7a155
+md"""
+*Figure 1. Segment count per diameter class.*
+"""
+
+# ╔═╡ e7e5fe5c-2af2-409a-ae43-870a9fcbb2f0
+md"""
+## Biomass distribution
+"""
+
+# ╔═╡ 0cd34adf-cf31-4ebe-b543-faaf87ecce5b
+md"""
+As expected, more biomass is stored in the higher diameter classes. The distribution of the biomass between classes is rather homogeneous between trees (Fig. 2).  
+"""
+
 # ╔═╡ 68d2a310-f6ca-475d-bf1f-63e13464cc74
+begin
 df_diam_class = combine(
-	groupby(dropmissing(df,:dry_mass), :diameter_class),
+	groupby(dropmissing(df,:dry_mass), [:diameter_class, :tree]),
 	:dry_mass => (x -> sum(x) * 1e-3) => :dry_mass,
 	:fresh_mass => (x -> sum(x) * 1e-3) => :fresh_mass
 )
 
-# ╔═╡ 8427424d-4f94-4a2a-8915-1b32eda10f66
-sum(df_diam_class.dry_mass) # dry mass in kg
+df_biomass_tree = transform(
+	groupby(df_diam_class, :tree),
+	:dry_mass => (x -> sum(x)) => :tot_dry_mass,
+	:fresh_mass => (x -> sum(x)) => :tot_fresh_mass
+)
 
-# ╔═╡ ad58909c-b341-4724-9bda-8678c3cc94f1
-sum(df_diam_class.fresh_mass) # fresh mass in kg
+transform!(
+	df_biomass_tree,
+	[:dry_mass, :tot_dry_mass] => ((x,y) -> x ./ y) => :rel_dry_mass,
+	[:fresh_mass, :tot_fresh_mass] => ((x,y) -> x ./ y) => :rel_fresh_mass,
+)
+nothing
+end
+
+# ╔═╡ bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
+begin
+	axis2 = (width = 800, height = 800, ylabel = "Biomass (%)", xlabel = "Diameter class (mm)")
+	plt = data(df_biomass_tree) * mapping(:diameter_class, :rel_dry_mass, color = :tree, dodge = :tree) * visual(BarPlot, dodge_gap=0, gap = 0.1)
+	p = draw(plt; axis = axis2, figure = (fontsize = 25,))
+end
+
+# ╔═╡ 280aef39-fc9f-4174-b56b-8e992960ede0
+md"""
+*Figure 2. Relative distribution of the biomass per segment diameter class.*
+"""
+
+# ╔═╡ c7b2f8af-cf3f-436f-9479-e97ce12a5cbf
+md"""
+*Table 2. Biomass distribution between segment diameter classes.*
+"""
+
+# ╔═╡ 4f27296a-68e7-4ecf-beca-9da7e6c93f5e
+begin
+df_per_class = 
+combine(
+	groupby(df_biomass_tree, :diameter_class),
+	:rel_dry_mass => (x -> mean(x) .* 100) => :biomass, 
+	:rel_dry_mass => (x -> std(x) .* 100) => :biomass_sd
+)
+
+select(
+	df_per_class,
+	:diameter_class => "Diameter class (mm)",
+	:biomass => "Biomass (%)",
+	:biomass_sd => "Biomass sd (%)"
+	)
+
+# NB: we don't differentiate between dry and fresh biomass because they are computed using a constant, so no difference in the %.
+end
+
+# ╔═╡ 3d2a2eb0-6a50-4e1b-bd24-af93bb4d9701
+md"""
+Quite suprisingly, the biomass of the branches with a **diameter in the  $(levels(df_per_class.diameter_class)[1]) class represents c.a. $(round(df_per_class.biomass[1], digits = 1)) ± $(round(df_per_class.biomass_sd[1]))%** of the whole tree biomass in average (Tab. 2)!
+"""
+
+# ╔═╡ 36db6cec-8476-44a1-b443-ca4cee8934e0
+md"""
+Saving the figure:
+"""
+
+# ╔═╡ 3f457f7f-ea35-40bf-b086-24e370b5e006
+save("../2-results/2-plots/step_5_whole_tree_biomass_distribution.png", p, px_per_unit=3)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -79,6 +210,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CategoricalArrays = "324d7699-5711-5eae-9e2f-1d82baa6b597"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 MultiScaleTreeGraph = "dd4a991b-8a45-4075-bede-262ee62d5583"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
 AlgebraOfGraphics = "~0.6.5"
@@ -1381,14 +1513,30 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╟─1493298e-b10e-11ec-1c86-4d659a9cf10e
 # ╠═c3e21bd7-6ac3-4daf-99b0-ceab8ff86696
+# ╟─511b592b-a690-4c92-b6a6-7bb092bb039a
+# ╟─4e664783-1275-4240-81c3-90dff1db1ba3
+# ╟─aa5ebb6e-9799-465b-8999-99182272e72c
+# ╟─a4faf453-d879-481c-a3c9-cf4f5bd3a897
+# ╟─50a9595e-fb98-4d12-a892-eafb1872d48f
 # ╠═ddcd55c6-fb0f-4c95-aa85-cb2770ad4578
-# ╠═9780d6b2-1822-41d8-8f17-a397dfb2820e
-# ╠═297fba9b-b341-4b57-aab7-91f32e5ed4d6
-# ╠═82b8d6ce-555f-4cc9-bb0f-4d8bcaaa217a
-# ╠═b28cfe08-a422-4461-896e-8898041c3fa4
-# ╠═7ef18685-e1ef-41b3-bd7d-372adb622cb7
-# ╠═68d2a310-f6ca-475d-bf1f-63e13464cc74
-# ╠═8427424d-4f94-4a2a-8915-1b32eda10f66
-# ╠═ad58909c-b341-4724-9bda-8678c3cc94f1
+# ╟─53f0acce-fa3c-4d37-aac5-063c456632c2
+# ╟─f7cacf20-f5b4-43a9-8b24-ff4660fe0498
+# ╟─e1d56b58-a5e9-4694-a19c-3fb6915701fb
+# ╟─56cd3b5a-3881-4b1f-ad5c-1641d64fa97d
+# ╟─408e01f8-5c39-4e47-a15e-971a949493ee
+# ╟─138ac4e5-5033-44ba-ab77-4f3101d71e76
+# ╟─09a901f8-b68c-451b-9f80-2cabbeeec98d
+# ╟─7ef18685-e1ef-41b3-bd7d-372adb622cb7
+# ╟─aff93e62-0347-46fa-8d58-e8e9a9e7a155
+# ╟─e7e5fe5c-2af2-409a-ae43-870a9fcbb2f0
+# ╟─0cd34adf-cf31-4ebe-b543-faaf87ecce5b
+# ╟─68d2a310-f6ca-475d-bf1f-63e13464cc74
+# ╠═bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
+# ╟─280aef39-fc9f-4174-b56b-8e992960ede0
+# ╟─3d2a2eb0-6a50-4e1b-bd24-af93bb4d9701
+# ╟─c7b2f8af-cf3f-436f-9479-e97ce12a5cbf
+# ╟─4f27296a-68e7-4ecf-beca-9da7e6c93f5e
+# ╟─36db6cec-8476-44a1-b443-ca4cee8934e0
+# ╠═3f457f7f-ea35-40bf-b086-24e370b5e006
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
