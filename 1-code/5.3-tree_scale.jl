@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -58,7 +58,7 @@ Compute a DataFrame out of them:
 
 # ╔═╡ e1d56b58-a5e9-4694-a19c-3fb6915701fb
 begin
-	df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees] 
+	df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees] 
 	
 	df = df_vec[1]
 	if length(mtg_trees) > 1
@@ -121,6 +121,53 @@ md"""
 *Figure 1. Segment count per diameter class.*
 """
 
+# ╔═╡ 606d39f4-ab34-46a7-88d5-ded15f91d1d3
+md"""
+## Length distribution
+"""
+
+# ╔═╡ f1b43235-5321-4f78-bd67-2c20e54e0abe
+begin
+	df_length = combine(
+		groupby(dropmissing(df,:length), [:tree, :diameter_class]),
+		:length => (x -> sum(x) / 1000) => :length
+	)
+	
+	axis_len = (width = 800, height = 800, ylabel = "Length (m)", xlabel = "Diameter class (mm)")
+	plt_length = data(df_length) * mapping(:diameter_class, :length, color = :tree, dodge = :tree) * visual(BarPlot, dodge_gap=0, gap = 0.1)
+	p_length = draw(plt_length; axis = axis_len, figure = (fontsize = 25,))
+end
+
+# ╔═╡ 2e377a1a-7a5a-4c99-a1e4-f3df2c7d4001
+md"""
+*Figure 2. Distribution of the total segment lengths per diameter class in the three walnut trees.*
+"""
+
+# ╔═╡ 5221b3ba-0de9-48a2-9a46-193b1973790c
+begin
+	
+	df_length_diam = combine(
+		groupby(df_length, [:diameter_class]), 
+		:length => mean => :mean,
+		:length => std => :std
+	)
+
+	df_length_all = combine(df_length_diam, :mean => sum => :length)
+	
+	select(
+		df_length_diam,
+		:diameter_class => "Diameter class (mm)",
+		:mean => "Length (m)",
+		:std => "Length std (m)",
+		:mean => ByRow(x -> round(x / df_length_all[1,:length] * 100, digits = 2)) => "Proportion (%))"
+	)
+end
+
+# ╔═╡ 338eaa04-4dae-42fc-ae44-09d67a9295d3
+md"""
+*Table 1. Average total length of the segments per diameter class. Total length: $(round(df_length_all[1,:length], digits= 1)) m*
+"""
+
 # ╔═╡ e7e5fe5c-2af2-409a-ae43-870a9fcbb2f0
 md"""
 ## Biomass distribution
@@ -128,7 +175,7 @@ md"""
 
 # ╔═╡ 0cd34adf-cf31-4ebe-b543-faaf87ecce5b
 md"""
-As expected, more biomass is stored in the higher diameter classes. The distribution of the biomass between classes is rather homogeneous between trees (Fig. 2).  
+As expected, more biomass is stored in the higher diameter classes. The distribution of the biomass between classes is rather homogeneous between trees (Fig. 3).  
 """
 
 # ╔═╡ 68d2a310-f6ca-475d-bf1f-63e13464cc74
@@ -155,19 +202,34 @@ end
 
 # ╔═╡ bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
 begin
-	axis2 = (width = 800, height = 800, ylabel = "Biomass (%)", xlabel = "Diameter class (mm)")
-	plt = data(df_biomass_tree) * mapping(:diameter_class, :rel_dry_mass, color = :tree, dodge = :tree) * visual(BarPlot, dodge_gap=0, gap = 0.1)
+	axis2 = (width = 800, height = 800, ylabel = "Biomass (%)", xlabel = "")
+
+	classes_map = Dict("[0.0, 50.0)" => "Twigs", "[50.0, 150.0)" => "Main branches", "[150.0, 500.0)" => "Trunk")
+
+	df_biomass_tree_plot = transform(
+		df_biomass_tree,
+		:diameter_class => ByRow(x -> classes_map[x]) => :type
+	)
+	
+	plt = 
+		data(df_biomass_tree_plot) * 
+		mapping(
+			:type=>sorter(collect(values(classes_map))), 
+			:rel_dry_mass, 
+			color = :tree, dodge = :tree
+		) * 
+		visual(BarPlot, dodge_gap=0, gap = 0.1)
 	p = draw(plt; axis = axis2, figure = (fontsize = 25,))
 end
 
 # ╔═╡ 280aef39-fc9f-4174-b56b-8e992960ede0
 md"""
-*Figure 2. Relative distribution of the biomass per segment diameter class.*
+*Figure 3. Relative distribution of the biomass per segment diameter class in the three walnut trees. Twigs: [0, 5) cm; Main branches: [5, 15) cm; Trunk: [15, 50) cm*
 """
 
 # ╔═╡ c7b2f8af-cf3f-436f-9479-e97ce12a5cbf
 md"""
-*Table 2. Biomass distribution between segment diameter classes.*
+*Table 2. Biomass distribution between segment diameter classes in the trees.*
 """
 
 # ╔═╡ 4f27296a-68e7-4ecf-beca-9da7e6c93f5e
@@ -193,6 +255,31 @@ end
 md"""
 Quite suprisingly, the biomass of the branches with a **diameter in the  $(levels(df_per_class.diameter_class)[1]) class represents c.a. $(round(df_per_class.biomass[1], digits = 1)) ± $(round(df_per_class.biomass_sd[1]))%** of the whole tree biomass in average (Tab. 2)!
 """
+
+# ╔═╡ d1e16594-6acb-43ef-8995-fc35d2feb503
+md"""
+*Table 3. Biomass distribution between segment diameter classes in total (all samples from all trees).*
+"""
+
+# ╔═╡ f4291956-47ef-45d1-a122-57ebfa3731be
+begin
+	# Total biomass of the three trees per class of diameter:
+	df_tot_biomass = combine(
+		dropmissing(df,:dry_mass),
+		:dry_mass => (x -> sum(x)) => :tot_dry_mass
+	)
+
+	# Relative biomass in the classes:
+	df_biomass_class = combine(
+		groupby(dropmissing(df,:dry_mass), :diameter_class),
+		:dry_mass => (x -> sum(x) / df_tot_biomass[1,:tot_dry_mass]) => :biomass,
+	)
+	select(
+		df_biomass_class,
+		:diameter_class => "Diameter class (mm)",
+		:biomass => "Biomass (%)"
+	)
+end
 
 # ╔═╡ 36db6cec-8476-44a1-b443-ca4cee8934e0
 md"""
@@ -1528,14 +1615,21 @@ version = "3.5.0+0"
 # ╟─09a901f8-b68c-451b-9f80-2cabbeeec98d
 # ╟─7ef18685-e1ef-41b3-bd7d-372adb622cb7
 # ╟─aff93e62-0347-46fa-8d58-e8e9a9e7a155
+# ╟─606d39f4-ab34-46a7-88d5-ded15f91d1d3
+# ╟─f1b43235-5321-4f78-bd67-2c20e54e0abe
+# ╟─2e377a1a-7a5a-4c99-a1e4-f3df2c7d4001
+# ╟─338eaa04-4dae-42fc-ae44-09d67a9295d3
+# ╟─5221b3ba-0de9-48a2-9a46-193b1973790c
 # ╟─e7e5fe5c-2af2-409a-ae43-870a9fcbb2f0
 # ╟─0cd34adf-cf31-4ebe-b543-faaf87ecce5b
 # ╟─68d2a310-f6ca-475d-bf1f-63e13464cc74
-# ╠═bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
+# ╟─bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
 # ╟─280aef39-fc9f-4174-b56b-8e992960ede0
 # ╟─3d2a2eb0-6a50-4e1b-bd24-af93bb4d9701
 # ╟─c7b2f8af-cf3f-436f-9479-e97ce12a5cbf
 # ╟─4f27296a-68e7-4ecf-beca-9da7e6c93f5e
+# ╟─d1e16594-6acb-43ef-8995-fc35d2feb503
+# ╟─f4291956-47ef-45d1-a122-57ebfa3731be
 # ╟─36db6cec-8476-44a1-b443-ca4cee8934e0
 # ╠═3f457f7f-ea35-40bf-b086-24e370b5e006
 # ╟─00000000-0000-0000-0000-000000000001

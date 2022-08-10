@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -119,6 +115,8 @@ begin
             on=[:branch, :id_cor]
         )
 
+	models = Dict("Topo. mod." => "Topological", "Pipe model" => "Pipe", "plantscan3d" => "Plantscan3d")
+	
     # Change the units to better match with our values (mass in kg and volume in m³):
     df_compare = transform(
         df_compare_tmp,
@@ -127,6 +125,8 @@ begin
         :fresh_mass => x -> x * 1e-3,
         :volume => x -> x * 1e-9,
         :volume_meas => x -> x * 1e-9,
+		:branch => ByRow(x -> join([x[5:6],x[7]],"-")) => "Tree-Branch:",
+		:origin => ByRow(x -> models[x]) => :Model,
         renamecols=false
     )
 end
@@ -137,7 +137,14 @@ Defining colors to associate with each method in the plots:
 """
 
 # ╔═╡ 29fa4d06-f5d5-434c-9b98-bc6243d5f55c
-colors = ["Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "Topo. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5]]
+begin
+	cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "Topo. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5])
+	
+	colors = [i.second => cols[i.first] for i in models]
+end
+
+# ╔═╡ 5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
+models
 
 # ╔═╡ d0888d85-3d81-4205-8dbe-e22b1fd37237
 md"""
@@ -169,7 +176,7 @@ begin
             mapping(
                 :length_meas => (x -> x / 1000) => "Measured length (m)",
                 :length => (x -> x / 1000) => "Predicted length (m)",
-                marker=:branch) *
+                marker= "Tree-Branch:") *
             visual(Scatter) +
             mapping(
                 :length_meas => (x -> x / 1000) => "Measured length (m)",
@@ -310,15 +317,16 @@ begin
         (
             mapping(
                 :cross_section_meas => "Measured cross-section (mm²)",
-                :cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines) +
+                :cross_section_meas => "Predicted cross-section (mm²)"
+			) * 
+			visual(Lines) +
             mapping(
                 :cross_section_meas => "Measured cross-section (mm²)",
                 :cross_section => "Predicted cross-section (mm²)",
-                color=:origin, marker=:branch) *
+                color=:Model => "Model:", marker="Tree-Branch:"
+			) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
-    # axis = (width = 500, height = 500)
-    # plt_cross_section = draw(plt; axis)
     if zoom_cs
         plt_cross_section = draw(plt_cs, axis=(limits=(0, 350, 0, 350),), palettes=(; color=colors))
     else
@@ -335,10 +343,14 @@ begin
         (
             mapping(
                 :volume_meas => "Measured volume (m³)",
-                :volume_meas => "Predicted volume (m³)") * visual(Lines) +
+                :volume_meas => "Predicted volume (m³)"
+			) * 
+			visual(Lines) +
             mapping(
                 :volume_meas => "Measured volume (m³)",
-                :volume => "Predicted volume (m³)", color=:origin, marker=:branch) *
+                :volume => "Predicted volume (m³)", 
+				color=:Model => "Model:", marker="Tree-Branch:"
+			) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
     # axis = (width = 500, height = 500)
@@ -359,10 +371,13 @@ begin
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
                 :fresh_mass_meas => "Predicted fresh biomass (kg)"
-            ) * visual(Lines) +
+            ) * 
+			visual(Lines) +
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)", color=:origin, marker=:branch) *
+                :fresh_mass => "Predicted fresh biomass (kg)", 
+				color=:Model => "Model:", marker="Tree-Branch:"
+			) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
     # axis = (width = 500, height = 500)
@@ -370,25 +385,28 @@ begin
     if zoom_biomass
         plt_biomass = draw(plt, axis=(limits=(0, 2, 0, 2),), palettes=(; color=colors))
     else
-        plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors))
+        plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors), legend = (framevisible=false,))
     end
 end
 
 # ╔═╡ fea13de5-26d6-4e2e-8fed-e241c650c206
 begin
-    gdf = groupby(df_compare4, [:branch, :origin])
+    gdf = groupby(df_compare4, ["Tree-Branch:", "Model"])
     df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false)
 
-    plt_branch =
+	plt_branch =
         data(df_branch) *
         (
             mapping(
                 :fresh_mass => "Measured fresh biomass (kg)",
                 :fresh_mass => "Predicted fresh biomass (kg)"
-            ) * visual(Lines) +
+            ) * 
+			visual(Lines) +
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)", color=:origin, marker=:branch) *
+                :fresh_mass => "Predicted fresh biomass (kg)", 
+				color=:Model => "Model:", marker="Tree-Branch:"
+			) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
 
@@ -494,7 +512,7 @@ df_stat_length = combine(
 
 # ╔═╡ b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
 sort(combine(
-        groupby(df_compare4, :origin),
+		groupby(df_compare4, :Model),
         [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
         [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
         [:fresh_mass_meas, :fresh_mass] => EF => :EF,
@@ -504,7 +522,7 @@ sort(combine(
 
 # ╔═╡ 116a150d-708d-4161-873d-6f92a83e3ed1
 sort(combine(
-        groupby(df_branch, :origin),
+        groupby(df_branch, :Model),
         [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
         [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
         [:fresh_mass_meas, :fresh_mass] => EF => :EF,
@@ -1825,6 +1843,7 @@ version = "3.5.0+0"
 # ╟─0c55a409-7847-4475-a1ef-39c22f459e6f
 # ╟─0a19d625-9b12-4565-a51f-f0dd96f2af40
 # ╟─29fa4d06-f5d5-434c-9b98-bc6243d5f55c
+# ╠═5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
 # ╟─d0888d85-3d81-4205-8dbe-e22b1fd37237
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╟─1f49c11d-678d-4b78-9038-4b5055f302bb

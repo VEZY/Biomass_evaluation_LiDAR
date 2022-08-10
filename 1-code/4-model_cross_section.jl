@@ -33,13 +33,24 @@ md"""
 ## Pre-requisites for the Notebook
 """
 
+# ╔═╡ 3d8871e5-1204-46a4-a03f-a2081054d5e7
+md"""
+Re-defining the model names:
+"""
+
+# ╔═╡ 12c90bd3-fb41-4e5d-9752-9e482225f634
+models = Dict("Topo. mod." => "Topological", "Pipe mod." => "Pipe")
+
 # ╔═╡ 8b711c1e-7d4e-404b-b2c8-87f536728fee
 md"""
 Defining the colors for the plot:
 """
 
 # ╔═╡ 6bee7b4a-c3a1-4562-a17f-71335b8d39ae
-colors = ["Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2]]
+begin
+	cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2])
+	colors = [i.second => cols[i.first] for i in models]
+end
 
 # ╔═╡ 6b8d93de-2fb4-411d-befe-29cb29132b40
 md"""
@@ -307,7 +318,6 @@ df = let
     filter!(x -> x.symbol == "S", x)
     # filter!(x -> !in(x.tree, ["2","4"]), x) # Remove pruned trees
     filter!(x -> in(x.tree, ["11", "12", "13"]), x) # Remove 2020 trees
-	
     x
 end
 
@@ -344,14 +354,16 @@ model = lm(formula_all, df)
 df_all = let x = deepcopy(df)
     x[:, "Topo. mod."] = predict(model, x)
     rename!(x, Dict(:cross_section_pipe => "Pipe mod."))
-    stack(
+
+    x = stack(
         dropmissing(x, ["Pipe mod.", "Topo. mod.", "cross_section"]),
         ["Pipe mod.", "Topo. mod."],
         [:tree, :branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
         variable_name=:origin,
         value_name=:cross_section_pred
     )
-end;
+	transform!(x, :origin => ByRow(x -> models[x]) => :Model)
+end
 
 # ╔═╡ d587f110-86d5-41c0-abc7-2671d711fbdf
 begin
@@ -366,8 +378,8 @@ begin
             mapping(
                 :cross_section => "Measured cross-section (mm²)",
                 :cross_section_pred => "Predicted cross-section (mm²)",
-                color=:origin => "Model",
-                marker=(:tree, :branch) => ((x,y) -> join([x,y]," : ")) => "Tree : Branch"
+                color=:Model => "Model:",
+                marker=(:tree, :branch) => ((x,y) -> join([x,y],"-")) => "Tree-Branch:"
 			) *
             visual(Scatter, markersize=20, alpha=0.8)
         )
@@ -2423,12 +2435,14 @@ version = "3.5.0+0"
 # ╟─393b8020-3743-11ec-2da9-d1600147f3d1
 # ╠═8d606a5d-4d1f-4754-98f2-80097817c479
 # ╟─3506b454-fb9c-4632-8dfb-15804b66add2
+# ╟─3d8871e5-1204-46a4-a03f-a2081054d5e7
+# ╠═12c90bd3-fb41-4e5d-9752-9e482225f634
 # ╟─8b711c1e-7d4e-404b-b2c8-87f536728fee
 # ╟─6bee7b4a-c3a1-4562-a17f-71335b8d39ae
 # ╟─6b8d93de-2fb4-411d-befe-29cb29132b40
 # ╟─796a13d2-a65c-46f6-ad42-5fd42811c8a8
 # ╟─220dfbff-15fc-4e75-a6a2-39e60c08e8dc
-# ╠═492fc741-7a3b-4992-a453-fcac2bbf35ad
+# ╟─492fc741-7a3b-4992-a453-fcac2bbf35ad
 # ╟─068bccf7-7d01-40f5-b06b-97f6f51abcdd
 # ╟─0b8d39b2-9255-4bd7-a02f-2cc055bf61fd
 # ╟─fa9cf6f4-eb79-4c70-ba1f-4d80b3c3e62a
@@ -2454,7 +2468,7 @@ version = "3.5.0+0"
 # ╠═87140df4-3fb5-443c-a667-be1f19b016f6
 # ╟─b710e330-e783-48f7-bebe-4257e7fec385
 # ╟─db44b868-f9b8-466a-b13e-274ad9b9d74a
-# ╠═a6ea9696-d778-4033-a7df-76da4ea1f5fe
+# ╟─a6ea9696-d778-4033-a7df-76da4ea1f5fe
 # ╟─665cb43b-ab86-4001-88a3-c67ed16b28e8
 # ╟─0a19ac96-a706-479d-91b5-4ea3e091c3e8
 # ╟─f50a2242-64ee-4c91-8c9d-3d2d3f11ac5d
