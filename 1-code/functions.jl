@@ -326,7 +326,7 @@ nodes describing the portion of the branch between two branching points. Axis is
 upper-scale grouping following segments, *i.e.* segments with a "/" or "<" link.
 """
 function segmentize_mtg(in_file, out_file)
-    # in_folder = joinpath("0-data", "3-mtg_lidar_plantscan3d", "1-raw_output"),
+    # in_folder = joinpath("0-data", "3-mtg_lidar_plantscan3d", "1-raw_output")
     # out_folder = joinpath("0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
     # out_file = joinpath(out_folder, mtg_files[1])
     # in_file = joinpath(in_folder, mtg_files[1])
@@ -377,8 +377,14 @@ function segmentize_mtg(in_file, out_file)
 
     # Last step, we add the index as in the field, *i.e.* the axis nodes are indexed following
     # their topological order, and the segments are indexed following their position on the axis:
-    transform!(mtg, (node -> node.MTG.index) => :index)
-    transform!(mtg, (node -> node.MTG.index = A_indexing(node)), symbol="A")
+    transform!(mtg, (x -> 1) => :index, symbol="A")
+    transform!(mtg, (node -> A_indexing(node)) => :index, symbol="A")
+    transform!(mtg, (node -> node.MTG.index = node[:index]), symbol="A")
+    # NB: this is done in 3 steps because the index is not a node attribute at first (it
+    # is in the MTG field). So we first initialize the index to 1, then we update it with the
+    # indexing function (A_indexing), then we update the index from the MTG field with the
+    # index attribute.
+
     # Remove the index from the nodes attributes (only temporary):
     traverse!(mtg, node -> pop!(node, :index))
 
