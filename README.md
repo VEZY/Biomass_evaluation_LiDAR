@@ -25,10 +25,11 @@ The manual measurements are used for two purposes:
 
 This project is divided into several steps:
 
-1. Check the measured length from the LiDAR data is close to the manual measurements. This is crucial as length are considered well estimated by LiDAR;
-2. Check the integrity of the manual measurements by evaluating if the biomass estimated from manual dimensions measurements (length and diameters) at segment scale and an average fresh wood density are close to the reference biomass measured using a scale on the field. This step helps us check if the volumes/biomass estimated using manual measurements can be used as a reference for evaluating the different methods to estimate them from LiDAR point-clouds;
-3. Find the variables explaining the cross-section at segment scale. This step is done to fit a statistical model onto the manual measurements dataset;
-4. Evaluate the different methods for the evaluation of the tree biomass
+1. Compute the MTG data
+2. Check the measured length from the LiDAR data is close to the manual measurements. This is crucial as length are considered well estimated by LiDAR;
+3. Check the integrity of the manual measurements by evaluating if the biomass estimated from manual dimensions measurements (length and diameters) at segment scale and an average fresh wood density are close to the reference biomass measured using a scale on the field. This step helps us check if the volumes/biomass estimated using manual measurements can be used as a reference for evaluating the different methods to estimate them from LiDAR point-clouds;
+4. Find the variables explaining the cross-section at segment scale. This step is done to fit a statistical model onto the manual measurements dataset;
+5. Evaluate the different methods for the evaluation of the tree biomass
 
 ## Structure
 
@@ -40,35 +41,70 @@ All data related to the project are stored in the `0-data` folder. You can find 
 
 ### Code
 
-The code related to the project is stored in the `1-code` folder. All computations are made using the Julia programming language and the [MultiScaleTreeGraph.jl](https://vezy.github.io/MultiScaleTreeGraph.jl/dev/) package. The computations are made in the Julia scripts as follows:
+The code related to the project is stored in the `1-code` folder. All computations are made using the Julia programming language and the [MultiScaleTreeGraph.jl](https://vezy.github.io/MultiScaleTreeGraph.jl/dev/) package. The computations are made in pure Julia scripts or [Pluto.jl](https://github.com/fonsp/Pluto.jl) notebooks for interactivity.
 
-- `1-compute_field_mtg_data.jl`: compute new variables into the manually measured MTG, and export the results as CSV and MTG files in `0-data/1.2-mtg_manual_measurement_corrected_enriched`;
-- `2-model_diameter.jl`: fit a model using all variables that can be computed from LiDAR;
-- `3-mtg_plantscan3d_to_segments.jl`: put the MTGs from plantscan3d into the same format as used in the manually-measured MTGs;
-- `4.0-compute_volume.jl`: compute the structures volumes and biomass, and save the results into `2-results/1-data/df_stats_branch.csv` and `2-results/1-data/df_manual.csv`;
-
-The following Julia scripts are also [Pluto.jl](https://github.com/fonsp/Pluto.jl) notebooks. It is best to open them using Pluto for a best format.
-
-To open these notebooks, simply add Pluto to your environment and import it:
+To open a notebook, add Pluto to your Julia environment and import it. To do so, open Julia, and type the following:
 
 ```julia
 using Pkg; Pkg.add("Pluto")
 using Pluto
 ```
 
-Then you can open the notebooks using these commands (copy-paste it in the Julia REPL):
+Then you can open the notebooks with the commands given below.
 
-- Step 1: Checking estimated length from LiDAR:
+- Step 1: The first step is done in two Julia scripts. Open the following scripts in *e.g.* VS Code, and execute the code from the script to repeat the analysis.
+  - the first script (`1.1-compute_field_mtg_data.jl`) computes new variables into the manually measured MTG, and export the results as CSV and MTG files in `0-data/1.2-mtg_manual_measurement_corrected_enriched`;
+  - the second script (`1.2-mtg_plantscan3d_to_segments.jl`) puts the MTGs from plantscan3d into the same format as used in the manually-measured MTGs;
 
-```julia
-Pluto.run(notebook = "1-code/4.1-step_1_check_LiDAR_length.jl")
-```
-
-- Step 2: Checking manual measurements integrity:
+- Step 2: Checking estimated length from LiDAR:
 
 ```julia
-Pluto.run(notebook = "1-code/4.2-step_2_check_manual_measurement.jl")
+Pluto.run(notebook = "1-code/2-step_3_check_LiDAR_length.jl")
 ```
+
+- Step 3: Checking manual measurements integrity:
+
+```julia
+Pluto.run(notebook = "1-code/3-check_manual_measurement.jl")
+```
+
+- Step 4: fit models using all variables that can be computed from LiDAR. To execute the notebook, copy and paste the following command into the Julia REPL:
+
+```julia
+Pluto.run(notebook = "1-code/4-model_cross_section.jl")
+```
+
+- Step 5: analysis.
+
+  - Axis scale:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.1-axis_scale")
+    ```
+
+  - Branch scale:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.2-branch_scale.jl")
+    ```
+
+  - Tree scale:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.3-tree_scale.jl")
+    ```
+
+  - Visualization in 2D:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.4-visualise_2d.jl")
+    ```
+
+  - Visualization in 3D:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.4-visualise_3d.jl")
+    ```
 
 ### Results
 

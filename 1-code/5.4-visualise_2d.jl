@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -143,6 +143,9 @@ md"""
 Pre-computing the color from the Z value:
 """
 
+# ╔═╡ 80e68eb2-c787-4f5a-861f-3b25c8297d57
+# save("../2-results/2-plots/step_5_visualisation_2d.png", f_tree, px_per_unit=3)
+
 # ╔═╡ 0c628653-c1a8-4f47-9e0e-540c92f48169
 md"""
 ## References
@@ -210,7 +213,7 @@ save("../2-results/2-plots/step_5_visualisation.png", f, px_per_unit=3)
 # ╔═╡ 9a3bfb11-9fa3-4a87-b583-ca5ef5c62a0b
 begin
 mtg_tree = read_mtg(joinpath(MTG_trees_dir,"all_scans_tree_"*tree*".mtg"))
-transform!(mtg_tree, node -> cylinder(node, [:XX, :ZZ, :YY]) => :cyl, symbol="S")
+transform!(mtg_tree, (node -> cylinder(node, [:XX, :ZZ, :YY])) => :cyl, symbol="S")
 end
 
 # ╔═╡ efd5b759-708d-4507-99a1-464540c61f20
@@ -233,21 +236,26 @@ f_tree = let
 	ax2 = Axis(fig[1,2])
 	hidedecorations!(ax2)
 	ax2.title = "3D reconstruction"
-
-	scatter!(ax1, LiDAR_tree[:,1], LiDAR_tree[:,3], LiDAR_tree[:,2], color = LiDAR_tree[:,3], markersize = 0.5)
-	traverse!(mtg_tree,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-	mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min_tree) / (z_max_tree - z_min_tree)))
-	end
-
 	ax3 = Axis(fig[2,1])
 	hidedecorations!(ax3)
 	ax4 = Axis(fig[2,2])
 	hidedecorations!(ax4)
 
-	scatter!(ax3, LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,3], markersize = 0.5)
+	scatter!(ax1, LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,3], markersize = 0.3)
 	traverse!(mtg,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-	mesh!(ax4, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+	mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
 	end
+
+	scatter!(ax3, LiDAR_tree[:,1], LiDAR_tree[:,3], LiDAR_tree[:,2], color = LiDAR_tree[:,3], markersize = 0.3)
+	traverse!(mtg_tree, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+    cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl])]
+    mesh!(ax4, node[:cyl], color=cols)
+end
+
+
+	colsize!(fig.layout, 1, Aspect(1, 1.0))
+	colsize!(fig.layout, 2, Aspect(1, 1.0))
+	resize_to_layout!(fig)
 	
 	fig
 end
@@ -1599,7 +1607,8 @@ version = "3.5.0+0"
 # ╠═20dc1132-2b84-4e02-98e1-377f74d1053b
 # ╟─fdec2992-0bfe-41e9-aac4-deceec2621ec
 # ╠═efd5b759-708d-4507-99a1-464540c61f20
-# ╟─d27d357e-b88c-4997-b8de-d45850ccc166
+# ╠═d27d357e-b88c-4997-b8de-d45850ccc166
+# ╠═80e68eb2-c787-4f5a-861f-3b25c8297d57
 # ╟─0c628653-c1a8-4f47-9e0e-540c92f48169
 # ╟─943da48a-1ccd-48a9-9263-f40d7f290ffe
 # ╟─00000000-0000-0000-0000-000000000001

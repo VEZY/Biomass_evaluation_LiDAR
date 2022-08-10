@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -889,9 +889,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "ad368663a5e20dbb8d6dc2fddeefe4dae0781ae8"
+git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+0"
+version = "5.15.3+1"
 
 [[QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -1318,7 +1318,7 @@ version = "0.9.1+5"
 # ╠═103678f0-5ef2-4679-b9d1-eada3cae6189
 # ╟─857891e1-c00c-4672-acca-5c88603b5c23
 # ╟─a0a4079d-b5e5-4404-9f88-9edf97d94c1a
-# ╠═b1afa486-5dc9-44c3-b737-39de850c0374
+# ╟─b1afa486-5dc9-44c3-b737-39de850c0374
 # ╟─a07264d7-5d7e-44de-8a8c-d036c72d2d40
 # ╟─8d90b9ec-5bdb-4021-a9f6-1791e3fa2386
 # ╟─0842de6b-313c-4a80-8b48-73ddbb58cf4c

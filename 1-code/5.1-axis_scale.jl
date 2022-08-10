@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -111,7 +111,7 @@ select!(
 df_compare_tmp = 
 innerjoin(
 	df_meas,
-	filter(x -> x.origin != "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis),
+	filter(x -> !in(x.origin, ["measurement", "Pipe mod. ⌀<50", "stat. mod. ⌀<50"]) && x.id_cor !== missing && x.symbol == "A", df_axis),
 	on = [:branch, :id_cor]
 )
 
@@ -199,7 +199,7 @@ md"""
 
 # ╔═╡ 37633b50-c141-45d1-b7dd-1a0eebfda64f
 md"""
-stat. mod. $(@bind len_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind len_2 CheckBox()) plantscan3d $(@bind len_3 CheckBox()) Pipe model $(@bind len_4 CheckBox()) Pipe mod. ⌀<50 $(@bind len_5 CheckBox())
+stat. mod. $(@bind len_1 CheckBox(default = true)) plantscan3d $(@bind len_2 CheckBox(default = true)) Pipe model $(@bind len_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_cs CheckBox())
 """
@@ -217,7 +217,7 @@ md"""
 
 # ╔═╡ c8a346f8-9942-4851-924a-9208cf077ba7
 md"""
-stat. mod. $(@bind vol_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind vol_2 CheckBox()) plantscan3d $(@bind vol_3 CheckBox()) Pipe model $(@bind vol_4 CheckBox()) Pipe mod. ⌀<50 $(@bind vol_5 CheckBox())
+stat. mod. $(@bind vol_1 CheckBox(default = true)) plantscan3d $(@bind vol_2 CheckBox(default = true)) Pipe model $(@bind vol_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_volume CheckBox())
 """
@@ -240,7 +240,7 @@ md"""
 
 # ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 md"""
-stat. mod. $(@bind bio_1 CheckBox(default = true)) stat. mod. ⌀<50 $(@bind bio_2 CheckBox()) plantscan3d $(@bind bio_3 CheckBox()) Pipe model $(@bind bio_4 CheckBox()) Pipe mod. ⌀<50 $(@bind bio_5 CheckBox())
+stat. mod. $(@bind bio_1 CheckBox(default = true)) plantscan3d $(@bind bio_2 CheckBox(default = true)) Pipe model $(@bind bio_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_biomass CheckBox())
 """
@@ -269,7 +269,7 @@ md"""
 
 # ╔═╡ 710ae2b2-4fcb-4727-899b-e2a921fa6b75
 md"""
-Table 4. Statistics of the fress biomass prediction at branch scale. These statistics are usually more interesting than the ones in Table 3 because they show how the prediction error propagates at a larger scale. These statistics are related to figure 4.
+Table 4. Statistics of the fresh biomass prediction at branch scale. These statistics are usually more interesting than the ones in Table 3 because they show how the prediction error propagates at a larger scale. These statistics are related to figure 4.
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -285,9 +285,9 @@ Functions used in the notebook:
 """
 
 # ╔═╡ 96973fc0-60af-4555-a7d9-4fa66e6b5990
-function filter_model(x, stat, stat_50, ps3d, pipe, pipe_50)
+function filter_model(x, stat, ps3d, pipe)
 	x2 = copy(x)
-	selection = Dict("stat. mod." => stat, "stat. mod. ⌀<50" => stat_50, "plantscan3d" => ps3d, "Pipe model" => pipe, "Pipe mod. ⌀<50" => pipe_50)
+	selection = Dict("stat. mod." => stat, "plantscan3d" => ps3d, "Pipe model" => pipe)
 	
 	for (k,value) in selection
 		if !value
@@ -299,7 +299,7 @@ end
 
 # ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
 begin
-df_compare2 = filter_model(df_compare, len_1, len_2, len_3, len_4, len_5)
+df_compare2 = filter_model(df_compare, len_1, len_2, len_3)
 	
 plt_cs = 
 	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
@@ -324,7 +324,7 @@ end
 
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
-df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3, vol_4, vol_5)
+df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3)
 	
 plt_vol = 
 	data(dropmissing(df_compare3, [:volume, :volume_meas])) *
@@ -348,7 +348,7 @@ end
 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
-df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3, bio_4, bio_5)
+df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3)
 plt = 
 	data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
 	(
@@ -479,13 +479,13 @@ sort(stats, :RMSE_volume)
 end
 
 # ╔═╡ 19c9eb91-d077-4eb0-85ee-5a80dd539bc0
-combine(
+df_stat_length = combine(
     filter(x -> x.origin == "plantscan3d", dropmissing(df_compare, [:length, :length_meas])),
 	[:length_meas, :length] => RMSE => :RMSE,
 	[:length_meas, :length] => nRMSE => :nRMSE,
     [:length_meas, :length] => EF => :EF,
 	[:length_meas, :length] => Bias => :Bias,
-	[:length_meas, :length] => nBias => :nBias
+	[:length_meas, :length] => ((x,y) -> nBias(x,y,digits = 5)) => :nBias
 )
 
 # ╔═╡ b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
@@ -1853,11 +1853,11 @@ version = "3.5.0+0"
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
-# ╠═96973fc0-60af-4555-a7d9-4fa66e6b5990
-# ╠═7db6c69d-4076-4a42-bfc9-6e8b7d2de13d
-# ╠═7b662b3f-6901-4258-ba68-25cdf2145890
-# ╠═6bca0065-cebb-4a70-af12-287eeec81ad2
-# ╠═ebba6e34-134d-45b0-8677-ec93f3d414f5
+# ╟─96973fc0-60af-4555-a7d9-4fa66e6b5990
+# ╟─7db6c69d-4076-4a42-bfc9-6e8b7d2de13d
+# ╟─7b662b3f-6901-4258-ba68-25cdf2145890
+# ╟─6bca0065-cebb-4a70-af12-287eeec81ad2
+# ╟─ebba6e34-134d-45b0-8677-ec93f3d414f5
 # ╠═29cfa66f-3e7a-4460-84c2-706e1e8f9766
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
