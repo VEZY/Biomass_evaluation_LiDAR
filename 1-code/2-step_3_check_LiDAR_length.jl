@@ -1,19 +1,19 @@
 ### A Pluto.jl notebook ###
-# v0.18.4
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
 
 # ╔═╡ 3bbd592d-98cf-4ed6-af25-e51647914683
 begin
-	using CSV
-	using Plots
-	using DataFrames
-	using AlgebraOfGraphics
-	using CairoMakie
-	using Statistics
-	using PlutoUI
-	using ColorSchemes 
+    using CSV
+    using Plots
+    using DataFrames
+    using AlgebraOfGraphics
+    using CairoMakie
+    using Statistics
+    using PlutoUI
+    using ColorSchemes
 end
 
 # ╔═╡ 1420a530-e1b0-4233-8d25-fd39415133c3
@@ -34,7 +34,7 @@ This notebook is used to verify this claim.
 md"""
 ## Material and Methods
 
-Two branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology. 
+Six branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology.
 
 In this notebook, we are only interested in their total length.
 
@@ -59,14 +59,14 @@ Importing the data:
 
 # ╔═╡ e04577f4-fbde-40fb-a49f-b99511395ad2
 begin
-	df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame);
-	replace!(df_stats_branch.model, "plantscan3d cor." => "corrected", "plantscan3d raw" => "raw");
+    df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame)
+    replace!(df_stats_branch.model, "plantscan3d cor." => "corrected", "plantscan3d raw" => "raw")
 end
 
 # ╔═╡ 4939edb8-5b18-490b-8941-711b77421b97
 md"""
 !!! note
-	The data is computed in the `2-model_cross_section.jl` script. 
+	The data is computed in the `2-model_cross_section.jl` script.
 """
 
 # ╔═╡ 0b65a00a-d88f-4967-8cd2-d9372fe51d02
@@ -74,7 +74,7 @@ colors = ["corrected" => ColorSchemes.Set2_5.colors[3], "raw" => :black]
 
 # ╔═╡ 4df2a06a-1124-4d52-a9dd-3ce6889e7b57
 md"""
-*Table 1. Statistics about the goodness of branch cumulated lenght prediction according to the algorithm. NB: stat. model is not included because the length is based on plantscan3d length.* 
+*Table 1. Statistics about the goodness of branch cumulated lenght prediction according to the algorithm. NB: Topo. model is not included because the length is based on plantscan3d length.*
 """
 
 # ╔═╡ 613ec1c9-df39-4147-b6e7-f8d21fe5e13f
@@ -85,32 +85,32 @@ The corrected MTG presents a higher error compared to the un-corrected (raw) one
 
 - Our MTG is not as perfect as we thought
 - The error was somewhat compensated
-- Some big portions of the branches are missing from the manual measurements. 
+- Some big portions of the branches are missing from the manual measurements.
 
 This last point is important because it tells us that we cannot compare at branch scale directly if there are missing parts, but rather keep comparisons at axis scale and if some higher-scale data is needed, sum the axis scales of the same branches.
 
-!!! note 
+!!! note
 	This point is confirmed in the next notebook where we see that length compare almost perfectly at axis scale.
 """
 
 # ╔═╡ df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 begin
-df_plot = filter(x -> x.variable == "length" && x.model != "stat. model", df_stats_branch)
-p = 
-	data(df_plot) *
-(
-mapping(
-	:measurement =>"Manual length (m)",
-	:prediction => "PlantScan3d length (m)", 
-	color= :model => "PlantScan3d"
-) *
-visual(Scatter) +
-mapping(
-	:measurement => "Manual length (m)",
-	:measurement => "PlantScan3d length (m)") * visual(Lines)
-)
+    df_plot = filter(x -> x.variable == "length" && x.model != "Topo. model", df_stats_branch)
+    p =
+        data(df_plot) *
+        (
+            mapping(
+                :measurement => "Manual length (m)",
+                :prediction => "PlantScan3d length (m)",
+                color=:model => "PlantScan3d"
+            ) *
+            visual(Scatter) +
+            mapping(
+                :measurement => "Manual length (m)",
+                :measurement => "PlantScan3d length (m)") * visual(Lines)
+        )
 
-plength = draw(p, palettes=(; color=colors))
+    plength = draw(p, palettes=(; color=colors))
 end
 
 # ╔═╡ 5e1ea5f9-9100-4db2-9de4-c13ad3173c38
@@ -137,7 +137,7 @@ Saving the plot to disk:
 """
 
 # ╔═╡ 169bdbcf-1dac-4053-820c-763a29a82f34
-save("../2-results/2-plots/step_1_check_length.png", plength, px_per_unit = 3)
+save("../2-results/2-plots/step_1_check_length.png", plength, px_per_unit=3)
 
 # ╔═╡ 6085fc4c-3f95-4a8c-b6b1-1479fef06791
 md"""
@@ -148,52 +148,52 @@ Functions used in the notebook:
 
 # ╔═╡ e3b907ea-21d7-4a6c-9ccb-16b159f13833
 begin
-"""
-    nRMSE(obs,sim; digits = 2)
+    """
+        nRMSE(obs,sim; digits = 2)
 
-Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
-Normalization is performed using division by observations range (max-min).
-Output: Float/Particles
-"""
-function nRMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
-end
+    Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
+    Normalization is performed using division by observations range (max-min).
+    Output: Float/Particles
+    """
+    function nRMSE(obs, sim; digits=2)
+        return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
+    end
 
-"""
-    RMSE(obs,sim; digits = 2)
+    """
+        RMSE(obs,sim; digits = 2)
 
-Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
-The closer to 0 the better.
-"""
-function RMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
-end
+    Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
+    The closer to 0 the better.
+    """
+    function RMSE(obs, sim; digits=2)
+        return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)), digits=digits)
+    end
 
 
-"""
-    EF(obs,sim; digits = 2)
+    """
+        EF(obs,sim; digits = 2)
 
-Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
-More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
-The closer to 1 the better.
-"""
-function EF(obs, sim; digits = 2)
-    SSres = sum((obs - sim).^2)
-    SStot = sum((obs .- mean(obs)).^2)
-    return round(1 - SSres / SStot, digits = digits)
-end
+    Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
+    More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
+    The closer to 1 the better.
+    """
+    function EF(obs, sim; digits=2)
+        SSres = sum((obs - sim) .^ 2)
+        SStot = sum((obs .- mean(obs)) .^ 2)
+        return round(1 - SSres / SStot, digits=digits)
+    end
 end
 
 # ╔═╡ 5382be48-5f85-4b3b-9353-3d0e9ffad31e
 begin
-gf_stats_branch = groupby(filter(x -> x.variable == "length" && x.model != "stat. model", df_stats_branch), :model)
-stats =
-	combine(
-	gf_stats_branch,
-    [:measurement, :prediction] => RMSE => :RMSE,
-    [:measurement, :prediction] => nRMSE => :nRMSE,
-	[:measurement, :prediction] => EF => :EF,
-)
+    gf_stats_branch = groupby(filter(x -> x.variable == "length" && x.model != "Topo. model", df_stats_branch), :model)
+    stats =
+        combine(
+            gf_stats_branch,
+            [:measurement, :prediction] => RMSE => :RMSE,
+            [:measurement, :prediction] => nRMSE => :nRMSE,
+            [:measurement, :prediction] => EF => :EF,
+        )
 end
 
 # ╔═╡ 71a39333-0e26-4c32-82e9-0a4889fe3d34
@@ -1178,9 +1178,9 @@ version = "1.0.0"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "ad368663a5e20dbb8d6dc2fddeefe4dae0781ae8"
+git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+0"
+version = "5.15.3+1"
 
 [[QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
@@ -1683,7 +1683,7 @@ version = "0.9.1+5"
 # ╟─4df2a06a-1124-4d52-a9dd-3ce6889e7b57
 # ╟─5382be48-5f85-4b3b-9353-3d0e9ffad31e
 # ╟─613ec1c9-df39-4147-b6e7-f8d21fe5e13f
-# ╠═df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
+# ╟─df9d13d5-45cc-41cc-8fa0-2a6d3be5d0f4
 # ╟─71a39333-0e26-4c32-82e9-0a4889fe3d34
 # ╟─5e1ea5f9-9100-4db2-9de4-c13ad3173c38
 # ╟─cc16b3a3-03cb-4b7e-8118-fbb84212e984

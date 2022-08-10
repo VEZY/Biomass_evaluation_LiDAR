@@ -326,24 +326,29 @@ nodes describing the portion of the branch between two branching points. Axis is
 upper-scale grouping following segments, *i.e.* segments with a "/" or "<" link.
 """
 function segmentize_mtg(in_file, out_file)
+    # in_folder = joinpath("0-data", "3-mtg_lidar_plantscan3d", "1-raw_output"),
+    # out_folder = joinpath("0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
+    # out_file = joinpath(out_folder, mtg_files[1])
+    # in_file = joinpath(in_folder, mtg_files[1])
     mtg = read_mtg(in_file)
 
     # Compute internode length and then cumulate the lenghts when deleting.
 
     # Step 1: computes the length of each node:
-    @mutate_mtg!(mtg, length_node = compute_length_coord(node), scale = 2) # length is in meters
+    transform!(mtg, compute_length_coord => :length_node, scale=2) # length is in meters
 
-    # Step 3: cumulate the length of all nodes in a segment for each segment node:
-    @mutate_mtg!(mtg, length = cumul_length_segment(node), scale = 2, filter_fun = is_seg)
+    # Step 2: cumulate the length of all nodes in a segment for each segment node:
+    transform!(mtg, cumul_length_segment => :length, scale=2, filter_fun=is_seg)
     # And add a lenght of 0 for the first segment:
     mtg[1][:length] = 0.0
 
-    # Step 4: delete nodes to make the mtg as the field measurements: with nodes only at in_filtering points
+    # Step 3: delete nodes to make the mtg as the field measurements: with nodes only at in_filtering points
     mtg = delete_nodes!(mtg, filter_fun=is_segment!, scale=(1, 2))
 
     # Insert a new scale: the Axis.
     # First step we put all nodes at scale 3 instead of 2:
-    @mutate_mtg!(mtg, node.MTG.scale = 3, scale = 2)
+    transform!(mtg, (node -> node.MTG.scale = 3), scale=2)
+    mtg.attributes[:scales] = scales(mtg)
 
     # 2nd step, we add axis nodes (scale 2) branching each time there's a branching node:
     template = MutableNodeMTG("+", "A", 0, 2)
@@ -352,10 +357,10 @@ function segmentize_mtg(in_file, out_file)
     insert_parents!(mtg, NodeMTG("/", "A", 1, 2), scale=3, link="/", all=false)
 
     # 3d step, we change the branching nodes links to decomposition:
-    @mutate_mtg!(mtg, node.MTG.link = "/", scale = 3, link = "+")
+    transform!(mtg, (node -> node.MTG.link = "/"), scale=3, link="+")
 
     # Fourth step, we rename the nodes symbol into segments "S":
-    @mutate_mtg!(mtg, node.MTG.symbol = "S", symbol = "N")
+    transform!(mtg, (node -> node.MTG.symbol = "S"), symbol="N")
 
     # And the plant symbol as the plant name:
     symbol_from_file = splitext(replace(basename(out_file), "_" => ""))[1]
@@ -367,17 +372,23 @@ function segmentize_mtg(in_file, out_file)
 
     mtg.MTG.symbol = symbol_from_file
 
+    # Updating the symbols in the root node:
+    mtg.attributes[:symbols] = symbols(mtg)
+
     # Last step, we add the index as in the field, *i.e.* the axis nodes are indexed following
     # their topological order, and the segments are indexed following their position on the axis:
-    @mutate_mtg!(mtg, node.MTG.index = A_indexing(node))
+    transform!(mtg, (node -> node.MTG.index) => :index)
+    transform!(mtg, (node -> node.MTG.index = A_indexing(node)), symbol="A")
+    # Remove the index from the nodes attributes (only temporary):
+    traverse!(mtg, node -> pop!(node, :index))
 
     # Set back the root node with no indexing:
     mtg.MTG.index = nothing
 
-    @mutate_mtg!(mtg, node.MTG.index = S_indexing(node), scale = 3)
+    transform!(mtg, (node -> node.MTG.index = S_indexing(node)), scale=3)
 
     # Delete the old length of the nodes (length_node) from the attributes:
-    traverse!(mtg, x -> x[:length_node] === nothing ? nothing : pop!(x.attributes, :length_node))
+    transform!(mtg, (x -> x[:length_node] === nothing ? nothing : pop!(x.attributes, :length_node)))
 
     # Write MTG back to file:
     write_mtg(out_file, mtg)
@@ -431,7 +442,6 @@ function cumul_length_segment(node)
         # NB: we don't use self = true because it would trigger a stop due to all = false
         filter!(x -> x !== nothing, length_ancestors)
 
-
         sum(length_ancestors) * 1000.0
     else
         0.0
@@ -439,10 +449,19 @@ function cumul_length_segment(node)
 end
 
 function A_indexing(node)
-    if isroot(node)
+    parent_index = ancestors(
+        node, :index,
+        symbol="A",
+        recursivity_level=1,
+        type=Union{Int64,Nothing}
+    )
+
+    if length(parent_index) == 0
         return 1
+    elseif node.MTG.link == "+"
+        return parent_index[1] + 1
     else
-        node.MTG.link == "+" ? node.parent.MTG.index + 1 : node.parent.MTG.index
+        return parent_index[1]
     end
 end
 
@@ -812,7 +831,7 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
 
     DataFrame(
         variable=["length", "length", "volume", "volume", "volume", "volume", "volume", "volume", "biomass", "biomass", "biomass", "biomass", "biomass", "biomass"],
-        model=["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw"],
+        model=["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "Topo. model cor.", "Pipe model cor.", "Topo. model raw", "Pipe model raw", "plantscan3d cor.", "plantscan3d raw", "Topo. model cor.", "Pipe model cor.", "Topo. model raw", "Pipe model raw"],
         measurement=[tot_lenght_manual, tot_lenght_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass],
         prediction=[tot_lenght_lidar, tot_lenght_lidar_raw, tot_vol_lidar, tot_vol_lidar_raw, tot_vol_lidar_stat_mod, tot_vol_lidar_pipe_mod, tot_vol_lidar_stat_mod_raw, tot_vol_lidar_pipe_mod_raw, fresh_biomass_lidar, fresh_biomass_lidar_raw, fresh_biomass_lidar_stat_mod, fresh_biomass_lidar_pipe_mod, fresh_biomass_lidar_stat_mod_raw, fresh_biomass_lidar_pipe_mod_raw]
     )

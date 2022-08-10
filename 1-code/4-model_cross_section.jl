@@ -39,7 +39,7 @@ Defining the colors for the plot:
 """
 
 # ╔═╡ 6bee7b4a-c3a1-4562-a17f-71335b8d39ae
-colors = ["Stat. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2]]
+colors = ["Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2]]
 
 # ╔═╡ 6b8d93de-2fb4-411d-befe-29cb29132b40
 md"""
@@ -108,7 +108,7 @@ The model is then calibrated and evaluated on the whole dataset. Fig. 1 shows th
 
 # ╔═╡ e2f20d4c-77d9-4b95-b30f-63febb7888c3
 md"""
-*Figure 1. Measured (x-axis) and predicted (y-axis) cross-section at axis scale. The prediction is done either using the statistical model (Stat. mod.), or the pipe model (Pipe mod.).*
+*Figure 1. Measured (x-axis) and predicted (y-axis) cross-section at axis scale. The prediction is done either using the topological model (Topo. mod.), or the pipe model (Pipe mod.).*
 """
 
 # ╔═╡ 3944b38d-f45a-4ff9-8348-98a8e04d4ad1
@@ -159,7 +159,7 @@ begin
     dir_path_lidar = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "5-corrected_segmentized_id")
     dir_path_lidar_raw = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "3-raw_output_segmentized")
     dir_path_manual = joinpath("..", "0-data", "1.2-mtg_manual_measurement_corrected_enriched")
-	dir_path_lidar_new = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "6-corrected_segmentized_id_enriched")
+    dir_path_lidar_new = joinpath("..", "0-data", "3-mtg_lidar_plantscan3d", "6-corrected_segmentized_id_enriched")
     mtg_files =
         filter(
             x -> splitext(basename(x))[2] in [".xlsx"],
@@ -174,12 +174,12 @@ md"""
 
 # ╔═╡ b710e330-e783-48f7-bebe-4257e7fec385
 md"""
-Computing the cross-section, volumes and biomass of the whole trees 
+Computing the cross-section, volumes and biomass of the whole trees
 """
 
 # ╔═╡ db44b868-f9b8-466a-b13e-274ad9b9d74a
-trees = 
-	filter(
+trees =
+    filter(
         x -> endswith(x, ".mtg"),
         readdir("../0-data/3-mtg_lidar_plantscan3d/8-tree_scale_segmentized", join=true)
     )
@@ -206,8 +206,8 @@ md"""
 Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function RMSE(obs, sim; digits = 2)
-	return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
+function RMSE(obs, sim; digits=2)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)), digits=digits)
 end
 
 # ╔═╡ ffe53b41-96bd-4f44-b313-94aabdc8b1a6
@@ -263,8 +263,8 @@ end
 Returns the normalised bias (%) between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function nBias(obs, sim; digits = 2)
-	return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+function nBias(obs, sim; digits=2)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
 end
 
 # ╔═╡ 0195ac30-b64f-409a-91ad-e68cf37d7c3b
@@ -303,10 +303,11 @@ end
 # ╔═╡ 492fc741-7a3b-4992-a453-fcac2bbf35ad
 df = let
     x = dropmissing(bind_csv_files(csv_files), :cross_section)
-    filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE","Portait aussi un axe peut-être cassé lors de la manip"]), x)
+    filter!(x -> ismissing(x.comment) || !(x.comment in ["casse", "CASSE", "AVORTE", "Portait aussi un axe peut-être cassé lors de la manip"]), x)
     filter!(x -> x.symbol == "S", x)
     # filter!(x -> !in(x.tree, ["2","4"]), x) # Remove pruned trees
     filter!(x -> in(x.tree, ["11", "12", "13"]), x) # Remove 2020 trees
+	
     x
 end
 
@@ -315,9 +316,9 @@ begin
     # Define the function to compute the RMSE for each cross-validation fold:
     function compute_rmse(mod, df_ref)
         x = deepcopy(df_ref)
-        x[!, "Stat. mod."] = predict(mod, x)
-        x = dropmissing(x, ["Stat. mod.", "cross_section"])
-        nRMSE(x[:, "Stat. mod."], x[:, :cross_section])
+        x[!, "Topo. mod."] = predict(mod, x)
+        x = dropmissing(x, ["Topo. mod.", "cross_section"])
+        nRMSE(x[:, "Topo. mod."], x[:, :cross_section])
     end
 
     # Sample size
@@ -341,12 +342,12 @@ model = lm(formula_all, df)
 
 # ╔═╡ b49c4235-a09e-4b8c-a392-d423d7ed7d4c
 df_all = let x = deepcopy(df)
-    x[:, "Stat. mod."] = predict(model, x)
+    x[:, "Topo. mod."] = predict(model, x)
     rename!(x, Dict(:cross_section_pipe => "Pipe mod."))
     stack(
-        dropmissing(x, ["Pipe mod.", "Stat. mod.", "cross_section"]),
-        ["Pipe mod.", "Stat. mod."],
-        [:unique_branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
+        dropmissing(x, ["Pipe mod.", "Topo. mod.", "cross_section"]),
+        ["Pipe mod.", "Topo. mod."],
+        [:tree, :branch, :id, :symbol, :scale, :index, :parent_id, :link, :cross_section],
         variable_name=:origin,
         value_name=:cross_section_pred
     )
@@ -357,15 +358,18 @@ begin
     plt_cs_all =
         data(df_all) *
         (
-		   mapping(
+            mapping(
                 :cross_section => "Measured cross-section (mm²)",
-                :cross_section => "Predicted cross-section (mm²)") * visual(Lines) +
+                :cross_section => "Predicted cross-section (mm²)"
+			) * 
+			visual(Lines) +
             mapping(
                 :cross_section => "Measured cross-section (mm²)",
                 :cross_section_pred => "Predicted cross-section (mm²)",
                 color=:origin => "Model",
-                marker=:unique_branch => "Branch") *
-            visual(Scatter, markersize = 20, alpha = 0.8)
+                marker=(:tree, :branch) => ((x,y) -> join([x,y]," : ")) => "Tree : Branch"
+			) *
+            visual(Scatter, markersize=20, alpha=0.8)
         )
     p = draw(plt_cs_all, palettes=(; color=colors))
 end
@@ -378,11 +382,11 @@ begin
     stats_all =
         combine(
             groupby(df_all, [:origin]),
-			[:cross_section_pred, :cross_section] => RMSE => :RMSE,
+            [:cross_section_pred, :cross_section] => RMSE => :RMSE,
             [:cross_section_pred, :cross_section] => nRMSE => :nRMSE,
             [:cross_section_pred, :cross_section] => EF => :EF,
             [:cross_section_pred, :cross_section] => Bias => :Bias,
-            [:cross_section_pred, :cross_section] => ((x,y) -> nBias(x,y,digits=4)) => :nBias
+            [:cross_section_pred, :cross_section] => ((x, y) -> nBias(x, y, digits=4)) => :nBias
         )
     sort(stats_all, :nRMSE)
 end
@@ -503,113 +507,113 @@ cross_section_stat_mod_all = cross_section_stat_mod
 # ╔═╡ 665cb43b-ab86-4001-88a3-c67ed16b28e8
 function compute_data_mtg_tree!(mtg_tree, fresh_density, dry_density)
 
-@mutate_mtg!(mtg_tree, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
+    @mutate_mtg!(mtg_tree, diameter = node[:radius] * 2 * 1000, symbol = "S") # diameter in mm
 
-@mutate_mtg!(
-	mtg_tree,
-	pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol="S", self=true))),
-	symbol = "S",
-	filter_fun = x -> x[:length] !== nothing
-)
+    @mutate_mtg!(
+        mtg_tree,
+        pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol="S", self=true))),
+        symbol = "S",
+        filter_fun = x -> x[:length] !== nothing
+    )
 
-@mutate_mtg!(
-	mtg_tree,
-	segment_subtree = length(descendants!(node, :length, symbol="S", self=true)),
-	number_leaves = nleaves!(node),
-	symbol = "S"
-)
+    @mutate_mtg!(
+        mtg_tree,
+        segment_subtree = length(descendants!(node, :length, symbol="S", self=true)),
+        number_leaves = nleaves!(node),
+        symbol = "S"
+    )
 
-branching_order!(mtg_tree, ascend=false)
-# We use basipetal topological order (from tip to base) to allow comparisons between branches of
-# different ages (the last emitted segment will always be of order 1).
+    branching_order!(mtg_tree, ascend=false)
+    # We use basipetal topological order (from tip to base) to allow comparisons between branches of
+    # different ages (the last emitted segment will always be of order 1).
 
-# Compute the index of each segment on the axis in a basipetal way (from tip to base)
-@mutate_mtg!(
-	mtg_tree,
-	n_segments = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)),
-	symbol = "A"
-)
+    # Compute the index of each segment on the axis in a basipetal way (from tip to base)
+    @mutate_mtg!(
+        mtg_tree,
+        n_segments = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)),
+        symbol = "A"
+    )
 
-# now use n_segments to compute the index of the segment on the axis (tip = 1, base = n_segments)
-@mutate_mtg!(
-	mtg_tree,
-	n_segments_axis = ancestors(node, :n_segments, symbol="A")[1],
-	segment_index_on_axis = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)) + 1,
-	symbol = "S"
-)
+    # now use n_segments to compute the index of the segment on the axis (tip = 1, base = n_segments)
+    @mutate_mtg!(
+        mtg_tree,
+        n_segments_axis = ancestors(node, :n_segments, symbol="A")[1],
+        segment_index_on_axis = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)) + 1,
+        symbol = "S"
+    )
 
-# Compute the total length of the axis in mm:
-@mutate_mtg!(
-	mtg_tree,
-	axis_length = compute_axis_length(node),
-	symbol = "A"
-)
+    # Compute the total length of the axis in mm:
+    @mutate_mtg!(
+        mtg_tree,
+        axis_length = compute_axis_length(node),
+        symbol = "A"
+    )
 
-# Associate the axis length to each segment:
-@mutate_mtg!(mtg_tree, axis_length = get_axis_length(node), symbol = "S")
+    # Associate the axis length to each segment:
+    @mutate_mtg!(mtg_tree, axis_length = get_axis_length(node), symbol = "S")
 
-# How many leaves the sibling of the node has:
-@mutate_mtg!(mtg_tree, nleaves_siblings = sum(nleaves_siblings!(node)))
+    # How many leaves the sibling of the node has:
+    @mutate_mtg!(mtg_tree, nleaves_siblings = sum(nleaves_siblings!(node)))
 
-# How many leaves the node has in proportion to its siblings + itself:
-@mutate_mtg!(mtg_tree, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
+    # How many leaves the node has in proportion to its siblings + itself:
+    @mutate_mtg!(mtg_tree, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
 
-# Use the first cross-section for the first value to apply the pipe-model:
-first_cross_section = π * ((descendants(mtg_tree, :diameter, ignore_nothing = true, recursivity_level=5)[1] / 2.0)^2)
-@mutate_mtg!(mtg_tree, cross_section_pipe = pipe_model!(node, first_cross_section))
+    # Use the first cross-section for the first value to apply the pipe-model:
+    first_cross_section = π * ((descendants(mtg_tree, :diameter, ignore_nothing=true, recursivity_level=5)[1] / 2.0)^2)
+    @mutate_mtg!(mtg_tree, cross_section_pipe = pipe_model!(node, first_cross_section))
 
-# Adding the cross_section to the root:
-append!(
-	mtg_tree,
-	(
-		cross_section=first_cross_section,
-		cross_section_pipe=first_cross_section,
-		cross_section_stat_mod=first_cross_section
-	)
-)
-# Compute the cross-section for the axes nodes using the one measured on the S just below:
-@mutate_mtg!(mtg_tree, cross_section_pipe = compute_cross_section_all(node, :cross_section_pipe))
-@mutate_mtg!(mtg_tree, cross_section_stat_mod = cross_section_stat_mod_all(node, model), symbol = "S")
+    # Adding the cross_section to the root:
+    append!(
+        mtg_tree,
+        (
+            cross_section=first_cross_section,
+            cross_section_pipe=first_cross_section,
+            cross_section_stat_mod=first_cross_section
+        )
+    )
+    # Compute the cross-section for the axes nodes using the one measured on the S just below:
+    @mutate_mtg!(mtg_tree, cross_section_pipe = compute_cross_section_all(node, :cross_section_pipe))
+    @mutate_mtg!(mtg_tree, cross_section_stat_mod = cross_section_stat_mod_all(node, model), symbol = "S")
 
-# Add the values for the axis:
-@mutate_mtg!(mtg_tree, cross_section_stat_mod = compute_cross_section_all(node, :cross_section_stat_mod))
+    # Add the values for the axis:
+    @mutate_mtg!(mtg_tree, cross_section_stat_mod = compute_cross_section_all(node, :cross_section_stat_mod))
 
-# Recompute the volume:
-compute_volume_stats(x, var) = x[var] * x[:length]
+    # Recompute the volume:
+    compute_volume_stats(x, var) = x[var] * x[:length]
 
-@mutate_mtg!(mtg_tree, volume_stat_mod = compute_volume_stats(node, :cross_section_stat_mod), symbol = "S") # volume in mm3
-@mutate_mtg!(mtg_tree, volume_pipe_mod = compute_volume_stats(node, :cross_section_pipe), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg_tree, volume_stat_mod = compute_volume_stats(node, :cross_section_stat_mod), symbol = "S") # volume in mm3
+    @mutate_mtg!(mtg_tree, volume_pipe_mod = compute_volume_stats(node, :cross_section_pipe), symbol = "S") # volume in mm3
 
-# And the biomass:	
-@mutate_mtg!(mtg_tree, fresh_mass = node[:volume_stat_mod] * fresh_density * 1e-3, symbol = "S") # in g
-@mutate_mtg!(mtg_tree, dry_mass = node[:volume_stat_mod] * dry_density * 1e-3, symbol = "S") # in g
+    # And the biomass:
+    @mutate_mtg!(mtg_tree, fresh_mass = node[:volume_stat_mod] * fresh_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_tree, dry_mass = node[:volume_stat_mod] * dry_density * 1e-3, symbol = "S") # in g
 
-@mutate_mtg!(mtg_tree, fresh_mass_pipe_mod = node[:volume_pipe_mod] * fresh_density * 1e-3, symbol = "S") # in g
-@mutate_mtg!(mtg_tree, dry_mass_pipe_mod = node[:volume_pipe_mod] * dry_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_tree, fresh_mass_pipe_mod = node[:volume_pipe_mod] * fresh_density * 1e-3, symbol = "S") # in g
+    @mutate_mtg!(mtg_tree, dry_mass_pipe_mod = node[:volume_pipe_mod] * dry_density * 1e-3, symbol = "S") # in g
 
-# Clean-up the cached variables:
-clean_cache!(mtg_tree)
+    # Clean-up the cached variables:
+    clean_cache!(mtg_tree)
 end
 
 # ╔═╡ a6ea9696-d778-4033-a7df-76da4ea1f5fe
 for i in trees
-	tree = match(r"[0-9]+", basename(i)).match
-	println("Computing tree $tree")
+    tree = match(r"[0-9]+", basename(i)).match
+    println("Computing tree $tree")
 
-	# Get the density for a tree:
-	df_density_tree = df_density[replace.(df_density.branches, r"[a-z]" => "") .== tree,:]
-	
-	# Compute the average per tree:
-	dry_density = mean(df_density_tree.dry_density)
-	fresh_density = mean(df_density_tree.fresh_density)
+    # Get the density for a tree:
+    df_density_tree = df_density[replace.(df_density.branches, r"[a-z]" => "").==tree, :]
 
-	# Import its MTG (computed from plantscan3d):
-	mtg_tree = read_mtg(i)
+    # Compute the average per tree:
+    dry_density = mean(df_density_tree.dry_density)
+    fresh_density = mean(df_density_tree.fresh_density)
+
+    # Import its MTG (computed from plantscan3d):
+    mtg_tree = read_mtg(i)
 
     compute_data_mtg_tree!(mtg_tree, fresh_density, dry_density)
 
-	# Write the computed LiDAR MTG to disk:
-	write_mtg(joinpath("../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched",basename(i)), mtg_tree)
+    # Write the computed LiDAR MTG to disk:
+    write_mtg(joinpath("../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched", basename(i)), mtg_tree)
 end
 
 # ╔═╡ 77486fa7-318d-4397-a792-70fd8d2148e3
@@ -678,7 +682,7 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     # How many leaves the node has in proportion to its siblings + itself:
     @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
 
-	# Use the first cross-section for the first value to apply the pipe-model:
+    # Use the first cross-section for the first value to apply the pipe-model:
     first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level=5))[1]
     @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
 
@@ -901,14 +905,14 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
 
     DataFrame(
         variable=["length", "length", "volume", "volume", "volume", "volume", "volume", "volume", "biomass", "biomass", "biomass", "biomass", "biomass", "biomass"],
-        model=["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw", "plantscan3d cor.", "plantscan3d raw", "stat. model cor.", "Pipe model cor.", "stat. model raw", "Pipe model raw"],
+        model=["plantscan3d cor.", "plantscan3d raw", "plantscan3d cor.", "plantscan3d raw", "Topo. model cor.", "Pipe model cor.", "Topo. model raw", "Pipe model raw", "plantscan3d cor.", "plantscan3d raw", "Topo. model cor.", "Pipe model cor.", "Topo. model raw", "Pipe model raw"],
         measurement=[tot_lenght_manual, tot_lenght_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, tot_vol_manual, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass, true_fresh_biomass],
         prediction=[tot_lenght_lidar, tot_lenght_lidar_raw, tot_vol_lidar, tot_vol_lidar_raw, tot_vol_lidar_stat_mod, tot_vol_lidar_pipe_mod, tot_vol_lidar_stat_mod_raw, tot_vol_lidar_pipe_mod_raw, fresh_biomass_lidar, fresh_biomass_lidar_raw, fresh_biomass_lidar_stat_mod, fresh_biomass_lidar_pipe_mod, fresh_biomass_lidar_stat_mod_raw, fresh_biomass_lidar_pipe_mod_raw]
     )
 end
 
 # ╔═╡ 0a19ac96-a706-479d-91b5-4ea3e091c3e8
-function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual,dir_path_lidar_new)
+function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, dir_path_lidar_new)
     branches = first.(splitext.(mtg_files))
 
     df_stats_branch = DataFrame(
@@ -941,9 +945,9 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
             compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
 
-		# Write the computed LiDAR MTG to disk:
-		write_mtg(joinpath(dir_path_lidar_new,i*".mtg"), mtg_lidar_model)
-		
+        # Write the computed LiDAR MTG to disk:
+        write_mtg(joinpath(dir_path_lidar_new, i * ".mtg"), mtg_lidar_model)
+
         df = volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_density)
         df[!, :branch] .= i
         df_stats_branch = vcat(df_stats_branch, df)
@@ -961,7 +965,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         # df_ps3d_raw[!,:id_cor] .= missing
         df_ps3d_raw[!, :origin] .= "plantscan3d, raw"
 
-        # statistical model:
+        # topological model:
         df_stat_mod = DataFrame(
             mtg_lidar_model,
             [
@@ -988,8 +992,8 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         df_stat_mod_biomass = select(
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
-            :fresh_mass => "stat. mod.",
-            :fresh_mass_50 => "stat. mod. ⌀<50",
+            :fresh_mass => "Topo. mod.",
+            :fresh_mass_50 => "Topo. mod. ⌀<50",
             :fresh_mass_ps3d => "plantscan3d",
             :fresh_mass_pipe_mod => "Pipe model",
             :fresh_mass_pipe_mod_50 => "Pipe mod. ⌀<50"
@@ -997,7 +1001,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
 
         df_stat_mod_biomass = stack(
             df_stat_mod_biomass,
-            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            ["Topo. mod.", "Topo. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
             [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
             variable_name=:origin,
             value_name=:fresh_mass
@@ -1007,8 +1011,8 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         df_stat_mod_cs = select(
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :id_cor,
-            :cross_section_stat_mod => "stat. mod.",
-            :cross_section_stat_mod_50 => "stat. mod. ⌀<50",
+            :cross_section_stat_mod => "Topo. mod.",
+            :cross_section_stat_mod_50 => "Topo. mod. ⌀<50",
             :cross_section_ps3d => "plantscan3d",
             :cross_section_pipe => "Pipe model",
             :cross_section_pipe_50 => "Pipe mod. ⌀<50"
@@ -1016,7 +1020,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
 
         df_stat_mod_cs = stack(
             df_stat_mod_cs,
-            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            ["Topo. mod.", "Topo. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
             [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor],
             variable_name=:origin,
             value_name=:cross_section
@@ -1025,8 +1029,8 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         select!(
             df_stat_mod,
             :id, :symbol, :scale, :index, :parent_id, :link, :length_sim => :length, :id_cor,
-            :volume_stat_mod => "stat. mod.",
-            :volume_stat_mod_50 => "stat. mod. ⌀<50",
+            :volume_stat_mod => "Topo. mod.",
+            :volume_stat_mod_50 => "Topo. mod. ⌀<50",
             :volume_ps3d => "plantscan3d",
             :volume_pipe_mod => "Pipe model",
             :volume_pipe_mod_50 => "Pipe mod. ⌀<50"
@@ -1034,7 +1038,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
 
         df_stat_mod = stack(
             df_stat_mod,
-            ["stat. mod.", "stat. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
+            ["Topo. mod.", "Topo. mod. ⌀<50", "plantscan3d", "Pipe model", "Pipe mod. ⌀<50"],
             [:id, :symbol, :scale, :index, :parent_id, :link, :id_cor, :length],
             variable_name=:origin,
             value_name=:volume
@@ -1057,7 +1061,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
 end
 
 # ╔═╡ 87140df4-3fb5-443c-a667-be1f19b016f6
-df_all_branches, df_stats_branch = summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual,dir_path_lidar_new);
+df_all_branches, df_stats_branch = summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, dir_path_lidar_new);
 
 # ╔═╡ 73515bd3-0124-42a4-9997-3730e7dcbf4c
 begin
@@ -2443,7 +2447,7 @@ version = "3.5.0+0"
 # ╟─9c04906b-10cd-4c53-a879-39d168e5bd1f
 # ╟─e5c0c40a-eb0a-4726-b58e-59c64cb39eae
 # ╟─d66aebf5-3681-420c-a342-166ea05dda2e
-# ╟─7de574d4-a8b8-4945-a2f1-5b2928b9d231
+# ╠═7de574d4-a8b8-4945-a2f1-5b2928b9d231
 # ╟─f26a28b2-d70e-4543-b58e-2d640c2a0c0d
 # ╟─9290e9bf-4c43-47c7-96ec-8b44ad3c6b23
 # ╟─466aa3b3-4c78-4bb7-944d-5d55128f8cf6

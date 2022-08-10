@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,13 +20,13 @@ end
 
 # ╔═╡ 119133e0-fb56-11eb-0e70-336d051ce19a
 begin
-	using CSV
-	using DataFrames
-	using Statistics
-	using AlgebraOfGraphics
-	using CairoMakie
-	using ColorSchemes
-	using PlutoUI
+    using CSV
+    using DataFrames
+    using Statistics
+    using AlgebraOfGraphics
+    using CairoMakie
+    using ColorSchemes
+    using PlutoUI
 end
 
 # ╔═╡ 061d3726-312d-486f-936d-2f40dfadf3a8
@@ -54,8 +58,8 @@ Several methods were used to estimate the cross-section of each segment in a bra
 
 - the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings.
 - the pipe model applied to all segments below 20mm diameter. This method is the same as the regular pipe model but considers all segments with a diameter higher than 20mm as well-measured by the LiDAR, and start computing the cross-section only below this given threshold.
-- the statistical model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data.
-- the statistical model applied to segments below 20mm diameter. This is the same strategy as for the pipe model.
+- the topological model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data.
+- the topological model applied to segments below 20mm diameter. This is the same strategy as for the pipe model.
 
 ## Results
 """
@@ -87,7 +91,7 @@ Defining colors to associate with each method in the plots:
 """
 
 # ╔═╡ b117cb32-8934-4ba2-96ea-33a8b51e5323
-colors = ["stat. model cor." => ColorSchemes.Set2_6.colors[1], "Pipe model cor." => ColorSchemes.Set2_6.colors[2], "plantscan3d cor." => ColorSchemes.Set2_6.colors[3], "stat. model raw" => ColorSchemes.Set2_6.colors[4], "Pipe model raw" => ColorSchemes.Set2_6.colors[5], "plantscan3d raw" => ColorSchemes.Set2_6.colors[6], "stat. mod." => ColorSchemes.Set2_6.colors[1], "Pipe mod." => ColorSchemes.Set2_6.colors[2]]
+colors = ["Topo. model cor." => ColorSchemes.Set2_6.colors[1], "Pipe model cor." => ColorSchemes.Set2_6.colors[2], "plantscan3d cor." => ColorSchemes.Set2_6.colors[3], "Topo. model raw" => ColorSchemes.Set2_6.colors[4], "Pipe model raw" => ColorSchemes.Set2_6.colors[5], "plantscan3d raw" => ColorSchemes.Set2_6.colors[6], "Topo. mod." => ColorSchemes.Set2_6.colors[1], "Pipe mod." => ColorSchemes.Set2_6.colors[2]]
 
 # ╔═╡ 400ee0ec-cc8c-4811-9e40-1438b7d21523
 md"""
@@ -108,20 +112,20 @@ md"""
 
 # ╔═╡ 3f9a5b83-7092-47fb-8d9b-6736d528997d
 begin
-n_fig_len = 1 # Number of the figure
-df_compare = filter(x -> x.variable == "length", df_stats_branch)
-plt_len =
-	data(df_compare) *
-(
-	mapping(
-		:measurement => "Measured length (m)",
-		:prediction => "Predicted length (m)", color= :model, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:measurement => "Measured length (m)",
-		:measurement => "Predicted length (m)") * visual(Lines)
-)
-plt_length = draw(plt_len, palettes=(; color=colors))
+    n_fig_len = 1 # Number of the figure
+    df_compare = filter(x -> x.variable == "length", df_stats_branch)
+    plt_len =
+        data(df_compare) *
+        (
+            mapping(
+                :measurement => "Measured length (m)",
+                :prediction => "Predicted length (m)", color=:model, marker=:branch) *
+            visual(Scatter) +
+            mapping(
+                :measurement => "Measured length (m)",
+                :measurement => "Predicted length (m)") * visual(Lines)
+        )
+    plt_length = draw(plt_len, palettes=(; color=colors))
 end
 
 # ╔═╡ fd6afb55-ce85-402b-a197-e7f44654f398
@@ -141,12 +145,12 @@ md"""
 
 # ╔═╡ f1babd1c-0151-4266-ad7b-beae5e5f977f
 md"""
-stat. model raw $(@bind vol_1 CheckBox(default = true)) stat. model cor. $(@bind vol_2 CheckBox()) plantscan3d raw $(@bind vol_3 CheckBox()) plantscan3d cor. $(@bind vol_4 CheckBox()) Pipe model raw $(@bind vol_5 CheckBox()) Pipe model cor. $(@bind vol_6 CheckBox())
+Topo. model raw $(@bind vol_1 CheckBox(default = true)) Topo. model cor. $(@bind vol_2 CheckBox()) plantscan3d raw $(@bind vol_3 CheckBox()) plantscan3d cor. $(@bind vol_4 CheckBox()) Pipe model raw $(@bind vol_5 CheckBox()) Pipe model cor. $(@bind vol_6 CheckBox())
 """
 
 # ╔═╡ 96f4479c-853f-4534-a3f5-6f31b844e634
 md"""
-*Figure 2. Comparison of the measured (x) and predicted (y) volume using different methods: plantscan3d, the pipe model and our statistical model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
+*Figure 2. Comparison of the measured (x) and predicted (y) volume using different methods: plantscan3d, the pipe model and our topological model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
 """
 
 # ╔═╡ 598c673e-1665-4b86-9ac8-7a52e8ce3d88
@@ -156,31 +160,31 @@ md"""
 
 # ╔═╡ f164ffb7-296e-477b-bb18-0fa1e82329e2
 md"""
-stat. model raw $(@bind bio_1 CheckBox(default = true)) stat. model cor. $(@bind bio_2 CheckBox()) plantscan3d raw $(@bind bio_3 CheckBox()) plantscan3d cor. $(@bind bio_4 CheckBox()) Pipe model raw $(@bind bio_5 CheckBox()) Pipe model cor. $(@bind bio_6 CheckBox())
+Topo. model raw $(@bind bio_1 CheckBox(default = true)) Topo. model cor. $(@bind bio_2 CheckBox()) plantscan3d raw $(@bind bio_3 CheckBox()) plantscan3d cor. $(@bind bio_4 CheckBox()) Pipe model raw $(@bind bio_5 CheckBox()) Pipe model cor. $(@bind bio_6 CheckBox())
 """
 
 # ╔═╡ a108212b-cb5d-46a8-a3aa-ddd617170e53
 md"""
-*Figure 3. Comparison of the measured (x) and predicted (y) biomass using different methods: plantscan3d, the pipe model and our statistical model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
+*Figure 3. Comparison of the measured (x) and predicted (y) biomass using different methods: plantscan3d, the pipe model and our topological model based either on the MTG from plantscan as-is (raw) or manually corrected (cor.).*
 """
 
 # ╔═╡ f550e258-a33a-4cb9-8a59-8a63b28d2bb3
 md"""
 ### Plots at branch scale, cor. as reference
 
-The statistical model computation presents the closest estimations compared to the axis-scale measurements. We can then use it as a reference here to see how much error is added when used on the raw MTG outputed from plantscan3d. We can also compare the outputs from the pipe model to see if it is consistant with its predictions on the corrected MTG too.
+The topological model computation presents the closest estimations compared to the axis-scale measurements. We can then use it as a reference here to see how much error is added when used on the raw MTG outputed from plantscan3d. We can also compare the outputs from the pipe model to see if it is consistant with its predictions on the corrected MTG too.
 
 #### Volume
 """
 
 # ╔═╡ dca7d576-e222-4a90-a536-dfbbff2cc486
 md"""
-*Figure 4. Comparison of the volume estimated using the corrected MTG from plantscan3d (x) or on the raw MTG (y), using two methods: the pipe model and our statistical model.*
+*Figure 4. Comparison of the volume estimated using the corrected MTG from plantscan3d (x) or on the raw MTG (y), using two methods: the pipe model and our topological model.*
 """
 
 # ╔═╡ 011be90f-4534-49bf-91e6-d6619e4ded62
 md"""
-*Table 2. Statistics of the consistancy of prediction of the branche-scale volume between the raw and the corrected MTG from plantscan3d using two methods: the pipe model and the statistical model (ours).*
+*Table 2. Statistics of the consistancy of prediction of the branche-scale volume between the raw and the corrected MTG from plantscan3d using two methods: the pipe model and the topological model (ours).*
 """
 
 # ╔═╡ 13a85844-0d86-44f7-8649-0d68f6642085
@@ -214,53 +218,53 @@ Functions used in the notebook:
 Filter x with the models set to `true`.
 """
 function filter_model(x, stat_raw, stat_cor, ps3d_raw, ps3d_cor, pipe_raw, pipe_cor)
-	x2 = copy(x)
-	selection = Dict("stat. model raw" => stat_raw, "stat. model cor." => stat_cor, "plantscan3d raw" => ps3d_raw, "plantscan3d cor." => ps3d_cor, "Pipe model raw" => pipe_raw, "Pipe model cor." => pipe_cor)
+    x2 = copy(x)
+    selection = Dict("Topo. model raw" => stat_raw, "Topo. model cor." => stat_cor, "plantscan3d raw" => ps3d_raw, "plantscan3d cor." => ps3d_cor, "Pipe model raw" => pipe_raw, "Pipe model cor." => pipe_cor)
 
-	for (k,value) in selection
-		if !value
-			filter!(y -> y.model != k, x2)
-		end
-	end
-	return x2
+    for (k, value) in selection
+        if !value
+            filter!(y -> y.model != k, x2)
+        end
+    end
+    return x2
 end
 
 # ╔═╡ 808fcdb0-75dd-4856-86f4-4ecd58161442
 begin
-df_compare2 = filter(x -> x.variable == "volume", df_stats_branch)
-df_compare2 = filter_model(df_compare2, vol_1, vol_2, vol_3, vol_4, vol_5, vol_6)
+    df_compare2 = filter(x -> x.variable == "volume", df_stats_branch)
+    df_compare2 = filter_model(df_compare2, vol_1, vol_2, vol_3, vol_4, vol_5, vol_6)
 
-p_vol =
-	data(df_compare2) *
-(
-	mapping(
-		:measurement => "Measured volume (m³)",
-		:prediction => "Predicted volume (m³)", color= :model, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:measurement => "Measured volume (m³)",
-		:measurement => "Predicted volume (m³)") * visual(Lines)
-)
-plt_volume = draw(p_vol, palettes=(; color=colors))
+    p_vol =
+        data(df_compare2) *
+        (
+            mapping(
+                :measurement => "Measured volume (m³)",
+                :prediction => "Predicted volume (m³)", color=:model, marker=:branch) *
+            visual(Scatter) +
+            mapping(
+                :measurement => "Measured volume (m³)",
+                :measurement => "Predicted volume (m³)") * visual(Lines)
+        )
+    plt_volume = draw(p_vol, palettes=(; color=colors))
 end
 
 # ╔═╡ a7141396-04dc-4eab-b2d2-a24ab7883e43
 begin
-df_compare3 = filter(x -> x.variable == "biomass", df_stats_branch)
-df_compare3 = filter_model(df_compare3, bio_1, bio_2, bio_3, bio_4, bio_5, bio_6)
+    df_compare3 = filter(x -> x.variable == "biomass", df_stats_branch)
+    df_compare3 = filter_model(df_compare3, bio_1, bio_2, bio_3, bio_4, bio_5, bio_6)
 
-p_biom =
-	data(df_compare3) *
-(
-	mapping(
-		:measurement => "Measured biomass (kg)",
-		:prediction => "Predicted biomass (kg)", color= :model, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:measurement => "Measured biomass (kg)",
-		:measurement => "Predicted biomass (kg)") * visual(Lines)
-)
-plt_biomass = draw(p_biom, palettes=(; color=colors))
+    p_biom =
+        data(df_compare3) *
+        (
+            mapping(
+                :measurement => "Measured biomass (kg)",
+                :prediction => "Predicted biomass (kg)", color=:model, marker=:branch) *
+            visual(Scatter) +
+            mapping(
+                :measurement => "Measured biomass (kg)",
+                :measurement => "Predicted biomass (kg)") * visual(Lines)
+        )
+    plt_biomass = draw(p_biom, palettes=(; color=colors))
 end
 
 # ╔═╡ f7392326-f346-4aeb-ab61-5d1973f11526
@@ -271,8 +275,8 @@ Returns the normalized Root Mean Squared Error between observations `obs` and si
 Normalization is performed using division by observations range (max-min).
 Output: Float/Particles
 """
-function nRMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+function nRMSE(obs, sim; digits=2)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
 end
 
 # ╔═╡ 617272d3-5ecc-45c3-ae0d-9e32d23ad7b9
@@ -282,8 +286,8 @@ end
 Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function RMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
+function RMSE(obs, sim; digits=2)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)), digits=digits)
 end
 
 # ╔═╡ 360d9c28-40f2-493e-bf98-5ab51aba8214
@@ -294,28 +298,28 @@ Returns the Efficiency Factor between observations `obs` and simulations `sim` u
 More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
 The closer to 1 the better.
 """
-function EF(obs, sim; digits = 2)
-    SSres = sum((obs - sim).^2)
-    SStot = sum((obs .- mean(obs)).^2)
-    return round(1 - SSres / SStot, digits = digits)
+function EF(obs, sim; digits=2)
+    SSres = sum((obs - sim) .^ 2)
+    SStot = sum((obs .- mean(obs)) .^ 2)
+    return round(1 - SSres / SStot, digits=digits)
 end
 
 # ╔═╡ ad52254f-cee8-4663-a2f7-9d6a9f83112a
 begin
-gdf_branch = groupby(df_stats_branch, [:variable, :model])
+    gdf_branch = groupby(df_stats_branch, [:variable, :model])
 
-stats =
-combine(
-    gdf_branch,
-    [:measurement, :prediction] => RMSE => :RMSE,
-	[:measurement, :prediction] => nRMSE => :nRMSE,
-    [:measurement, :prediction] => EF => :EF
-)
+    stats =
+        combine(
+            gdf_branch,
+            [:measurement, :prediction] => RMSE => :RMSE,
+            [:measurement, :prediction] => nRMSE => :nRMSE,
+            [:measurement, :prediction] => EF => :EF
+        )
 
-stats_length = filter(x -> x.variable == "length", stats)
-stats_volume = filter(x -> x.variable == "volume", stats)
-stats_biomass = filter(x -> x.variable == "biomass", stats)
-stats
+    stats_length = filter(x -> x.variable == "length", stats)
+    stats_volume = filter(x -> x.variable == "volume", stats)
+    stats_biomass = filter(x -> x.variable == "biomass", stats)
+    stats
 end
 
 # ╔═╡ 5c3d5f5b-f49b-41c8-bbd5-0540faec7f07
@@ -325,8 +329,8 @@ end
 Returns the bias between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function Bias(obs, sim; digits = 2)
-    return round(mean((sim .- obs)), digits = digits)
+function Bias(obs, sim; digits=2)
+    return round(mean((sim .- obs)), digits=digits)
 end
 
 # ╔═╡ 33ff497e-afd4-46b7-b984-e37730108144
@@ -336,58 +340,58 @@ end
 Returns the normalized bias (%) between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function nBias(obs, sim; digits = 2)
-    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+function nBias(obs, sim; digits=2)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
 end
 
 # ╔═╡ 0651e9c6-309a-425f-bba5-ea0b00c43e0b
 begin
-df_vol_tmp = filter(x -> x.variable == "volume", df_stats_branch)
-vol_stat_mod_cor = transform(filter(x -> x.model == "stat. model cor.", df_vol_tmp), :branch => (x-> "stat. mod.") => :method)
-vol_stat_mod_raw = transform(filter(x -> x.model == "stat. model raw", df_vol_tmp), :branch => (x-> "stat. mod.") => :method)
-vol_pipe_cor = transform(filter(x -> x.model == "Pipe model cor.", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
-# vol_pipe_cor = transform(filter(x -> x.model == "stat. model cor.", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
+    df_vol_tmp = filter(x -> x.variable == "volume", df_stats_branch)
+    vol_stat_mod_cor = transform(filter(x -> x.model == "Topo. model cor.", df_vol_tmp), :branch => (x -> "Topo. mod.") => :method)
+    vol_stat_mod_raw = transform(filter(x -> x.model == "Topo. model raw", df_vol_tmp), :branch => (x -> "Topo. mod.") => :method)
+    vol_pipe_cor = transform(filter(x -> x.model == "Pipe model cor.", df_vol_tmp), :branch => (x -> "Pipe mod.") => :method)
+    # vol_pipe_cor = transform(filter(x -> x.model == "Topo. model cor.", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
 
-vol_pipe_raw = transform(filter(x -> x.model == "Pipe model raw", df_vol_tmp), :branch => (x-> "Pipe mod.") => :method)
+    vol_pipe_raw = transform(filter(x -> x.model == "Pipe model raw", df_vol_tmp), :branch => (x -> "Pipe mod.") => :method)
 
-df_cor = select(vcat(vol_stat_mod_cor, vol_pipe_cor), :branch, :prediction => :corrected, :method)
-df_raw = select(vcat(vol_stat_mod_raw, vol_pipe_raw), :branch, :prediction => :raw, :method)
+    df_cor = select(vcat(vol_stat_mod_cor, vol_pipe_cor), :branch, :prediction => :corrected, :method)
+    df_raw = select(vcat(vol_stat_mod_raw, vol_pipe_raw), :branch, :prediction => :raw, :method)
 
-df_compare_vol = innerjoin(df_cor, df_raw, on = [:branch, :method])
+    df_compare_vol = innerjoin(df_cor, df_raw, on=[:branch, :method])
 
-stats_vol =
-combine(
-    groupby(df_compare_vol, [:method]),
-	[:raw, :corrected] => ((x,y) -> RMSE(x, y, digits = 3)) => :RMSE,
-	[:raw, :corrected] => nRMSE => :nRMSE,
-	[:raw, :corrected] => ((x,y) -> Bias(x, y, digits = 3)) => :Bias,
-	[:raw, :corrected] => nBias => :nBias
-	)
-sort(stats_vol, :nRMSE)
+    stats_vol =
+        combine(
+            groupby(df_compare_vol, [:method]),
+            [:raw, :corrected] => ((x, y) -> RMSE(x, y, digits=3)) => :RMSE,
+            [:raw, :corrected] => nRMSE => :nRMSE,
+            [:raw, :corrected] => ((x, y) -> Bias(x, y, digits=3)) => :Bias,
+            [:raw, :corrected] => nBias => :nBias
+        )
+    sort(stats_vol, :nRMSE)
 end
 
 # ╔═╡ 1afd8da2-5b18-4672-aa34-d9f8e66b3bef
 begin
-p_vol2 =
-	data(df_compare_vol) *
-(
-	mapping(
-		:corrected => "Volume, corrected MTG (m³)",
-		:raw => "Volume, raw MTG (m³)", color= :method, marker = :branch) *
-	visual(Scatter) +
-	mapping(
-		:raw => "Volume, corrected MTG (m³)",
-		:raw => "Volume, raw MTG (m³)") * visual(Lines)
-)
-plt_volume2 = draw(p_vol2, palettes=(; color=colors))
+    p_vol2 =
+        data(df_compare_vol) *
+        (
+            mapping(
+                :corrected => "Volume, corrected MTG (m³)",
+                :raw => "Volume, raw MTG (m³)", color=:method, marker=:branch) *
+            visual(Scatter) +
+            mapping(
+                :raw => "Volume, corrected MTG (m³)",
+                :raw => "Volume, raw MTG (m³)") * visual(Lines)
+        )
+    plt_volume2 = draw(p_vol2, palettes=(; color=colors))
 end
 
 # ╔═╡ c4e44b1f-3a6d-4718-b241-190504ed39c8
 begin
-save("../2-results/2-plots/step_4_compare_models_branch_scale_len.png", plt_length, px_per_unit = 3)
-save("../2-results/2-plots/step_4_compare_models_branch_scale_volume.png", plt_volume, px_per_unit = 3)
-save("../2-results/2-plots/step_4_compare_models_branch_scale_biomass.png", plt_biomass, px_per_unit = 3)
-save("../2-results/2-plots/step_4_compare_models_branch_scale_volume_consistancy.png", plt_volume2, px_per_unit = 3)
+    save("../2-results/2-plots/step_4_compare_models_branch_scale_len.png", plt_length, px_per_unit=3)
+    save("../2-results/2-plots/step_4_compare_models_branch_scale_volume.png", plt_volume, px_per_unit=3)
+    save("../2-results/2-plots/step_4_compare_models_branch_scale_biomass.png", plt_biomass, px_per_unit=3)
+    save("../2-results/2-plots/step_4_compare_models_branch_scale_volume_consistancy.png", plt_volume2, px_per_unit=3)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

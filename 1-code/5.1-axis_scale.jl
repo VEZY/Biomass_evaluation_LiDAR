@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,13 +20,13 @@ end
 
 # ╔═╡ ea69604f-847b-435f-82e2-a60f02b7a5fd
 begin
-	using CSV
-	using DataFrames
-	using Statistics
-	using AlgebraOfGraphics
-	using CairoMakie
-	using PlutoUI
-	using ColorSchemes
+    using CSV
+    using DataFrames
+    using Statistics
+    using AlgebraOfGraphics
+    using CairoMakie
+    using PlutoUI
+    using ColorSchemes
 end
 
 # ╔═╡ 930fac10-fc16-11eb-259d-6ba1a5317e77
@@ -37,11 +41,11 @@ The outputs of the models in this notebook differs from the ones presented in `2
 
 ## Material and methods
 
-### Measurements 
+### Measurements
 
 Two branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology:
 
-- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement). 
+- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement).
 
 - The dimensions included a measurement of the diameter and length for each segment on the branch. They are used to compute a reference volume for each segment. See the previous notebook for more details (`4.2-step_2_check_manual_measurement.jl`).
 
@@ -49,14 +53,14 @@ Two branches from three walnut trees (*Juglans nigra*) were studied in an agrofo
 
 ### Computations
 
-Several methods were used to estimate the cross-section of each segment in a branch: 
+Several methods were used to estimate the cross-section of each segment in a branch:
 
-- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings. 
+- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings.
 - the pipe model applied to all segments below 20mm diameter. This method is the same as the regular pipe model but considers all segments with a diameter higher than 20mm as well-measured by the LiDAR, and start computing the cross-section only below this given threshold.
-- the statistical model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data. 
-- the statistical model applied to segments below 20mm diameter. This is the same strategy as for the pipe model. 
+- the topological model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data.
+- the topological model applied to segments below 20mm diameter. This is the same strategy as for the pipe model.
 
-Comparing at axis scale implied a correspondance between the axis from the manually measured MTGs and the LiDAR-based MTGs. This step was done by manually identifying matching the second branching order axis on both files.  
+Comparing at axis scale implied a correspondance between the axis from the manually measured MTGs and the LiDAR-based MTGs. This step was done by manually identifying matching the second branching order axis on both files.
 
 ## Results
 """
@@ -79,7 +83,7 @@ Importing the data:
 """
 
 # ╔═╡ 20df87b5-9a06-4a7d-922d-873f423a4001
-df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim = ";");
+df_axis = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim=";");
 
 # ╔═╡ cb9cd952-7799-447d-b3e5-03fd1aab13ee
 md"""
@@ -94,37 +98,37 @@ Make a DataFrame that matches the measurements and the predictions from LiDAR da
 
 # ╔═╡ 0c55a409-7847-4475-a1ef-39c22f459e6f
 begin
-# Filter out the measurement data and keep only the rows with axis that were identified in both the manually-measured MTG and the LiDAR-derived MTGs, meaning the first order axis (scale = 2 & index = 1) and the manually identified order 2 axis: 
-df_meas = filter(x -> x.origin == "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis)
+    # Filter out the measurement data and keep only the rows with axis that were identified in both the manually-measured MTG and the LiDAR-derived MTGs, meaning the first order axis (scale = 2 & index = 1) and the manually identified order 2 axis:
+    df_meas = filter(x -> x.origin == "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis)
 
-select!(
-	df_meas, 
-	:branch, :id_cor, 
-	:length => :length_meas, 
-	:cross_section => :cross_section_meas, 
-	:fresh_mass => :fresh_mass_meas, 
-	:volume => :volume_meas
-)
-	
-	
-# And make a new DataFrame with predictions and simulations in different columns:
-df_compare_tmp = 
-innerjoin(
-	df_meas,
-	filter(x -> !in(x.origin, ["measurement", "Pipe mod. ⌀<50", "stat. mod. ⌀<50"]) && x.id_cor !== missing && x.symbol == "A", df_axis),
-	on = [:branch, :id_cor]
-)
+    select!(
+        df_meas,
+        :branch, :id_cor,
+        :length => :length_meas,
+        :cross_section => :cross_section_meas,
+        :fresh_mass => :fresh_mass_meas,
+        :volume => :volume_meas
+    )
 
-# Change the units to better match with our values (mass in kg and volume in m³):
-df_compare = transform(
-	df_compare_tmp, 
-	:mass_g => x -> x * 1e-3,
-	:fresh_mass_meas => x -> x * 1e-3,
-	:fresh_mass => x -> x * 1e-3,
-	:volume => x -> x * 1e-9,
-	:volume_meas => x -> x * 1e-9,
-	renamecols = false
-);
+
+    # And make a new DataFrame with predictions and simulations in different columns:
+    df_compare_tmp =
+        innerjoin(
+            df_meas,
+            filter(x -> !in(x.origin, ["measurement", "Pipe mod. ⌀<50", "Topo. mod. ⌀<50"]) && x.id_cor !== missing && x.symbol == "A", df_axis),
+            on=[:branch, :id_cor]
+        )
+
+    # Change the units to better match with our values (mass in kg and volume in m³):
+    df_compare = transform(
+        df_compare_tmp,
+        :mass_g => x -> x * 1e-3,
+        :fresh_mass_meas => x -> x * 1e-3,
+        :fresh_mass => x -> x * 1e-3,
+        :volume => x -> x * 1e-9,
+        :volume_meas => x -> x * 1e-9,
+        renamecols=false
+    )
 end
 
 # ╔═╡ 0a19d625-9b12-4565-a51f-f0dd96f2af40
@@ -133,13 +137,13 @@ Defining colors to associate with each method in the plots:
 """
 
 # ╔═╡ 29fa4d06-f5d5-434c-9b98-bc6243d5f55c
-colors = ["stat. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "stat. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5]]
+colors = ["Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "Topo. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5]]
 
 # ╔═╡ d0888d85-3d81-4205-8dbe-e22b1fd37237
 md"""
 ### Statistics
 
-Statistics are given for each method, and each variable. They include root mean square error in its basic form (RMSE) or normalized (nRMSE) and the modelling efficiency (EF).  
+Statistics are given for each method, and each variable. They include root mean square error in its basic form (RMSE) or normalized (nRMSE) and the modelling efficiency (EF).
 """
 
 # ╔═╡ c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
@@ -151,7 +155,7 @@ md"""
 md"""
 ### Axis total length
 
-Comparing the axis length measured manually and predicted from the LiDAR pointcloud using plantscan3d: 
+Comparing the axis length measured manually and predicted from the LiDAR pointcloud using plantscan3d:
 """
 
 # ╔═╡ 26f11764-67c0-4b09-904a-d253e1d0fb59
@@ -159,26 +163,26 @@ Comparing the axis length measured manually and predicted from the LiDAR pointcl
 
 # ╔═╡ 7ccadb8d-940d-4550-a8ef-d38704e9ea7f
 begin
-plt_len = 
-	data(dropmissing(df_compare, [:length, :length_meas])) *
-	(
-		mapping(
-			:length_meas => (x -> x / 1000) => "Measured length (m)",
-			:length => (x -> x / 1000) => "Predicted length (m)", 
-			marker = :branch) *
-		visual(Scatter) +
-		mapping(
-			:length_meas => (x -> x / 1000) =>"Measured length (m)",
-			:length_meas => (x -> x / 1000) =>"Predicted length (m)") * visual(Lines)
-	)
-# axis = (width = 500, height = 500)
-# plt_biomass = draw(plt; axis)
-plt_length = draw(plt_len)
-if zoom_len
-	plt_length = draw(plt_len, axis=(limits = (0, 1, 0, 1),))
-else
-	plt_length = draw(plt_len)
-end
+    plt_len =
+        data(dropmissing(df_compare, [:length, :length_meas])) *
+        (
+            mapping(
+                :length_meas => (x -> x / 1000) => "Measured length (m)",
+                :length => (x -> x / 1000) => "Predicted length (m)",
+                marker=:branch) *
+            visual(Scatter) +
+            mapping(
+                :length_meas => (x -> x / 1000) => "Measured length (m)",
+                :length_meas => (x -> x / 1000) => "Predicted length (m)") * visual(Lines)
+        )
+    # axis = (width = 500, height = 500)
+    # plt_biomass = draw(plt; axis)
+    plt_length = draw(plt_len)
+    if zoom_len
+        plt_length = draw(plt_len, axis=(limits=(0, 1, 0, 1),))
+    else
+        plt_length = draw(plt_len)
+    end
 end
 
 # ╔═╡ 092ed56f-93c7-4343-a080-6ddc0da6c2ac
@@ -199,7 +203,7 @@ md"""
 
 # ╔═╡ 37633b50-c141-45d1-b7dd-1a0eebfda64f
 md"""
-stat. mod. $(@bind len_1 CheckBox(default = true)) plantscan3d $(@bind len_2 CheckBox(default = true)) Pipe model $(@bind len_3 CheckBox(default = true))
+Topo. mod. $(@bind len_1 CheckBox(default = true)) plantscan3d $(@bind len_2 CheckBox(default = true)) Pipe model $(@bind len_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_cs CheckBox())
 """
@@ -217,7 +221,7 @@ md"""
 
 # ╔═╡ c8a346f8-9942-4851-924a-9208cf077ba7
 md"""
-stat. mod. $(@bind vol_1 CheckBox(default = true)) plantscan3d $(@bind vol_2 CheckBox(default = true)) Pipe model $(@bind vol_3 CheckBox(default = true))
+Topo. mod. $(@bind vol_1 CheckBox(default = true)) plantscan3d $(@bind vol_2 CheckBox(default = true)) Pipe model $(@bind vol_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_volume CheckBox())
 """
@@ -240,7 +244,7 @@ md"""
 
 # ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 md"""
-stat. mod. $(@bind bio_1 CheckBox(default = true)) plantscan3d $(@bind bio_2 CheckBox(default = true)) Pipe model $(@bind bio_3 CheckBox(default = true))
+Topo. mod. $(@bind bio_1 CheckBox(default = true)) plantscan3d $(@bind bio_2 CheckBox(default = true)) Pipe model $(@bind bio_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_biomass CheckBox())
 """
@@ -286,122 +290,122 @@ Functions used in the notebook:
 
 # ╔═╡ 96973fc0-60af-4555-a7d9-4fa66e6b5990
 function filter_model(x, stat, ps3d, pipe)
-	x2 = copy(x)
-	selection = Dict("stat. mod." => stat, "plantscan3d" => ps3d, "Pipe model" => pipe)
-	
-	for (k,value) in selection
-		if !value
-			filter!(y -> y.origin != k, x2)
-		end
-	end
-	return x2
+    x2 = copy(x)
+    selection = Dict("Topo. mod." => stat, "plantscan3d" => ps3d, "Pipe model" => pipe)
+
+    for (k, value) in selection
+        if !value
+            filter!(y -> y.origin != k, x2)
+        end
+    end
+    return x2
 end
 
 # ╔═╡ 04dd878b-2358-4fa7-8d85-1e8928b10c59
 begin
-df_compare2 = filter_model(df_compare, len_1, len_2, len_3)
-	
-plt_cs = 
-	data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
-	(
-		mapping(
-			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines) +
-		mapping(
-			:cross_section_meas => "Measured cross-section (mm²)",
-			:cross_section => "Predicted cross-section (mm²)", 
-			color= :origin, marker = :branch) *
-		visual(Scatter, markersize = 15, alpha = 0.9)
-	)
-# axis = (width = 500, height = 500)
-# plt_cross_section = draw(plt; axis)
-if zoom_cs
-	plt_cross_section = draw(plt_cs, axis=(limits = (0, 350, 0, 350),), palettes=(; color=colors))
-else
-	plt_cross_section = draw(plt_cs, palettes=(; color=colors))
-end
+    df_compare2 = filter_model(df_compare, len_1, len_2, len_3)
+
+    plt_cs =
+        data(dropmissing(df_compare2, [:cross_section, :cross_section_meas])) *
+        (
+            mapping(
+                :cross_section_meas => "Measured cross-section (mm²)",
+                :cross_section_meas => "Predicted cross-section (mm²)") * visual(Lines) +
+            mapping(
+                :cross_section_meas => "Measured cross-section (mm²)",
+                :cross_section => "Predicted cross-section (mm²)",
+                color=:origin, marker=:branch) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+    # axis = (width = 500, height = 500)
+    # plt_cross_section = draw(plt; axis)
+    if zoom_cs
+        plt_cross_section = draw(plt_cs, axis=(limits=(0, 350, 0, 350),), palettes=(; color=colors))
+    else
+        plt_cross_section = draw(plt_cs, palettes=(; color=colors))
+    end
 end
 
 # ╔═╡ 81f64f27-3ea5-4c03-abca-f281e072b2ca
 begin
-df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3)
-	
-plt_vol = 
-	data(dropmissing(df_compare3, [:volume, :volume_meas])) *
-	(
-		mapping(
-			:volume_meas => "Measured volume (m³)",
-			:volume_meas => "Predicted volume (m³)") * visual(Lines) +
-		mapping(
-			:volume_meas => "Measured volume (m³)",
-			:volume => "Predicted volume (m³)", color= :origin, marker = :branch) *
-		visual(Scatter, markersize = 15, alpha = 0.9)		
-	)
-# axis = (width = 500, height = 500)
-# plt_biomass = draw(plt; axis)
-if zoom_volume
-	plt_volume = draw(plt_vol, axis=(limits = (0, 0.0005, 0, 0.0005),), palettes=(; color=colors))
-else
-	plt_volume = draw(plt_vol, palettes=(; color=colors))
-end
+    df_compare3 = filter_model(df_compare, vol_1, vol_2, vol_3)
+
+    plt_vol =
+        data(dropmissing(df_compare3, [:volume, :volume_meas])) *
+        (
+            mapping(
+                :volume_meas => "Measured volume (m³)",
+                :volume_meas => "Predicted volume (m³)") * visual(Lines) +
+            mapping(
+                :volume_meas => "Measured volume (m³)",
+                :volume => "Predicted volume (m³)", color=:origin, marker=:branch) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+    # axis = (width = 500, height = 500)
+    # plt_biomass = draw(plt; axis)
+    if zoom_volume
+        plt_volume = draw(plt_vol, axis=(limits=(0, 0.0005, 0, 0.0005),), palettes=(; color=colors))
+    else
+        plt_volume = draw(plt_vol, palettes=(; color=colors))
+    end
 end
 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
-df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3)
-plt = 
-	data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
-	(
-		mapping(
-			:fresh_mass_meas => "Measured fresh biomass (kg)",
-			:fresh_mass_meas => "Predicted fresh biomass (kg)"
-		) * visual(Lines) +
-		mapping(
-			:fresh_mass_meas => "Measured fresh biomass (kg)",
-			:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
-		visual(Scatter, markersize = 15, alpha = 0.9)
-	)
-# axis = (width = 500, height = 500)
-# plt_biomass = draw(plt; axis)
-if zoom_biomass
-	plt_biomass = draw(plt, axis=(limits = (0, 2, 0, 2),), palettes=(; color=colors))
-else 
-	plt_biomass = draw(plt, axis=(autolimitaspect = 1,), palettes=(; color=colors))
-end
+    df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3)
+    plt =
+        data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
+        (
+            mapping(
+                :fresh_mass_meas => "Measured fresh biomass (kg)",
+                :fresh_mass_meas => "Predicted fresh biomass (kg)"
+            ) * visual(Lines) +
+            mapping(
+                :fresh_mass_meas => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)", color=:origin, marker=:branch) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+    # axis = (width = 500, height = 500)
+    # plt_biomass = draw(plt; axis)
+    if zoom_biomass
+        plt_biomass = draw(plt, axis=(limits=(0, 2, 0, 2),), palettes=(; color=colors))
+    else
+        plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors))
+    end
 end
 
 # ╔═╡ fea13de5-26d6-4e2e-8fed-e241c650c206
 begin
-gdf = groupby(df_compare4, [:branch, :origin])
-df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols = false)
+    gdf = groupby(df_compare4, [:branch, :origin])
+    df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false)
 
-plt_branch = 
-data(df_branch) *
-(
-	mapping(
-		:fresh_mass => "Measured fresh biomass (kg)",
-		:fresh_mass => "Predicted fresh biomass (kg)"
-	) * visual(Lines) +
-	mapping(
-		:fresh_mass_meas => "Measured fresh biomass (kg)",
-		:fresh_mass => "Predicted fresh biomass (kg)", color= :origin, marker = :branch) *
-	visual(Scatter, markersize = 15, alpha = 0.9)
-)
-	
-plot_branch = draw(plt_branch, axis=(autolimitaspect = 1,), palettes=(; color=colors))
+    plt_branch =
+        data(df_branch) *
+        (
+            mapping(
+                :fresh_mass => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)"
+            ) * visual(Lines) +
+            mapping(
+                :fresh_mass_meas => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)", color=:origin, marker=:branch) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+
+    plot_branch = draw(plt_branch, axis=(autolimitaspect=1,), palettes=(; color=colors))
 end
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
-begin 
-save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit = 3)
-	
-save("../2-results/2-plots/step_4_compare_models_axis_scale_cross_section.png", plt_cross_section, px_per_unit = 3)
-	
-save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit = 3)
+begin
+    save("../2-results/2-plots/step_4_compare_models_axis_scale_length.png", plt_length, px_per_unit=3)
 
-save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit = 3)
-	
-save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass_branch.png", plot_branch, px_per_unit = 3)
+    save("../2-results/2-plots/step_4_compare_models_axis_scale_cross_section.png", plt_cross_section, px_per_unit=3)
+
+    save("../2-results/2-plots/step_4_compare_models_axis_scale_volume.png", plt_volume, px_per_unit=3)
+
+    save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass.png", plt_biomass, px_per_unit=3)
+
+    save("../2-results/2-plots/step_4_compare_models_axis_scale_biomass_branch.png", plot_branch, px_per_unit=3)
 end
 
 # ╔═╡ 7db6c69d-4076-4a42-bfc9-6e8b7d2de13d
@@ -411,8 +415,8 @@ end
 Returns the bias between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function Bias(obs, sim; digits = 2)
-	return round(mean((sim .- obs)), digits = digits)
+function Bias(obs, sim; digits=2)
+    return round(mean((sim .- obs)), digits=digits)
 end
 
 # ╔═╡ 7b662b3f-6901-4258-ba68-25cdf2145890
@@ -422,8 +426,8 @@ end
 Returns the normalised bias (%) between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function nBias(obs, sim; digits = 2)
-	return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+function nBias(obs, sim; digits=2)
+    return round(mean((sim .- obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
 end
 
 # ╔═╡ 6bca0065-cebb-4a70-af12-287eeec81ad2
@@ -434,8 +438,8 @@ Returns the normalized Root Mean Squared Error between observations `obs` and si
 Normalization is performed using division by observations range (max-min).
 Output: Float/Particles
 """
-function nRMSE(obs, sim; digits = 2)
-	return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
+function nRMSE(obs, sim; digits=2)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
 end
 
 # ╔═╡ ebba6e34-134d-45b0-8677-ec93f3d414f5
@@ -445,68 +449,68 @@ end
 Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
 The closer to 0 the better.
 """
-function RMSE(obs, sim; digits = 2)
-	return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
+function RMSE(obs, sim; digits=2)
+    return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)), digits=digits)
 end
 
 # ╔═╡ 29cfa66f-3e7a-4460-84c2-706e1e8f9766
 """
 	EF(obs,sim; digits = 2)
-	
+
 Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
 More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
 The closer to 1 the better.
 """
-function EF(obs, sim; digits = 2)
-	SSres = sum((obs - sim).^2)
-	SStot = sum((obs .- mean(obs)).^2)
-	return round(1 - SSres / SStot, digits = digits)
+function EF(obs, sim; digits=2)
+    SSres = sum((obs - sim) .^ 2)
+    SStot = sum((obs .- mean(obs)) .^ 2)
+    return round(1 - SSres / SStot, digits=digits)
 end
 
 # ╔═╡ 1f49c11d-678d-4b78-9038-4b5055f302bb
 begin
-stats =
-combine(
-    groupby(dropmissing(df_compare, [:volume]), [:origin]),
-	[:volume_meas, :volume] => RMSE => :RMSE_volume,
-	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
-	[:volume_meas, :volume] => nRMSE => :nRMSE_volume,
-	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
-    [:volume_meas, :volume] => EF => :EF_volume,
-    [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
-)
-sort(stats, :RMSE_volume)
+    stats =
+        combine(
+            groupby(dropmissing(df_compare, [:volume]), [:origin]),
+            [:volume_meas, :volume] => RMSE => :RMSE_volume,
+            [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
+            [:volume_meas, :volume] => nRMSE => :nRMSE_volume,
+            [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE_fresh_mass,
+            [:volume_meas, :volume] => EF => :EF_volume,
+            [:fresh_mass_meas, :fresh_mass] => EF => :EF_fresh_mass
+        )
+    sort(stats, :RMSE_volume)
 end
 
 # ╔═╡ 19c9eb91-d077-4eb0-85ee-5a80dd539bc0
 df_stat_length = combine(
     filter(x -> x.origin == "plantscan3d", dropmissing(df_compare, [:length, :length_meas])),
-	[:length_meas, :length] => RMSE => :RMSE,
-	[:length_meas, :length] => nRMSE => :nRMSE,
+    [:length_meas, :length] => RMSE => :RMSE,
+    [:length_meas, :length] => nRMSE => :nRMSE,
     [:length_meas, :length] => EF => :EF,
-	[:length_meas, :length] => Bias => :Bias,
-	[:length_meas, :length] => ((x,y) -> nBias(x,y,digits = 5)) => :nBias
+    [:length_meas, :length] => Bias => :Bias,
+    [:length_meas, :length] => ((x, y) -> nBias(x, y, digits=5)) => :nBias
 )
 
 # ╔═╡ b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
 sort(combine(
-    groupby(df_compare4, :origin),
-	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
-	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
-    [:fresh_mass_meas, :fresh_mass] => EF => :EF,
-	[:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
-	[:fresh_mass_meas, :fresh_mass] => nBias => :nBias
-), :nRMSE)
+        groupby(df_compare4, :origin),
+        [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+        [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+        [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+        [:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+        [:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+    ), :nRMSE)
 
 # ╔═╡ 116a150d-708d-4161-873d-6f92a83e3ed1
 sort(combine(
-    groupby(df_branch, :origin),
-	[:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
-	[:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
-    [:fresh_mass_meas, :fresh_mass] => EF => :EF,
-	[:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
-	[:fresh_mass_meas, :fresh_mass] => nBias => :nBias
-), :nRMSE)
+        groupby(df_branch, :origin),
+        [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+        [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+        [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+        [:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+        [:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+    ), :nRMSE)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

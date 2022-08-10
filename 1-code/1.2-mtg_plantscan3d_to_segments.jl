@@ -1,6 +1,6 @@
 # Aim: transform mtg from plantscan3d LiDAR reconstruction to match the same format than the
 # one used in the mtg from field measurements, i.e. with Axis and segments
-# Author: A. Bonnet & R. Vezy
+# Author: A. Bonnet & M. Millan & R. Vezy
 # Date: 10/05/2021
 
 
