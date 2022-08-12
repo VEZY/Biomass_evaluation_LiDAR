@@ -410,7 +410,23 @@ begin
             visual(Scatter, markersize=15, alpha=0.9)
         )
 
+
+	
     plot_branch = draw(plt_branch, axis=(autolimitaspect=1,), palettes=(; color=colors))
+
+	# lines!(plot_branch.figure[1, 1], repeat(df_13h.fresh_mass_meas,2), [df_13h.fresh_mass_meas[1],df_13h.fresh_mass[1]*1.02], color = :red, linewidth = 1, linestyle = :dash)
+	plot_branch
+end
+
+# ╔═╡ 49a44898-c799-48d3-bb2d-cd2620a6f391
+begin
+	df_13h = 
+		combine(
+			groupby(filter(x -> x.Model == "Topological" && x["Tree-Branch:"] == "13-h", df_compare4), ["Tree-Branch:", "Model"]), 
+			:fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false
+		)
+	error_13h = round((df_13h[1,:fresh_mass] - df_13h[1,:fresh_mass_meas]) / df_13h[1,:fresh_mass_meas] * 100)
+	nothing
 end
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
@@ -1870,6 +1886,7 @@ version = "3.5.0+0"
 # ╟─b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
 # ╟─fea13de5-26d6-4e2e-8fed-e241c650c206
 # ╟─316bd7fb-c49e-47b2-9fd6-015158ce8926
+# ╟─49a44898-c799-48d3-bb2d-cd2620a6f391
 # ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
 # ╟─710ae2b2-4fcb-4727-899b-e2a921fa6b75
 # ╟─116a150d-708d-4161-873d-6f92a83e3ed1
