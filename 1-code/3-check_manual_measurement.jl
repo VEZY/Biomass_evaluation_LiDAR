@@ -6,12 +6,12 @@ using InteractiveUtils
 
 # ╔═╡ d0b7c2b0-f9db-11eb-0220-d5ee058b3a33
 begin
-	using CSV
-	using Plots
-	using DataFrames
-	using StatsPlots
-	using Statistics
-	using Plots
+    using CSV
+    using Plots
+    using DataFrames
+    using StatsPlots
+    using Statistics
+    using Plots
 end
 
 # ╔═╡ a0a72716-d37e-48f3-a024-b61a15065fdf
@@ -61,11 +61,39 @@ md"Importing and cleaning the data:"
 
 # ╔═╡ eb6b8d86-a11f-45b4-9ddd-0ff0459456c9
 begin
-df_manual = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim = ";")
-filter!(x -> x.symbol == "A", df_manual);
-dropmissing!(df_manual, [:mass_g, :fresh_mass]);
-nothing
+    df_manual = CSV.read("../2-results/1-data/df_all.csv", DataFrame, delim=";")
+    df_s = filter(x -> x.origin == "measurement", df_manual)
+    filter!(x -> x.symbol == "A", df_manual)
+    dropmissing!(df_manual, [:mass_g, :fresh_mass])
+    nothing
 end
+
+# ╔═╡ b79aa8dc-d1f8-495e-a3a3-0847686c9c78
+md"""
+## Global statistics
+"""
+
+# ╔═╡ e06c1506-1667-410a-bc5a-b1f0ff09ae96
+begin
+    average_length =
+        combine(
+            filter(x -> x.symbol == "A" && x.index == 1, df_s),
+            :length => (x -> round(mean(x) / 1000, digits=1)) => :length
+        )[1, 1]
+
+    tot_length_branch = combine(
+        groupby(filter(x -> x.symbol == "S", df_s), :branch),
+        :length => (x -> round(sum(x) / 1000, digits=1)) => :length
+    )
+
+    tot_length_meas = sum(tot_length_branch.length)
+    nothing
+end
+
+# ╔═╡ 80b7a9cd-cd98-417c-b019-a22e1e0e098e
+md"""
+A total of **$[size(df_s)[1]]** topological data points were collected in the six branches, with an average branch main axis length of $average_length m, the total length measured was $tot_length_meas.
+"""
 
 # ╔═╡ 39d734bf-b0e8-4485-9818-70871a52873b
 md"""
@@ -80,15 +108,20 @@ Transforming in kilograms:
 
 # ╔═╡ 103678f0-5ef2-4679-b9d1-eada3cae6189
 df_manual_kg =
-	transform(
-		df_manual,
-		:mass_g => (x -> x / 1000) => :mass_g,
-		:fresh_mass => (x -> x / 1000) => :fresh_mass
-	);
+    transform(
+        df_manual,
+        :mass_g => (x -> x / 1000) => :mass_g,
+        :fresh_mass => (x -> x / 1000) => :fresh_mass
+    );
 
 # ╔═╡ 857891e1-c00c-4672-acca-5c88603b5c23
 md"""
 ### Plotting
+"""
+
+# ╔═╡ 5c1ee85a-bcf4-4d84-9841-84a5a55338c5
+md"""
+#### Axis scale
 """
 
 # ╔═╡ a0a4079d-b5e5-4404-9f88-9edf97d94c1a
@@ -98,30 +131,64 @@ The fresh biomass estimated from the segments volume (*i.e.* `length * diameter`
 
 # ╔═╡ b1afa486-5dc9-44c3-b737-39de850c0374
 begin
-@df df_manual_kg scatter(:mass_g, :fresh_mass,
-        xlab = "Measured fresh biomass (kg)",
-        ylab = "Fresh biomass (kg) = Volume * Fresh Density",
-        group = :branch,
-        legend = :topleft,
-        dpi = 300
+    @df df_manual_kg scatter(:mass_g, :fresh_mass,
+        xlab="Measured fresh biomass (kg)",
+        ylab="Fresh biomass (kg) = Volume * Fresh Density",
+        group=:branch,
+        legend=:topleft,
+        dpi=300
     )
-Plots.abline!(1,0, line = :dash, label = "identity")
+    Plots.abline!(1, 0, line=:dash, label="identity")
 
-lims = (-Inf, 2)
-@df df_manual_kg scatter!(:mass_g, :fresh_mass,
-        group = :branch,
-        legend = :bottomright,
-        xlim = lims,
-        ylim = lims,
-        label = "",
-        link = :both,
-        xlims = lims,
-        ylims = lims,
-        inset = (1, bbox(0.0, 0.1, 0.35, 0.35, :bottom, :right)),
-    subplot = 2
-)
-Plots.abline!(1,0, line = :dash, lw = 2, label = "", subplot = 2)
+    lims = (-Inf, 2)
+    @df df_manual_kg scatter!(:mass_g, :fresh_mass,
+        group=:branch,
+        legend=:bottomright,
+        xlim=lims,
+        ylim=lims,
+        label="",
+        link=:both,
+        xlims=lims,
+        ylims=lims,
+        inset=(1, bbox(0.0, 0.1, 0.35, 0.35, :bottom, :right)),
+        subplot=2
+    )
+    Plots.abline!(1, 0, line=:dash, lw=2, label="", subplot=2)
 end
+
+# ╔═╡ 990afc9d-9510-4637-a045-3f925792a4a6
+md"""
+#### Branch scale
+"""
+
+# ╔═╡ 0e49cf4b-0cf9-47d7-86f2-30f459b5c024
+begin
+    df_compare_methods_branch = leftjoin(
+        select(
+            filter(x -> x.scale == 1, df_s),
+            :branch,
+            :mass_g => :mass_from_scale
+        ),
+        combine(
+            groupby(filter(x -> x.symbol == "S", df_s), :branch),
+            :fresh_mass => sum => :mass_from_volume
+        ),
+        on=:branch
+    )
+    @df df_compare_methods_branch scatter(:mass_from_scale, :mass_from_volume,
+        xlab="Measured fresh biomass (kg)",
+        ylab="Fresh biomass (kg) = Volume * Fresh Density",
+        group=:branch,
+        legend=:topleft,
+        dpi=300
+    )
+    Plots.abline!(1, 0, line=:dash, label="identity")
+end
+
+# ╔═╡ 5f69ace8-3481-48c9-8da1-e78c8dbdc6e4
+md"""
+*Figure 2. Fresh biomass estimated from dimensions measurements and an average branch fresh density at segment scale (`y`) compared to fresh biomass measured with a scale on the field (`x`). Each point is a branch.*
+"""
 
 # ╔═╡ 0842de6b-313c-4a80-8b48-73ddbb58cf4c
 md"""
@@ -155,50 +222,50 @@ Functions used in the notebook:
 
 # ╔═╡ 75a15c39-d97e-47b6-a115-4694ebf12679
 begin
-"""
-    nRMSE(obs,sim; digits = 2)
+    """
+        nRMSE(obs,sim; digits = 2)
 
-Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
-Normalization is performed using division by observations range (max-min).
-Output: Float/Particles
-"""
-function nRMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits = digits)
-end
+    Returns the normalized Root Mean Squared Error between observations `obs` and simulations `sim`.
+    Normalization is performed using division by observations range (max-min).
+    Output: Float/Particles
+    """
+    function nRMSE(obs, sim; digits=2)
+        return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)) / (findmax(obs)[1] - findmin(obs)[1]), digits=digits)
+    end
 
-"""
-    RMSE(obs,sim; digits = 2)
+    """
+        RMSE(obs,sim; digits = 2)
 
-Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
-The closer to 0 the better.
-"""
-function RMSE(obs, sim; digits = 2)
-    return round(sqrt(sum((obs .- sim).^2) / length(obs)), digits = digits)
-end
+    Returns the Root Mean Squared Error between observations `obs` and simulations `sim`.
+    The closer to 0 the better.
+    """
+    function RMSE(obs, sim; digits=2)
+        return round(sqrt(sum((obs .- sim) .^ 2) / length(obs)), digits=digits)
+    end
 
 
-"""
-    EF(obs,sim; digits = 2)
+    """
+        EF(obs,sim; digits = 2)
 
-Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
-More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
-The closer to 1 the better.
-"""
-function EF(obs, sim; digits = 2)
-    SSres = sum((obs - sim).^2)
-    SStot = sum((obs .- mean(obs)).^2)
-    return round(1 - SSres / SStot, digits = digits)
-end
+    Returns the Efficiency Factor between observations `obs` and simulations `sim` using NSE (Nash-Sutcliffe efficiency) model.
+    More information can be found at https://en.wikipedia.org/wiki/Nash%E2%80%93Sutcliffe_model_efficiency_coefficient.
+    The closer to 1 the better.
+    """
+    function EF(obs, sim; digits=2)
+        SSres = sum((obs - sim) .^ 2)
+        SStot = sum((obs .- mean(obs)) .^ 2)
+        return round(1 - SSres / SStot, digits=digits)
+    end
 end
 
 # ╔═╡ 8d90b9ec-5bdb-4021-a9f6-1791e3fa2386
 fig_stats =
-combine(
-	df_manual,
-	[:mass_g, :fresh_mass] => RMSE => :RMSE,
-	[:mass_g, :fresh_mass] => nRMSE => :nRMSE,
-	[:mass_g, :fresh_mass] => EF => :EF
-);
+    combine(
+        df_manual,
+        [:mass_g, :fresh_mass] => RMSE => :RMSE,
+        [:mass_g, :fresh_mass] => nRMSE => :nRMSE,
+        [:mass_g, :fresh_mass] => EF => :EF
+    );
 
 # ╔═╡ a07264d7-5d7e-44de-8a8c-d036c72d2d40
 md"""
@@ -207,15 +274,15 @@ md"""
 
 # ╔═╡ 88cff656-0cd8-45e7-a268-10c0c5e3a815
 begin
-gdf_branch = groupby(df_manual, [:branch])
+    gdf_branch = groupby(df_manual, [:branch])
 
-stats =
-combine(
-    gdf_branch,
-    [:mass_g, :fresh_mass] => RMSE => :RMSE,
-	[:mass_g, :fresh_mass] => nRMSE => :nRMSE,
-    [:mass_g, :fresh_mass] => EF => :EF
-)
+    stats =
+        combine(
+            gdf_branch,
+            [:mass_g, :fresh_mass] => RMSE => :RMSE,
+            [:mass_g, :fresh_mass] => nRMSE => :nRMSE,
+            [:mass_g, :fresh_mass] => EF => :EF
+        )
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1313,14 +1380,21 @@ version = "0.9.1+5"
 # ╠═d0b7c2b0-f9db-11eb-0220-d5ee058b3a33
 # ╟─b535f1f1-19da-4bbe-a060-d6988e04e2a7
 # ╠═eb6b8d86-a11f-45b4-9ddd-0ff0459456c9
+# ╟─b79aa8dc-d1f8-495e-a3a3-0847686c9c78
+# ╟─80b7a9cd-cd98-417c-b019-a22e1e0e098e
+# ╟─e06c1506-1667-410a-bc5a-b1f0ff09ae96
 # ╟─39d734bf-b0e8-4485-9818-70871a52873b
 # ╟─d4fe2ec1-bb95-4d67-a8c6-8c190ac4c747
 # ╠═103678f0-5ef2-4679-b9d1-eada3cae6189
 # ╟─857891e1-c00c-4672-acca-5c88603b5c23
+# ╟─5c1ee85a-bcf4-4d84-9841-84a5a55338c5
 # ╟─a0a4079d-b5e5-4404-9f88-9edf97d94c1a
 # ╟─b1afa486-5dc9-44c3-b737-39de850c0374
 # ╟─a07264d7-5d7e-44de-8a8c-d036c72d2d40
 # ╟─8d90b9ec-5bdb-4021-a9f6-1791e3fa2386
+# ╟─990afc9d-9510-4637-a045-3f925792a4a6
+# ╟─0e49cf4b-0cf9-47d7-86f2-30f459b5c024
+# ╟─5f69ace8-3481-48c9-8da1-e78c8dbdc6e4
 # ╟─0842de6b-313c-4a80-8b48-73ddbb58cf4c
 # ╟─2f61ff80-3dd8-45b1-8c11-4e5d78e2d1a6
 # ╟─88cff656-0cd8-45e7-a268-10c0c5e3a815
