@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -115,8 +119,8 @@ begin
             on=[:branch, :id_cor]
         )
 
-	models = Dict("Topo. mod." => "Topological", "Pipe model" => "Pipe", "plantscan3d" => "Plantscan3d")
-	
+    models = Dict("Topo. mod." => "Topological", "Pipe model" => "Pipe", "plantscan3d" => "Plantscan3d")
+
     # Change the units to better match with our values (mass in kg and volume in m³):
     df_compare = transform(
         df_compare_tmp,
@@ -125,8 +129,8 @@ begin
         :fresh_mass => x -> x * 1e-3,
         :volume => x -> x * 1e-9,
         :volume_meas => x -> x * 1e-9,
-		:branch => ByRow(x -> join([x[5:6],x[7]],"-")) => "Tree-Branch:",
-		:origin => ByRow(x -> models[x]) => :Model,
+        :branch => ByRow(x -> join([x[5:6], x[7]], "-")) => "Tree-Branch:",
+        :origin => ByRow(x -> models[x]) => :Model,
         renamecols=false
     )
 end
@@ -138,9 +142,9 @@ Defining colors to associate with each method in the plots:
 
 # ╔═╡ 29fa4d06-f5d5-434c-9b98-bc6243d5f55c
 begin
-	cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "Topo. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5])
-	
-	colors = [i.second => cols[i.first] for i in models]
+    cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe model" => ColorSchemes.Set2_5.colors[2], "plantscan3d" => ColorSchemes.Set2_5.colors[3], "Topo. mod. ⌀<50" => ColorSchemes.Set2_5.colors[4], "Pipe mod. ⌀<50" => ColorSchemes.Set2_5.colors[5])
+
+    colors = [i.second => cols[i.first] for i in models]
 end
 
 # ╔═╡ 5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
@@ -176,7 +180,7 @@ begin
             mapping(
                 :length_meas => (x -> x / 1000) => "Measured length (m)",
                 :length => (x -> x / 1000) => "Predicted length (m)",
-                marker= "Tree-Branch:") *
+                marker="Tree-Branch:") *
             visual(Scatter) +
             mapping(
                 :length_meas => (x -> x / 1000) => "Measured length (m)",
@@ -280,7 +284,7 @@ md"""
 
 # ╔═╡ 710ae2b2-4fcb-4727-899b-e2a921fa6b75
 md"""
-Table 4. Statistics of the fresh biomass prediction at branch scale. These statistics are usually more interesting than the ones in Table 3 because they show how the prediction error propagates at a larger scale. These statistics are related to figure 4.
+*Table 4. Statistics of the fresh biomass prediction at branch scale. These statistics are usually more interesting than the ones in Table 3 because they show how the prediction error propagates at a larger scale. These statistics are related to figure 4.*
 """
 
 # ╔═╡ e4493718-91e1-47fe-9ea8-c55fd323afdc
@@ -318,13 +322,13 @@ begin
             mapping(
                 :cross_section_meas => "Measured cross-section (mm²)",
                 :cross_section_meas => "Predicted cross-section (mm²)"
-			) * 
-			visual(Lines) +
+            ) *
+            visual(Lines) +
             mapping(
                 :cross_section_meas => "Measured cross-section (mm²)",
                 :cross_section => "Predicted cross-section (mm²)",
                 color=:Model => "Model:", marker="Tree-Branch:"
-			) *
+            ) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
     if zoom_cs
@@ -344,13 +348,13 @@ begin
             mapping(
                 :volume_meas => "Measured volume (m³)",
                 :volume_meas => "Predicted volume (m³)"
-			) * 
-			visual(Lines) +
+            ) *
+            visual(Lines) +
             mapping(
                 :volume_meas => "Measured volume (m³)",
-                :volume => "Predicted volume (m³)", 
-				color=:Model => "Model:", marker="Tree-Branch:"
-			) *
+                :volume => "Predicted volume (m³)",
+                color=:Model => "Model:", marker="Tree-Branch:"
+            ) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
     # axis = (width = 500, height = 500)
@@ -371,13 +375,13 @@ begin
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
                 :fresh_mass_meas => "Predicted fresh biomass (kg)"
-            ) * 
-			visual(Lines) +
+            ) *
+            visual(Lines) +
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)", 
-				color=:Model => "Model:", marker="Tree-Branch:"
-			) *
+                :fresh_mass => "Predicted fresh biomass (kg)",
+                color=:Model => "Model:", marker="Tree-Branch:"
+            ) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
     # axis = (width = 500, height = 500)
@@ -385,7 +389,7 @@ begin
     if zoom_biomass
         plt_biomass = draw(plt, axis=(limits=(0, 2, 0, 2),), palettes=(; color=colors))
     else
-        plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors), legend = (framevisible=false,))
+        plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors), legend=(framevisible=false,))
     end
 end
 
@@ -394,39 +398,39 @@ begin
     gdf = groupby(df_compare4, ["Tree-Branch:", "Model"])
     df_branch = combine(gdf, :fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false)
 
-	plt_branch =
+    plt_branch =
         data(df_branch) *
         (
             mapping(
                 :fresh_mass => "Measured fresh biomass (kg)",
                 :fresh_mass => "Predicted fresh biomass (kg)"
-            ) * 
-			visual(Lines) +
+            ) *
+            visual(Lines) +
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)", 
-				color=:Model => "Model:", marker="Tree-Branch:"
-			) *
+                :fresh_mass => "Predicted fresh biomass (kg)",
+                color=:Model => "Model:", marker="Tree-Branch:"
+            ) *
             visual(Scatter, markersize=15, alpha=0.9)
         )
 
 
-	
+
     plot_branch = draw(plt_branch, axis=(autolimitaspect=1,), palettes=(; color=colors))
 
-	# lines!(plot_branch.figure[1, 1], repeat(df_13h.fresh_mass_meas,2), [df_13h.fresh_mass_meas[1],df_13h.fresh_mass[1]*1.02], color = :red, linewidth = 1, linestyle = :dash)
-	plot_branch
+    # lines!(plot_branch.figure[1, 1], repeat(df_13h.fresh_mass_meas,2), [df_13h.fresh_mass_meas[1],df_13h.fresh_mass[1]*1.02], color = :red, linewidth = 1, linestyle = :dash)
+    plot_branch
 end
 
 # ╔═╡ 49a44898-c799-48d3-bb2d-cd2620a6f391
 begin
-	df_13h = 
-		combine(
-			groupby(filter(x -> x.Model == "Topological" && x["Tree-Branch:"] == "13-h", df_compare4), ["Tree-Branch:", "Model"]), 
-			:fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false
-		)
-	error_13h = round((df_13h[1,:fresh_mass] - df_13h[1,:fresh_mass_meas]) / df_13h[1,:fresh_mass_meas] * 100)
-	nothing
+    df_13h =
+        combine(
+            groupby(filter(x -> x.Model == "Topological" && x["Tree-Branch:"] == "13-h", df_compare4), ["Tree-Branch:", "Model"]),
+            :fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false
+        )
+    error_13h = round((df_13h[1, :fresh_mass] - df_13h[1, :fresh_mass_meas]) / df_13h[1, :fresh_mass_meas] * 100)
+    nothing
 end
 
 # ╔═╡ 516d9d30-ca44-4db0-a85f-444e874c96a2
@@ -528,7 +532,7 @@ df_stat_length = combine(
 
 # ╔═╡ b5fabdad-b8e1-4eb1-b5a3-a19bcaeeb728
 sort(combine(
-		groupby(df_compare4, :Model),
+        groupby(df_compare4, :Model),
         [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
         [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
         [:fresh_mass_meas, :fresh_mass] => EF => :EF,
@@ -545,6 +549,64 @@ sort(combine(
         [:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
         [:fresh_mass_meas, :fresh_mass] => nBias => :nBias
     ), :nRMSE)
+
+# ╔═╡ 820afee9-59a9-4373-a5ea-c6952c4c60d4
+begin
+    threshold = 10 # threshold diameter for the plot and stats
+    df_compare_lwr10 = filter(x -> x.cross_section_meas <= π * ((threshold / 2.0)^2), df_compare4)
+    df_branch_lwr10 =
+        combine(
+            groupby(df_compare_lwr10, ["Tree-Branch:", "Model"]),
+            :fresh_mass_meas => sum, :fresh_mass => sum,
+            renamecols=false
+        )
+
+    sort(combine(
+            groupby(df_branch_lwr10, :Model),
+            [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+            [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+            [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+            [:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+            [:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+        ), :nRMSE)
+end
+
+# ╔═╡ c0c5799c-9046-4b2b-8d1a-a12ea9d37b36
+md"""
+### Segments below $threshold cm ⌀
+
+Here are the results for each axis when considering the segments with a diameter below or equal to $threshold cm.
+"""
+
+# ╔═╡ b3f5b27d-f93d-4a58-88d3-7490ee093957
+md"""
+*Table 5. Statistics of the fresh biomass prediction at axis scale considering segments with a diameter of $threshold cm or below. These statistics helps us evaluate the model accuracy for the finer structures only*
+"""
+
+# ╔═╡ 9999e0e4-19c0-4d9e-9ebc-2283bcb74460
+begin
+    plt_branch_lwr10 =
+        data(df_compare_lwr10) *
+        (
+            mapping(
+                :fresh_mass => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)"
+            ) *
+            visual(Lines) +
+            mapping(
+                :fresh_mass_meas => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)",
+                color=:Model => "Model:", marker="Tree-Branch:"
+            ) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+    plot_branch_lwr10 = draw(plt_branch_lwr10, axis=(autolimitaspect=1,), palettes=(; color=colors))
+end
+
+# ╔═╡ da7557ff-1d75-4c2f-9b8c-0c883533d054
+md"""
+*Figure 5. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale  considering segments with a diameter of $threshold cm or below.*
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1890,6 +1952,11 @@ version = "3.5.0+0"
 # ╟─1777a09c-2657-46a6-bf93-6b7465d6fb48
 # ╟─710ae2b2-4fcb-4727-899b-e2a921fa6b75
 # ╟─116a150d-708d-4161-873d-6f92a83e3ed1
+# ╟─c0c5799c-9046-4b2b-8d1a-a12ea9d37b36
+# ╟─b3f5b27d-f93d-4a58-88d3-7490ee093957
+# ╟─820afee9-59a9-4373-a5ea-c6952c4c60d4
+# ╟─9999e0e4-19c0-4d9e-9ebc-2283bcb74460
+# ╟─da7557ff-1d75-4c2f-9b8c-0c883533d054
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
