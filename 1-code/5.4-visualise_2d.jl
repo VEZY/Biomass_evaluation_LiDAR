@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,13 +20,13 @@ end
 
 # ╔═╡ 43a83fe0-ac4a-11ec-2b8c-677a7469b0b7
 begin
-using MultiScaleTreeGraph
-using CairoMakie
-using GeometryBasics
-using CSV
-using DataFrames
-using PlutoUI
-using ColorSchemes
+    using MultiScaleTreeGraph
+    using CairoMakie
+    using GeometryBasics
+    using CSV
+    using DataFrames
+    using PlutoUI
+    using ColorSchemes
 end
 
 # ╔═╡ 3793df6f-018f-4a34-aba8-c03fe5458519
@@ -75,21 +79,21 @@ branches_LiDAR = sort!([match(r"tree[0-9]{1,2}[a-z]", i).match for i in LiDAR_fi
 
 # ╔═╡ 4dd5b561-1e68-4c6d-bf14-bf3ffde78726
 if branches_MTG != branches_LiDAR
-md"""
-!!! danger
-	Some branches are missing!"""
+    md"""
+    !!! danger
+    	Some branches are missing!"""
 end
 
 # ╔═╡ 40499cd3-18c1-489a-a8cc-4644859a0de4
 md"""
-Please choose the branch you want to plot: 
+Please choose the branch you want to plot:
 """
 
 # ╔═╡ 29c32624-b0b7-4d9b-b9d1-1836393317ec
 @bind branch Select(branches_MTG)
 
 # ╔═╡ e886ae94-6075-4fe4-acbc-62b2d945a740
-LiDAR = CSV.read(joinpath(LiDAR_directory,branch*".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
+LiDAR = CSV.read(joinpath(LiDAR_directory, branch * ".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
 # ╔═╡ 7f122746-1955-42f2-bbe1-e53c5cf3ac30
 md"""
@@ -136,7 +140,7 @@ trees_MTG = sort!([match(r"[0-9]{1,2}", i).match for i in MTG_files_tree])
 @bind tree Select(trees_MTG)
 
 # ╔═╡ 20dc1132-2b84-4e02-98e1-377f74d1053b
-LiDAR_tree = CSV.read(joinpath(LiDAR_trees_dir,"all_scans_tree_"*tree*".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
+LiDAR_tree = CSV.read(joinpath(LiDAR_trees_dir, "all_scans_tree_" * tree * ".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
 # ╔═╡ fdec2992-0bfe-41e9-aac4-deceec2621ec
 md"""
@@ -157,14 +161,14 @@ md"""
 
 Compute a cylinder based on [:XX, :YY, :ZZ] attributes of MTG nodes.
 """
-function cylinder(node::MultiScaleTreeGraph.Node, xyz_attr = [:XX, :YY, :ZZ])
+function cylinder(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ])
     node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol="S")
     if length(node_start) != 0
-		cs = node[:cross_section_stat_mod]
+        cs = node[:cross_section_stat_mod]
         if cs < 0.0
-			cs = 0.0
-		end
-		Cylinder(
+            cs = 0.0
+        end
+        Cylinder(
             Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
             Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
             sqrt(cs / π) * 1e-3 # radius in meter
@@ -175,36 +179,36 @@ end
 
 # ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
 begin
-mtg = read_mtg(joinpath(MTG_directory,branch*".mtg"))
-transform!(mtg, cylinder => :cyl, symbol="S")
+    mtg = read_mtg(joinpath(MTG_directory, branch * ".mtg"))
+    transform!(mtg, cylinder => :cyl, symbol="S")
 end
 
 # ╔═╡ c7762335-eeeb-48c9-82f5-e4906a990bba
 begin
-# Computing min/max values for colouring:
-z_values = descendants(mtg, :ZZ, ignore_nothing = true)
-z_min = minimum(z_values)
-z_max = maximum(z_values);
+    # Computing min/max values for colouring:
+    z_values = descendants(mtg, :ZZ, ignore_nothing=true)
+    z_min = minimum(z_values)
+    z_max = maximum(z_values)
 end
 
 # ╔═╡ 004960ba-a598-4808-bc7e-e87b4a1156d9
 f = let
-	fig = Figure()
-	scene = Scene(fig.scene)
-	ax1 = Axis(fig[1,1], elevation = 1π)
-	# ax1 = Axis3(fig[1,1], elevation = 1π)
-	# rotate!(scene, Vec3f(0,1,1), -π/4)
-	hidedecorations!(ax1)
-	ax1.title = "LiDAR point cloud"
-	ax2 = Axis(fig[1,2])
-	hidedecorations!(ax2)
-	ax2.title = "3D reconstruction"
+    fig = Figure()
+    scene = Scene(fig.scene)
+    ax1 = Axis(fig[1, 1], elevation=1π)
+    # ax1 = Axis3(fig[1,1], elevation = 1π)
+    # rotate!(scene, Vec3f(0,1,1), -π/4)
+    hidedecorations!(ax1)
+    ax1.title = "LiDAR point cloud"
+    ax2 = Axis(fig[1, 2])
+    hidedecorations!(ax2)
+    ax2.title = "3D reconstruction"
 
-	scatter!(ax1, LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,3], markersize = 0.5)
-	traverse!(mtg,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-	mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
-	end
-	fig
+    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.5)
+    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+        mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+    end
+    fig
 end
 
 # ╔═╡ 78532e4a-59a7-4bee-b4ce-c55d66150498
@@ -212,52 +216,52 @@ save("../2-results/2-plots/step_5_visualisation.png", f, px_per_unit=3)
 
 # ╔═╡ 9a3bfb11-9fa3-4a87-b583-ca5ef5c62a0b
 begin
-mtg_tree = read_mtg(joinpath(MTG_trees_dir,"all_scans_tree_"*tree*".mtg"))
-transform!(mtg_tree, (node -> cylinder(node, [:XX, :ZZ, :YY])) => :cyl, symbol="S")
+    mtg_tree = read_mtg(joinpath(MTG_trees_dir, "all_scans_tree_" * tree * ".mtg"))
+    transform!(mtg_tree, (node -> cylinder(node, [:XX, :ZZ, :YY])) => :cyl, symbol="S")
 end
 
 # ╔═╡ efd5b759-708d-4507-99a1-464540c61f20
 begin
-# Computing min/max values for colouring:
-z_values_tree = descendants!(mtg_tree, :ZZ, ignore_nothing = true)
-z_min_tree = minimum(z_values_tree)
-z_max_tree = maximum(z_values_tree);
-point_color = [get(ColorSchemes.viridis, (i - z_min_tree) / (z_max_tree - z_min_tree)) for i in LiDAR_tree[:,3]]
-nothing
+    # Computing min/max values for colouring:
+    z_values_tree = descendants!(mtg_tree, :ZZ, ignore_nothing=true)
+    z_min_tree = minimum(z_values_tree)
+    z_max_tree = maximum(z_values_tree)
+    point_color = [get(ColorSchemes.viridis, (i - z_min_tree) / (z_max_tree - z_min_tree)) for i in LiDAR_tree[:, 3]]
+    nothing
 end
 
 # ╔═╡ d27d357e-b88c-4997-b8de-d45850ccc166
 f_tree = let
-	fig = Figure()
-	# ax1 = Axis3(fig[1,1], elevation = 0.0π)
-	ax1 = Axis(fig[1,1])
-	hidedecorations!(ax1)
-	ax1.title = "LiDAR point cloud"
-	ax2 = Axis(fig[1,2])
-	hidedecorations!(ax2)
-	ax2.title = "3D reconstruction"
-	ax3 = Axis(fig[2,1])
-	hidedecorations!(ax3)
-	ax4 = Axis(fig[2,2])
-	hidedecorations!(ax4)
+    fig = Figure()
+    # ax1 = Axis3(fig[1,1], elevation = 0.0π)
+    ax1 = Axis(fig[1, 1])
+    hidedecorations!(ax1)
+    ax1.title = "LiDAR point cloud"
+    ax2 = Axis(fig[1, 2])
+    hidedecorations!(ax2)
+    ax2.title = "3D reconstruction"
+    ax3 = Axis(fig[2, 1])
+    hidedecorations!(ax3)
+    ax4 = Axis(fig[2, 2])
+    hidedecorations!(ax4)
 
-	scatter!(ax1, LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,3], markersize = 0.3)
-	traverse!(mtg,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-	mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
-	end
+    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
+    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+        mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+    end
 
-	scatter!(ax3, LiDAR_tree[:,1], LiDAR_tree[:,3], LiDAR_tree[:,2], color = LiDAR_tree[:,3], markersize = 0.3)
-	traverse!(mtg_tree, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-    cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl])]
-    mesh!(ax4, node[:cyl], color=cols)
-end
+    scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], color=LiDAR_tree[:, 3], markersize=0.3)
+    traverse!(mtg_tree, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+        cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl])]
+        mesh!(ax4, node[:cyl], color=cols)
+    end
 
 
-	colsize!(fig.layout, 1, Aspect(1, 1.0))
-	colsize!(fig.layout, 2, Aspect(1, 1.0))
-	resize_to_layout!(fig)
-	
-	fig
+    colsize!(fig.layout, 1, Aspect(1, 1.0))
+    colsize!(fig.layout, 2, Aspect(1, 1.0))
+    resize_to_layout!(fig)
+
+    fig
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

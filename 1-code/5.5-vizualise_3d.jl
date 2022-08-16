@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,18 +20,18 @@ end
 
 # ╔═╡ b4a33695-736e-42b6-b880-e9a63dfeda39
 begin
-	using JSServe
-	Page(exportable=true, offline=true)
+    using JSServe
+    Page(exportable=true, offline=true)
 end
 
 # ╔═╡ 43a83fe0-ac4a-11ec-2b8c-677a7469b0b7
 begin
-using MultiScaleTreeGraph
-using WGLMakie
-using GeometryBasics
-using CSV
-using DataFrames
-using PlutoUI
+    using MultiScaleTreeGraph
+    using WGLMakie
+    using GeometryBasics
+    using CSV
+    using DataFrames
+    using PlutoUI
 end
 
 # ╔═╡ 3793df6f-018f-4a34-aba8-c03fe5458519
@@ -65,16 +69,16 @@ branches_LiDAR = sort!([match(r"tree[0-9]{1,2}[a-z]", i).match for i in LiDAR_fi
 
 # ╔═╡ 4dd5b561-1e68-4c6d-bf14-bf3ffde78726
 if branches_MTG != branches_LiDAR
-md"""
-!!! danger
-	Some branches are missing!"""
+    md"""
+    !!! danger
+    	Some branches are missing!"""
 end
 
 # ╔═╡ 29c32624-b0b7-4d9b-b9d1-1836393317ec
 @bind branch Select(branches_MTG)
 
 # ╔═╡ e886ae94-6075-4fe4-acbc-62b2d945a740
-LiDAR = CSV.read(joinpath(LiDAR_directory,branch*".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
+LiDAR = CSV.read(joinpath(LiDAR_directory, branch * ".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
 # ╔═╡ 98157cc8-0567-4589-ad24-5095a1ba4ba4
 md"""
@@ -83,7 +87,7 @@ Here is the LiDAR point cloud:
 
 # ╔═╡ 3e3dcc9c-016a-45b8-8e10-d6377fb106d7
 begin
-scatter(LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,4], markersize = 2)
+    scatter(LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 4], markersize=2)
 end
 
 # ╔═╡ 64406a16-243b-4e0d-b632-84b0b2c2fa88
@@ -98,7 +102,7 @@ function cylinder(node::MultiScaleTreeGraph.Node)
         Cylinder(
             Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
             Point3((node[:XX], node[:YY], node[:ZZ])),
-            sqrt(node[:cross_section_stat_mod]/π)*1e-3 # radius in meter
+            sqrt(node[:cross_section_stat_mod] / π) * 1e-3 # radius in meter
         )
 
     end
@@ -106,35 +110,35 @@ end
 
 # ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
 begin
-mtg = read_mtg(joinpath(MTG_directory,branch*".mtg"))
-transform!(mtg, cylinder => :cyl, symbol="S")
-mtg
+    mtg = read_mtg(joinpath(MTG_directory, branch * ".mtg"))
+    transform!(mtg, cylinder => :cyl, symbol="S")
+    mtg
 end
 
 # ╔═╡ 5d4ed4ad-a0cf-4a33-a3ec-77bc70485728
 begin
-scene = Scene()
-cam3d_cad!(scene)
-traverse!(mtg,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node 
-	mesh!(scene, node[:cyl], color=:slategrey)
-end
-scene
+    scene = Scene()
+    cam3d_cad!(scene)
+    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+        mesh!(scene, node[:cyl], color=:slategrey)
+    end
+    scene
 end
 
 # ╔═╡ 004960ba-a598-4808-bc7e-e87b4a1156d9
 let
-	fig = Figure()
-	cam3d_cad!(fig.scene)
+    fig = Figure()
+    cam3d_cad!(fig.scene)
 
-	ax1 = fig[1,1]
-	ax2 = Axis(fig[1, 2])
+    ax1 = fig[1, 1]
+    ax2 = Axis(fig[1, 2])
 
-	scatter(ax1, LiDAR[:,1], LiDAR[:,2], LiDAR[:,3], color = LiDAR[:,4], markersize = 2)
-	traverse!(mtg,symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node 
-	mesh!(ax2, node[:cyl], color=:slategrey)
-	end
-	
-	fig
+    scatter(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 4], markersize=2)
+    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
+        mesh!(ax2, node[:cyl], color=:slategrey)
+    end
+
+    fig
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

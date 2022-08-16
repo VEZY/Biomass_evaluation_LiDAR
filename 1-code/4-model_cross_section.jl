@@ -48,8 +48,8 @@ Defining the colors for the plot:
 
 # ╔═╡ 6bee7b4a-c3a1-4562-a17f-71335b8d39ae
 begin
-	cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2])
-	colors = [i.second => cols[i.first] for i in models]
+    cols = Dict("Topo. mod." => ColorSchemes.Set2_5.colors[1], "Pipe mod." => ColorSchemes.Set2_5.colors[2])
+    colors = [i.second => cols[i.first] for i in models]
 end
 
 # ╔═╡ 6b8d93de-2fb4-411d-befe-29cb29132b40
@@ -362,7 +362,7 @@ df_all = let x = deepcopy(df)
         variable_name=:origin,
         value_name=:cross_section_pred
     )
-	transform!(x, :origin => ByRow(x -> models[x]) => :Model)
+    transform!(x, :origin => ByRow(x -> models[x]) => :Model)
 end
 
 # ╔═╡ d587f110-86d5-41c0-abc7-2671d711fbdf
@@ -373,14 +373,14 @@ begin
             mapping(
                 :cross_section => "Measured cross-section (mm²)",
                 :cross_section => "Predicted cross-section (mm²)"
-			) * 
-			visual(Lines) +
+            ) *
+            visual(Lines) +
             mapping(
                 :cross_section => "Measured cross-section (mm²)",
                 :cross_section_pred => "Predicted cross-section (mm²)",
                 color=:Model => "Model:",
-                marker=(:tree, :branch) => ((x,y) -> join([x,y],"-")) => "Tree-Branch:"
-			) *
+                marker=(:tree, :branch) => ((x, y) -> join([x, y], "-")) => "Tree-Branch:"
+            ) *
             visual(Scatter, markersize=20, alpha=0.8)
         )
     p = draw(plt_cs_all, palettes=(; color=colors))

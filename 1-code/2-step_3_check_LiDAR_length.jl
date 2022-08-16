@@ -60,7 +60,7 @@ Importing the data:
 # ╔═╡ e04577f4-fbde-40fb-a49f-b99511395ad2
 begin
     df_stats_branch = CSV.read("../2-results/1-data/df_stats_branch.csv", DataFrame)
-    replace!(df_stats_branch.model, "plantscan3d cor." => "corrected", "plantscan3d raw" => "raw");
+    replace!(df_stats_branch.model, "plantscan3d cor." => "corrected", "plantscan3d raw" => "raw")
 end
 
 # ╔═╡ 4939edb8-5b18-490b-8941-711b77421b97

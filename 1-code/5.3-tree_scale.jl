@@ -5,7 +5,7 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ c3e21bd7-6ac3-4daf-99b0-ceab8ff86696
-using MultiScaleTreeGraph,AlgebraOfGraphics, CairoMakie, DataFrames, CategoricalArrays, Statistics
+using MultiScaleTreeGraph, AlgebraOfGraphics, CairoMakie, DataFrames, CategoricalArrays, Statistics
 
 # ╔═╡ 1493298e-b10e-11ec-1c86-4d659a9cf10e
 md"""
@@ -13,7 +13,7 @@ md"""
 
 ## Introduction
 
-This notebook is used to apply our model to estimate the biomass of whole trees and investigate how it is distributed along the structures with different diameters.  
+This notebook is used to apply our model to estimate the biomass of whole trees and investigate how it is distributed along the structures with different diameters.
 """
 
 # ╔═╡ 511b592b-a690-4c92-b6a6-7bb092bb039a
@@ -22,7 +22,7 @@ Defining the classes into which we categorize the segment diameters:
 """
 
 # ╔═╡ 4e664783-1275-4240-81c3-90dff1db1ba3
-classes = [0., 50., 150., 500.]
+classes = [0.0, 50.0, 150.0, 500.0]
 
 # ╔═╡ aa5ebb6e-9799-465b-8999-99182272e72c
 md"""
@@ -31,11 +31,11 @@ Getting all trees in the folder:
 
 # ╔═╡ a4faf453-d879-481c-a3c9-cf4f5bd3a897
 mtg_trees_paths = filter(
-	x -> endswith(x, ".mtg"), # all MTGs
-	readdir(
-		"../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched", 
-		join = true
-	)
+    x -> endswith(x, ".mtg"), # all MTGs
+    readdir(
+        "../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched",
+        join=true
+    )
 )
 
 # ╔═╡ 50a9595e-fb98-4d12-a892-eafb1872d48f
@@ -58,29 +58,29 @@ Compute a DataFrame out of them:
 
 # ╔═╡ e1d56b58-a5e9-4694-a19c-3fb6915701fb
 begin
-	df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees] 
-	
-	df = df_vec[1]
-	if length(mtg_trees) > 1
-		for i in df_vec[2:end]
-			append!(df, i)
-		end
-	end
+    df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees]
 
-	transform!(
-		df,
-		:cross_section_stat_mod => ByRow(x -> !ismissing(x) && x < 0.0 ? 0.0 : x) => :cross_section_stat_mod
-	)
-	
-	transform!(
-		df,
-		:cross_section_stat_mod => (x -> sqrt.(x ./ π) .* 2) => :diameter_stat_mod
-	)
+    df = df_vec[1]
+    if length(mtg_trees) > 1
+        for i in df_vec[2:end]
+            append!(df, i)
+        end
+    end
 
-	transform!(
-		df,
-		:diameter_stat_mod => (x -> cut(x, classes)) => :diameter_class
-	)
+    transform!(
+        df,
+        :cross_section_stat_mod => ByRow(x -> !ismissing(x) && x < 0.0 ? 0.0 : x) => :cross_section_stat_mod
+    )
+
+    transform!(
+        df,
+        :cross_section_stat_mod => (x -> sqrt.(x ./ π) .* 2) => :diameter_stat_mod
+    )
+
+    transform!(
+        df,
+        :diameter_stat_mod => (x -> cut(x, classes)) => :diameter_class
+    )
 
 end
 
@@ -98,10 +98,10 @@ The number of structures with a low diameter is staggeringly high compared to ot
 
 # ╔═╡ 09a901f8-b68c-451b-9f80-2cabbeeec98d
 begin
-	df_count = combine(groupby(df, :diameter_class), nrow => :count)
-	transform!(df_count, :count => sum)
-	transform!(df_count, [:count, :count_sum] => ((x,y) -> x ./y .* 100) => :count_rel)
-	nothing
+    df_count = combine(groupby(df, :diameter_class), nrow => :count)
+    transform!(df_count, :count => sum)
+    transform!(df_count, [:count, :count_sum] => ((x, y) -> x ./ y .* 100) => :count_rel)
+    nothing
 end
 
 # ╔═╡ 138ac4e5-5033-44ba-ab77-4f3101d71e76
@@ -111,9 +111,9 @@ They represent $(round(df_count.count_rel[1], digits = 1))% of all segments in t
 
 # ╔═╡ 7ef18685-e1ef-41b3-bd7d-372adb622cb7
 begin
-cs_frequency = data(df) * frequency() * mapping(:diameter_class)
+    cs_frequency = data(df) * frequency() * mapping(:diameter_class)
 
-draw(cs_frequency; axis = (xlabel = "Diameter class (mm)",))
+    draw(cs_frequency; axis=(xlabel="Diameter class (mm)",))
 end
 
 # ╔═╡ aff93e62-0347-46fa-8d58-e8e9a9e7a155
@@ -128,14 +128,14 @@ md"""
 
 # ╔═╡ f1b43235-5321-4f78-bd67-2c20e54e0abe
 begin
-	df_length = combine(
-		groupby(dropmissing(df,:length), [:tree, :diameter_class]),
-		:length => (x -> sum(x) / 1000) => :length
-	)
-	
-	axis_len = (width = 800, height = 800, ylabel = "Length (m)", xlabel = "Diameter class (mm)")
-	plt_length = data(df_length) * mapping(:diameter_class, :length, color = :tree, dodge = :tree) * visual(BarPlot, dodge_gap=0, gap = 0.1)
-	p_length = draw(plt_length; axis = axis_len, figure = (fontsize = 25,))
+    df_length = combine(
+        groupby(dropmissing(df, :length), [:tree, :diameter_class]),
+        :length => (x -> sum(x) / 1000) => :length
+    )
+
+    axis_len = (width=800, height=800, ylabel="Length (m)", xlabel="Diameter class (mm)")
+    plt_length = data(df_length) * mapping(:diameter_class, :length, color=:tree, dodge=:tree) * visual(BarPlot, dodge_gap=0, gap=0.1)
+    p_length = draw(plt_length; axis=axis_len, figure=(fontsize=25,))
 end
 
 # ╔═╡ 2e377a1a-7a5a-4c99-a1e4-f3df2c7d4001
@@ -145,22 +145,22 @@ md"""
 
 # ╔═╡ 5221b3ba-0de9-48a2-9a46-193b1973790c
 begin
-	
-	df_length_diam = combine(
-		groupby(df_length, [:diameter_class]), 
-		:length => mean => :mean,
-		:length => std => :std
-	)
 
-	df_length_all = combine(df_length_diam, :mean => sum => :length)
-	
-	select(
-		df_length_diam,
-		:diameter_class => "Diameter class (mm)",
-		:mean => "Length (m)",
-		:std => "Length std (m)",
-		:mean => ByRow(x -> round(x / df_length_all[1,:length] * 100, digits = 2)) => "Proportion (%))"
-	)
+    df_length_diam = combine(
+        groupby(df_length, [:diameter_class]),
+        :length => mean => :mean,
+        :length => std => :std
+    )
+
+    df_length_all = combine(df_length_diam, :mean => sum => :length)
+
+    select(
+        df_length_diam,
+        :diameter_class => "Diameter class (mm)",
+        :mean => "Length (m)",
+        :std => "Length std (m)",
+        :mean => ByRow(x -> round(x / df_length_all[1, :length] * 100, digits=2)) => "Proportion (%))"
+    )
 end
 
 # ╔═╡ 338eaa04-4dae-42fc-ae44-09d67a9295d3
@@ -175,51 +175,51 @@ md"""
 
 # ╔═╡ 0cd34adf-cf31-4ebe-b543-faaf87ecce5b
 md"""
-As expected, more biomass is stored in the higher diameter classes. The distribution of the biomass between classes is rather homogeneous between trees (Fig. 3).  
+As expected, more biomass is stored in the higher diameter classes. The distribution of the biomass between classes is rather homogeneous between trees (Fig. 3).
 """
 
 # ╔═╡ 68d2a310-f6ca-475d-bf1f-63e13464cc74
 begin
-df_diam_class = combine(
-	groupby(dropmissing(df,:dry_mass), [:diameter_class, :tree]),
-	:dry_mass => (x -> sum(x) * 1e-3) => :dry_mass,
-	:fresh_mass => (x -> sum(x) * 1e-3) => :fresh_mass
-)
+    df_diam_class = combine(
+        groupby(dropmissing(df, :dry_mass), [:diameter_class, :tree]),
+        :dry_mass => (x -> sum(x) * 1e-3) => :dry_mass,
+        :fresh_mass => (x -> sum(x) * 1e-3) => :fresh_mass
+    )
 
-df_biomass_tree = transform(
-	groupby(df_diam_class, :tree),
-	:dry_mass => (x -> sum(x)) => :tot_dry_mass,
-	:fresh_mass => (x -> sum(x)) => :tot_fresh_mass
-)
+    df_biomass_tree = transform(
+        groupby(df_diam_class, :tree),
+        :dry_mass => (x -> sum(x)) => :tot_dry_mass,
+        :fresh_mass => (x -> sum(x)) => :tot_fresh_mass
+    )
 
-transform!(
-	df_biomass_tree,
-	[:dry_mass, :tot_dry_mass] => ((x,y) -> x ./ y) => :rel_dry_mass,
-	[:fresh_mass, :tot_fresh_mass] => ((x,y) -> x ./ y) => :rel_fresh_mass,
-)
-nothing
+    transform!(
+        df_biomass_tree,
+        [:dry_mass, :tot_dry_mass] => ((x, y) -> x ./ y) => :rel_dry_mass,
+        [:fresh_mass, :tot_fresh_mass] => ((x, y) -> x ./ y) => :rel_fresh_mass,
+    )
+    nothing
 end
 
 # ╔═╡ bc5fd6b9-a447-4c3f-b6b0-8cc76bb91825
 begin
-	axis2 = (width = 800, height = 800, ylabel = "Biomass (%)", xlabel = "")
+    axis2 = (width=800, height=800, ylabel="Biomass (%)", xlabel="")
 
-	classes_map = Dict("[0.0, 50.0)" => "Twigs", "[50.0, 150.0)" => "Main branches", "[150.0, 500.0)" => "Trunk")
+    classes_map = Dict("[0.0, 50.0)" => "Twigs", "[50.0, 150.0)" => "Main branches", "[150.0, 500.0)" => "Trunk")
 
-	df_biomass_tree_plot = transform(
-		df_biomass_tree,
-		:diameter_class => ByRow(x -> classes_map[x]) => :type
-	)
-	
-	plt = 
-		data(df_biomass_tree_plot) * 
-		mapping(
-			:type=>sorter(collect(values(classes_map))), 
-			:rel_dry_mass, 
-			color = :tree, dodge = :tree
-		) * 
-		visual(BarPlot, dodge_gap=0, gap = 0.1)
-	p = draw(plt; axis = axis2, figure = (fontsize = 25,))
+    df_biomass_tree_plot = transform(
+        df_biomass_tree,
+        :diameter_class => ByRow(x -> classes_map[x]) => :type
+    )
+
+    plt =
+        data(df_biomass_tree_plot) *
+        mapping(
+            :type => sorter(collect(values(classes_map))),
+            :rel_dry_mass,
+            color=:tree, dodge=:tree
+        ) *
+        visual(BarPlot, dodge_gap=0, gap=0.1)
+    p = draw(plt; axis=axis2, figure=(fontsize=25,))
 end
 
 # ╔═╡ 280aef39-fc9f-4174-b56b-8e992960ede0
@@ -234,21 +234,21 @@ md"""
 
 # ╔═╡ 4f27296a-68e7-4ecf-beca-9da7e6c93f5e
 begin
-df_per_class = 
-combine(
-	groupby(df_biomass_tree, :diameter_class),
-	:rel_dry_mass => (x -> mean(x) .* 100) => :biomass, 
-	:rel_dry_mass => (x -> std(x) .* 100) => :biomass_sd
-)
+    df_per_class =
+        combine(
+            groupby(df_biomass_tree, :diameter_class),
+            :rel_dry_mass => (x -> mean(x) .* 100) => :biomass,
+            :rel_dry_mass => (x -> std(x) .* 100) => :biomass_sd
+        )
 
-select(
-	df_per_class,
-	:diameter_class => "Diameter class (mm)",
-	:biomass => "Biomass (%)",
-	:biomass_sd => "Biomass sd (%)"
-	)
+    select(
+        df_per_class,
+        :diameter_class => "Diameter class (mm)",
+        :biomass => "Biomass (%)",
+        :biomass_sd => "Biomass sd (%)"
+    )
 
-# NB: we don't differentiate between dry and fresh biomass because they are computed using a constant, so no difference in the %.
+    # NB: we don't differentiate between dry and fresh biomass because they are computed using a constant, so no difference in the %.
 end
 
 # ╔═╡ 3d2a2eb0-6a50-4e1b-bd24-af93bb4d9701
@@ -263,22 +263,22 @@ md"""
 
 # ╔═╡ f4291956-47ef-45d1-a122-57ebfa3731be
 begin
-	# Total biomass of the three trees per class of diameter:
-	df_tot_biomass = combine(
-		dropmissing(df,:dry_mass),
-		:dry_mass => (x -> sum(x)) => :tot_dry_mass
-	)
+    # Total biomass of the three trees per class of diameter:
+    df_tot_biomass = combine(
+        dropmissing(df, :dry_mass),
+        :dry_mass => (x -> sum(x)) => :tot_dry_mass
+    )
 
-	# Relative biomass in the classes:
-	df_biomass_class = combine(
-		groupby(dropmissing(df,:dry_mass), :diameter_class),
-		:dry_mass => (x -> sum(x) / df_tot_biomass[1,:tot_dry_mass]) => :biomass,
-	)
-	select(
-		df_biomass_class,
-		:diameter_class => "Diameter class (mm)",
-		:biomass => "Biomass (%)"
-	)
+    # Relative biomass in the classes:
+    df_biomass_class = combine(
+        groupby(dropmissing(df, :dry_mass), :diameter_class),
+        :dry_mass => (x -> sum(x) / df_tot_biomass[1, :tot_dry_mass]) => :biomass,
+    )
+    select(
+        df_biomass_class,
+        :diameter_class => "Diameter class (mm)",
+        :biomass => "Biomass (%)"
+    )
 end
 
 # ╔═╡ 36db6cec-8476-44a1-b443-ca4cee8934e0
