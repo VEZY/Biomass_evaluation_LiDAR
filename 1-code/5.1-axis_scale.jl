@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -607,6 +603,63 @@ end
 md"""
 *Figure 5. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale  considering segments with a diameter of $threshold cm or below.*
 """
+
+# ╔═╡ 0310e500-2dae-45fc-8133-6e5a29fce466
+md"""
+### Segments above $threshold cm ⌀
+
+Here are the results for each axis when considering the segments with a diameter above $threshold cm.
+"""
+
+# ╔═╡ 58c99e9f-7382-4faf-9706-d583fa283d36
+md"""
+*Table 6. Statistics of the fresh biomass prediction (axis scale) considering segments with a diameter above $threshold cm.*
+"""
+
+# ╔═╡ af985280-4f70-4d5a-aa6b-a277e6e648bb
+md"""
+*Figure 6. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale  considering segments with a diameter above $threshold cm.*
+"""
+
+# ╔═╡ 9770ccdf-f96a-4adc-b12d-d17e7b07130d
+begin
+	df_compare_gt10 = filter(x -> x.cross_section_meas > π * ((threshold / 2.0)^2), df_compare4)
+    df_branch_gt10 =
+        combine(
+            groupby(df_compare_gt10, ["Tree-Branch:", "Model"]),
+            :fresh_mass_meas => sum, :fresh_mass => sum,
+            renamecols=false
+        )
+
+    sort(combine(
+            groupby(df_branch_gt10, :Model),
+            [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE,
+            [:fresh_mass_meas, :fresh_mass] => nRMSE => :nRMSE,
+            [:fresh_mass_meas, :fresh_mass] => EF => :EF,
+            [:fresh_mass_meas, :fresh_mass] => Bias => :Bias,
+            [:fresh_mass_meas, :fresh_mass] => nBias => :nBias
+        ), :nRMSE)
+end
+
+# ╔═╡ 04ca7547-179c-4914-b598-88e21dd5b38c
+begin
+    plt_branch_gt10 =
+        data(df_branch_gt10) *
+        (
+            mapping(
+                :fresh_mass => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)"
+            ) *
+            visual(Lines) +
+            mapping(
+                :fresh_mass_meas => "Measured fresh biomass (kg)",
+                :fresh_mass => "Predicted fresh biomass (kg)",
+                color=:Model => "Model:", marker="Tree-Branch:"
+            ) *
+            visual(Scatter, markersize=15, alpha=0.9)
+        )
+    plot_branch_gt10 = draw(plt_branch_gt10, axis=(autolimitaspect=1,), palettes=(; color=colors))
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1957,6 +2010,11 @@ version = "3.5.0+0"
 # ╟─820afee9-59a9-4373-a5ea-c6952c4c60d4
 # ╟─9999e0e4-19c0-4d9e-9ebc-2283bcb74460
 # ╟─da7557ff-1d75-4c2f-9b8c-0c883533d054
+# ╟─0310e500-2dae-45fc-8133-6e5a29fce466
+# ╟─58c99e9f-7382-4faf-9706-d583fa283d36
+# ╟─9770ccdf-f96a-4adc-b12d-d17e7b07130d
+# ╟─04ca7547-179c-4914-b598-88e21dd5b38c
+# ╟─af985280-4f70-4d5a-aa6b-a277e6e648bb
 # ╟─e4493718-91e1-47fe-9ea8-c55fd323afdc
 # ╠═516d9d30-ca44-4db0-a85f-444e874c96a2
 # ╟─6752ed71-b4d5-4da3-9c42-e99b92949970
