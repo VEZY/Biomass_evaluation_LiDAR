@@ -115,7 +115,7 @@ begin
             on=[:branch, :id_cor]
         )
 
-    models = Dict("Topo. mod." => "Topological", "Pipe model" => "Pipe", "plantscan3d" => "Plantscan3d")
+    models = Dict("Topo. mod." => "SM", "Pipe model" => "PMT", "plantscan3d" => "P3D")
 
     # Change the units to better match with our values (mass in kg and volume in m³):
     df_compare = transform(
@@ -398,13 +398,13 @@ begin
         data(df_branch) *
         (
             mapping(
-                :fresh_mass => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)"
+                :fresh_mass => "Measured wood fresh biomass (kg)",
+                :fresh_mass => "Predicted wood fresh biomass (kg)"
             ) *
             visual(Lines) +
             mapping(
-                :fresh_mass_meas => "Measured fresh biomass (kg)",
-                :fresh_mass => "Predicted fresh biomass (kg)",
+                :fresh_mass_meas => "Measured wood fresh biomass (kg)",
+                :fresh_mass => "Predicted wood fresh biomass (kg)",
                 color=:Model => "Model:", marker="Tree-Branch:"
             ) *
             visual(Scatter, markersize=15, alpha=0.9)
@@ -422,7 +422,7 @@ end
 begin
     df_13h =
         combine(
-            groupby(filter(x -> x.Model == "Topological" && x["Tree-Branch:"] == "13-h", df_compare4), ["Tree-Branch:", "Model"]),
+            groupby(filter(x -> x.Model == "SM" && x["Tree-Branch:"] == "13-h", df_compare4), ["Tree-Branch:", "Model"]),
             :fresh_mass_meas => sum, :fresh_mass => sum, renamecols=false
         )
     error_13h = round((df_13h[1, :fresh_mass] - df_13h[1, :fresh_mass_meas]) / df_13h[1, :fresh_mass_meas] * 100)
@@ -1971,7 +1971,7 @@ version = "3.5.0+0"
 # ╠═20df87b5-9a06-4a7d-922d-873f423a4001
 # ╟─cb9cd952-7799-447d-b3e5-03fd1aab13ee
 # ╟─8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
-# ╟─0c55a409-7847-4475-a1ef-39c22f459e6f
+# ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
 # ╟─0a19d625-9b12-4565-a51f-f0dd96f2af40
 # ╟─29fa4d06-f5d5-434c-9b98-bc6243d5f55c
 # ╠═5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
