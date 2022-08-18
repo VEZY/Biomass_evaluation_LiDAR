@@ -58,7 +58,9 @@ Compute a DataFrame out of them:
 
 # ╔═╡ e1d56b58-a5e9-4694-a19c-3fb6915701fb
 begin
-    df_vec = [transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree) for i in mtg_trees]
+    df_vec = [
+		transform(DataFrame(i, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length, :ZZ]), :tree => (x -> match(r"[0-9]+", i.MTG.symbol).match) => :tree, :ZZ => :ZZ) for i in mtg_trees
+	]
 
     df = df_vec[1]
     if length(mtg_trees) > 1
@@ -280,6 +282,52 @@ begin
         :biomass => "Biomass (%)"
     )
 end
+
+# ╔═╡ 8c79bcfa-e599-4e2d-a5ca-c051da892285
+md"""
+### Distribution of the biomass in the tree
+
+Figure 4 show the distribution of the biomass according to tree height. Unfortunately the curve is not very realistic because the trunk is composed of only one segment so it is represented as one big chunk of biomass (hence the pick). 
+"""
+
+# ╔═╡ 3cbfe660-52ef-4348-9e21-20835611d258
+p_AGB = let
+    df_AGB = transform(df, :ZZ => (x -> cut(x, -7:1:12)) => :height)
+
+	df_AGB_class = combine(
+        groupby(dropmissing(df_AGB, :fresh_mass), [:height, :tree]),
+        :fresh_mass => (x -> sum(x) * 1e-3) => :fresh_mass,
+		:ZZ => maximum => :ZZ
+    )
+
+    df_AGB_tree = transform(
+        groupby(df_AGB_class, :tree),
+        :fresh_mass => sum => :tot_fresh_mass
+    )
+
+    transform!(
+        df_AGB_tree,
+        [:fresh_mass, :tot_fresh_mass] => ((x, y) -> x ./ y) => :rel_fresh_mass,
+    )
+
+	
+    axis3 = (width=800, height=800, ylabel="Tree height (m)", xlabel="Relative AGB (%)")
+	
+    plt_AGB =
+        data(sort(df_AGB_tree, :ZZ)) *
+        mapping(
+            :rel_fresh_mass,
+            :ZZ,
+            color=:tree
+        ) *
+        visual(Lines)
+    draw(plt_AGB; axis=axis3, figure=(fontsize=25,))
+end
+
+# ╔═╡ 9f531785-b909-4146-bce3-67d2cf0e7a2a
+md"""
+*Figure 4. Relative distribution of the biomass along tree height.*
+"""
 
 # ╔═╡ 36db6cec-8476-44a1-b443-ca4cee8934e0
 md"""
@@ -1598,7 +1646,7 @@ version = "3.5.0+0"
 # ╟─aa5ebb6e-9799-465b-8999-99182272e72c
 # ╟─a4faf453-d879-481c-a3c9-cf4f5bd3a897
 # ╟─50a9595e-fb98-4d12-a892-eafb1872d48f
-# ╠═ddcd55c6-fb0f-4c95-aa85-cb2770ad4578
+# ╟─ddcd55c6-fb0f-4c95-aa85-cb2770ad4578
 # ╟─53f0acce-fa3c-4d37-aac5-063c456632c2
 # ╟─f7cacf20-f5b4-43a9-8b24-ff4660fe0498
 # ╟─e1d56b58-a5e9-4694-a19c-3fb6915701fb
@@ -1623,6 +1671,9 @@ version = "3.5.0+0"
 # ╟─4f27296a-68e7-4ecf-beca-9da7e6c93f5e
 # ╟─d1e16594-6acb-43ef-8995-fc35d2feb503
 # ╟─f4291956-47ef-45d1-a122-57ebfa3731be
+# ╟─8c79bcfa-e599-4e2d-a5ca-c051da892285
+# ╟─3cbfe660-52ef-4348-9e21-20835611d258
+# ╟─9f531785-b909-4146-bce3-67d2cf0e7a2a
 # ╟─36db6cec-8476-44a1-b443-ca4cee8934e0
 # ╠═3f457f7f-ea35-40bf-b086-24e370b5e006
 # ╟─00000000-0000-0000-0000-000000000001

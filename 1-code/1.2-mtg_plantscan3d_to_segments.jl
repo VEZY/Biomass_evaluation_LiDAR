@@ -6,10 +6,7 @@
 
 # Script set-up -----------------------------------------------------------
 
-# using Pkg; Pkg.add(url = "https://github.com/VEZY/MultiScaleTreeGraph.jl", rev = "master")
-using Revise
-
-includet("./functions.jl")
+include("./functions.jl")
 using .BiomassFromLiDAR
 
 # Raw MTGs:

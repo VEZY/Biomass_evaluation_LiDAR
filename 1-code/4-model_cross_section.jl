@@ -63,7 +63,7 @@ csv_files =
         x -> endswith(x, ".csv"), # all MTGs
         # x -> endswith(x, r"tree[1,3].\.csv"), # train only on 2020 MTGs
         readdir(joinpath("../0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join=true)
-    )
+	)
 
 # ╔═╡ 220dfbff-15fc-4e75-a6a2-39e60c08e8dc
 md"""
