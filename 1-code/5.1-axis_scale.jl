@@ -41,7 +41,7 @@ The outputs of the models in this notebook differs from the ones presented in `2
 
 Two branches from three walnut trees (*Juglans nigra*) were studied in an agroforestry system. Two branches were identified per tree, one close to the ground, and one upper in the tree canopy. The branches were cut at the basis, and measured for their density, biomass, dimensions and topology:
 
-- the fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement).
+- The fresh and dry density of 10 samples from sections along the first order axis were measured at the lab using the archimed method (measuring water displacement).
 
 - The dimensions included a measurement of the diameter and length for each segment on the branch. They are used to compute a reference volume for each segment. See the previous notebook for more details (`4.2-step_2_check_manual_measurement.jl`).
 
@@ -51,10 +51,9 @@ Two branches from three walnut trees (*Juglans nigra*) were studied in an agrofo
 
 Several methods were used to estimate the cross-section of each segment in a branch:
 
-- the pipe model. This method divide the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings.
-- the pipe model applied to all segments below 20mm diameter. This method is the same as the regular pipe model but considers all segments with a diameter higher than 20mm as well-measured by the LiDAR, and start computing the cross-section only below this given threshold.
-- the topological model, applied to all segments. The model is fitted on the manual measurements of the branches, and applied to the plantscan3d MTG from LiDAR data.
-- the topological model applied to segments below 20mm diameter. This is the same strategy as for the pipe model.
+- Plantscan3d (P3D), which is the software we use for the skeletonization, and that provides an algorithm that computes the radius of each node using the mean distance algorithm, *i.e.* it fits a cylinder to the mean distance of the LiDAR points.
+- The pipe model theory (PMT). This method partition the parent cross-section to its children, weighted by the total number of terminal segments each child holds compared to its siblings.
+- The stuctural model (SM). The model is fitted on the manual measurements of the branches, and applied to the Plantscan3d MTG from LiDAR data.
 
 Comparing at axis scale implied a correspondance between the axis from the manually measured MTGs and the LiDAR-based MTGs. This step was done by manually identifying matching the second branching order axis on both files.
 
@@ -87,13 +86,21 @@ md"""
 	The data is computed in the `2-model_cross_section.jl` script.
 """
 
+# ╔═╡ 8d8f6024-8ee1-470c-ac78-ff3b4e593779
+md"""
+Renaming the models for the figures and statistics:
+"""
+
+# ╔═╡ 6444885c-3821-4063-b7d6-f049b7cde674
+models = Dict("Topo. mod." => "SM", "Pipe model" => "PMT", "plantscan3d" => "P3D")
+
 # ╔═╡ 8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
 md"""
 Make a DataFrame that matches the measurements and the predictions from LiDAR data:
 """
 
 # ╔═╡ 0c55a409-7847-4475-a1ef-39c22f459e6f
-begin
+df_compare = let
     # Filter out the measurement data and keep only the rows with axis that were identified in both the manually-measured MTG and the LiDAR-derived MTGs, meaning the first order axis (scale = 2 & index = 1) and the manually identified order 2 axis:
     df_meas = filter(x -> x.origin == "measurement" && x.id_cor !== missing && x.symbol == "A", df_axis)
 
@@ -115,10 +122,8 @@ begin
             on=[:branch, :id_cor]
         )
 
-    models = Dict("Topo. mod." => "SM", "Pipe model" => "PMT", "plantscan3d" => "P3D")
-
     # Change the units to better match with our values (mass in kg and volume in m³):
-    df_compare = transform(
+    transform(
         df_compare_tmp,
         :mass_g => x -> x * 1e-3,
         :fresh_mass_meas => x -> x * 1e-3,
@@ -142,9 +147,6 @@ begin
 
     colors = [i.second => cols[i.first] for i in models]
 end
-
-# ╔═╡ 5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
-models
 
 # ╔═╡ d0888d85-3d81-4205-8dbe-e22b1fd37237
 md"""
@@ -210,7 +212,7 @@ md"""
 
 # ╔═╡ 37633b50-c141-45d1-b7dd-1a0eebfda64f
 md"""
-Topo. mod. $(@bind len_1 CheckBox(default = true)) plantscan3d $(@bind len_2 CheckBox(default = true)) Pipe model $(@bind len_3 CheckBox(default = true))
+Structural model $(@bind len_1 CheckBox(default = true)) Plantscan3d $(@bind len_2 CheckBox(default = true)) Pipe model theory $(@bind len_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_cs CheckBox())
 """
@@ -228,7 +230,7 @@ md"""
 
 # ╔═╡ c8a346f8-9942-4851-924a-9208cf077ba7
 md"""
-Topo. mod. $(@bind vol_1 CheckBox(default = true)) plantscan3d $(@bind vol_2 CheckBox(default = true)) Pipe model $(@bind vol_3 CheckBox(default = true))
+Structural model $(@bind vol_1 CheckBox(default = true)) Plantscan3d $(@bind vol_2 CheckBox(default = true)) Pipe model theory $(@bind vol_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_volume CheckBox())
 """
@@ -251,24 +253,9 @@ md"""
 
 # ╔═╡ c9aa538f-cbbc-43dc-8f1b-5cde358fd4a2
 md"""
-Topo. mod. $(@bind bio_1 CheckBox(default = true)) plantscan3d $(@bind bio_2 CheckBox(default = true)) Pipe model $(@bind bio_3 CheckBox(default = true))
+Structural model $(@bind bio_1 CheckBox(default = true)) Plantscan3d $(@bind bio_2 CheckBox(default = true)) Pipe model theory $(@bind bio_3 CheckBox(default = true))
 
 Zoom in plot $(@bind zoom_biomass CheckBox())
-"""
-
-# ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
-md"""
-*Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale. Note that some A1 are missing. This is because the A1 were not measured for their biomass directly, but were considered as the difference between the whole branch biomass and the biomass of all A2. In some cases some A2 were not measured, so we cannot infer the biomass of A1 (e.g. for tree13h).*
-"""
-
-# ╔═╡ 9dac320d-5d89-4c37-8ff4-4fdd005658a5
-md"""
-Table 3. Statistics of the fress biomass prediction of all identified axes. These statistics are related to figure 3.
-"""
-
-# ╔═╡ 316bd7fb-c49e-47b2-9fd6-015158ce8926
-md"""
-*Figure 4. Measured (x-axis) and predicted (y-axis) fresh biomass at branch scale. Branch scale is defined here as the sum of all identified axis biomass to control for the error induced by missing structures between LiDAR scans and manual measurements.*
 """
 
 # ╔═╡ 1777a09c-2657-46a6-bf93-6b7465d6fb48
@@ -364,9 +351,9 @@ end
 
 # ╔═╡ b9745a8c-a3a3-4f3b-a50e-2d840bb221a5
 begin
-    df_compare4 = filter_model(df_compare, bio_1, bio_2, bio_3)
+    df_compare4 = dropmissing(filter_model(df_compare, bio_1, bio_2, bio_3), [:fresh_mass, :fresh_mass_meas])
     plt =
-        data(dropmissing(df_compare4, [:fresh_mass, :fresh_mass_meas])) *
+        data(df_compare4) *
         (
             mapping(
                 :fresh_mass_meas => "Measured fresh biomass (kg)",
@@ -388,6 +375,11 @@ begin
         plt_biomass = draw(plt, axis=(autolimitaspect=1,), palettes=(; color=colors), legend=(framevisible=false,))
     end
 end
+
+# ╔═╡ a410b364-486f-493c-aa01-f2a82163b75f
+md"""
+*Figure 3. Measured (x-axis) and predicted (y-axis) fresh biomass at axis scale (n = $(nrow(df_compare4) ÷ length(unique(df_compare4.Model))) each). Note that some A1 are missing. This is because the A1 were not measured for their biomass directly, but were considered as the difference between the whole branch biomass and the biomass of all A2. In some cases some A2 were not measured, so we cannot infer the biomass of A1 (e.g. for tree13h).*
+"""
 
 # ╔═╡ fea13de5-26d6-4e2e-8fed-e241c650c206
 begin
@@ -417,6 +409,16 @@ begin
     # lines!(plot_branch.figure[1, 1], repeat(df_13h.fresh_mass_meas,2), [df_13h.fresh_mass_meas[1],df_13h.fresh_mass[1]*1.02], color = :red, linewidth = 1, linestyle = :dash)
     plot_branch
 end
+
+# ╔═╡ 9dac320d-5d89-4c37-8ff4-4fdd005658a5
+md"""
+*Table 3. Statistics of the fress biomass prediction of all identified axes (n = $(nrow(df_branch) ÷ length(unique(df_compare4.Model))) each). These statistics are related to figure 3.*
+"""
+
+# ╔═╡ 316bd7fb-c49e-47b2-9fd6-015158ce8926
+md"""
+*Figure 4. Measured (x-axis) and predicted (y-axis) fresh biomass at branch scale (n = $(nrow(df_branch) ÷ length(unique(df_compare4.Model))). Branch scale is defined here as the sum of all identified axis biomass to control for the error induced by missing structures between LiDAR scans and manual measurements.*
+"""
 
 # ╔═╡ 49a44898-c799-48d3-bb2d-cd2620a6f391
 begin
@@ -505,7 +507,7 @@ end
 begin
     stats =
         combine(
-            groupby(dropmissing(df_compare, [:volume]), [:origin]),
+            groupby(dropmissing(df_compare, [:volume]), [:Model]),
             [:volume_meas, :volume] => RMSE => :RMSE_volume,
             [:fresh_mass_meas, :fresh_mass] => RMSE => :RMSE_fresh_mass,
             [:volume_meas, :volume] => nRMSE => :nRMSE_volume,
@@ -1970,11 +1972,12 @@ version = "3.5.0+0"
 # ╟─608c0a9f-8890-485f-ab75-cfebe5922d97
 # ╠═20df87b5-9a06-4a7d-922d-873f423a4001
 # ╟─cb9cd952-7799-447d-b3e5-03fd1aab13ee
+# ╟─8d8f6024-8ee1-470c-ac78-ff3b4e593779
+# ╟─6444885c-3821-4063-b7d6-f049b7cde674
 # ╟─8ffcd75f-31d6-4a94-bed2-1d55dfcb5172
-# ╠═0c55a409-7847-4475-a1ef-39c22f459e6f
+# ╟─0c55a409-7847-4475-a1ef-39c22f459e6f
 # ╟─0a19d625-9b12-4565-a51f-f0dd96f2af40
 # ╟─29fa4d06-f5d5-434c-9b98-bc6243d5f55c
-# ╠═5aaf6eb9-f2a7-4a74-a3cf-5ef61a190d49
 # ╟─d0888d85-3d81-4205-8dbe-e22b1fd37237
 # ╟─c1b6e8ae-40e0-4962-8cc6-b206ef85ddfc
 # ╟─1f49c11d-678d-4b78-9038-4b5055f302bb
@@ -2023,6 +2026,6 @@ version = "3.5.0+0"
 # ╟─7b662b3f-6901-4258-ba68-25cdf2145890
 # ╟─6bca0065-cebb-4a70-af12-287eeec81ad2
 # ╟─ebba6e34-134d-45b0-8677-ec93f3d414f5
-# ╠═29cfa66f-3e7a-4460-84c2-706e1e8f9766
+# ╟─29cfa66f-3e7a-4460-84c2-706e1e8f9766
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
