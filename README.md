@@ -2,6 +2,8 @@
 
 > This is the repository for the code and data used in the paper [Coupling LiDAR and structural models to improve the estimation of aboveground woody biomass](https://doi.org/10.5281/zenodo.7038482).
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7038482.svg)](https://doi.org/10.5281/zenodo.7038482)
+
 ## Introduction
 
 Light detection and ranging (LiDAR) is commonly used in forestry for different applications, among which the evaluation of the trees biomass. Different methods exist to evaluate the biomass of a tree from LiDAR data, with varying accuracy, mainly depending on the quality of the data acquisition.
@@ -22,6 +24,10 @@ The manual measurements are used for two purposes:
 
 - as a database to fit the statistical model of the third method (structural model), and
 - as a reference to assess the estimation of the volume and biomass from the different methods cited before
+
+<img src="./2-results/2-plots/step_5_visualisation_2d.png" width="300" alt="3D reconstruction of a branch and a tree" />
+
+*Figure 1. Co-registered LiDAR point-cloud (left panels) and 3D reconstruction using the structural model (right panels) of a sampled branch (top panels) and a whole tree (bottom panels). Note that the 3D reconstruction was done at the segment level, which implies that the trunk base has only one segment.*
 
 ## Project steps
 

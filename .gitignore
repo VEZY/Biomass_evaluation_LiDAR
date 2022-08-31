@@ -43,3 +43,4 @@ vignettes/*.pdf
 /2-results/**
 !/2-results/**/
 !/2-results/**/.keep
+!/2-results/2-plots/step_5_visualisation_2d.png
