@@ -25,7 +25,7 @@ The manual measurements are used for two purposes:
 - as a database to fit the statistical model of the third method (structural model), and
 - as a reference to assess the estimation of the volume and biomass from the different methods cited before
 
-<img src="./2-results/2-plots/step_5_visualisation_2d.png" width="300" alt="3D reconstruction of a branch and a tree" />
+<img src="./2-results/2-plots/step_5_visualisation_2d.png" width="500" alt="3D reconstruction of a branch and a tree" />
 
 *Figure 1. Co-registered LiDAR point-cloud (left panels) and 3D reconstruction using the structural model (right panels) of a sampled branch (top panels) and a whole tree (bottom panels). Note that the 3D reconstruction was done at the segment level, which implies that the trunk base has only one segment.*
 
