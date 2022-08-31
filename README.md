@@ -1,5 +1,7 @@
 # Tree biomass evaluation using LiDAR
 
+> This is the repository for the code and data used in the paper [Coupling LiDAR and structural models to improve the estimation of aboveground woody biomass](https://doi.org/10.5281/zenodo.7038482).
+
 ## Introduction
 
 Light detection and ranging (LiDAR) is commonly used in forestry for different applications, among which the evaluation of the trees biomass. Different methods exist to evaluate the biomass of a tree from LiDAR data, with varying accuracy, mainly depending on the quality of the data acquisition.
