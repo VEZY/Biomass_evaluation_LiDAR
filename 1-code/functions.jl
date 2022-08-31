@@ -844,3 +844,123 @@ function volume_stats(mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model, df_densit
 end
 
 end
+
+
+"""
+	cylinder(node::MultiScaleTreeGraph.Node)
+
+Compute a cylinder based on [:XX, :YY, :ZZ] attributes of MTG nodes.
+"""
+function cylinder(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; symbol="S")
+    node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
+    if length(node_start) != 0
+        cs = node[:cross_section_stat_mod]
+        if cs < 0.0
+            cs = 0.0
+        end
+        Cylinder(
+            Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
+            Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
+            sqrt(cs / π) * 1e-3 # radius in meter
+        )
+
+    end
+end
+
+
+function cylinder_from_radius(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; symbol="S")
+    node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
+    if length(node_start) != 0
+        Cylinder(
+            Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
+            Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
+            node[:radius] # radius in meter
+        )
+    end
+end
+
+"""
+    node_pos(node, angle, phyllotaxy, length=1.0)
+
+Compute the new position of a node based on its parent position, its angle and its phyllotaxy.
+"""
+function node_pos(node, angle, phyllotaxy, length_node=1.0)
+
+    if isroot(node)
+        return Dict(:XX => 0.0, :YY => 0.0, :ZZ => 0.0)
+    end
+
+    parent_node = parent(node)
+    great_parent_node = parent(parent_node)
+
+    if great_parent_node === nothing
+        great_parent_node_XX = 0.0
+        great_parent_node_YY = -1.0
+    else
+        great_parent_node_XX = great_parent_node[:XX]
+        great_parent_node_YY = great_parent_node[:YY]
+    end
+
+    point = extend_pos(
+        great_parent_node_XX,
+        great_parent_node_YY,
+        parent_node[:XX],
+        parent_node[:YY],
+        length_node
+    )
+
+    if node.MTG.link == "+"
+        point =
+            rotate_point(
+                parent_node[:XX],
+                parent_node[:YY],
+                point[1],
+                point[2],
+                phyllotaxy[1] * angle
+            )
+
+        # Change phyllotaxy for next node:
+        if phyllotaxy[1] == 1
+            phyllotaxy[1] = -1
+        else
+            phyllotaxy[1] = 1
+        end
+    end
+
+    return Dict(:XX => point[1], :YY => point[2], :ZZ => 0.0)
+end
+
+"""
+Extend the position of point (x2,y2) by length_node considering direction from (x1,y1)
+"""
+function extend_pos(x1, y1, x2, y2, length_node)
+    if x1 == x2
+        if y1 == y2
+            return [x2, y2]
+        else
+            return [x2, y2 + length_node]
+        end
+    else
+        if y1 == y2
+            return [x2 + length_node, y2]
+        else
+            return [x2 + length_node * (y2 - y1) / (x2 - x1), y2 + length_node * (x2 - x1) / (y2 - y1)]
+        end
+    end
+end
+
+"""
+Rotate a point (x1,y1) around (x0, y0) with `angle`.
+"""
+function rotate_point(x0, y0, x1, y1, angle)
+    angle = -angle * pi / 180
+    x1 = x1 - x0
+    y1 = y1 - y0
+    cos_a = cos(angle)
+    sin_a = sin(angle)
+
+    x = x1 * cos_a - y1 * sin_a + x0
+    y = x1 * sin_a + y1 * cos_a + y0
+
+    return x, y
+end

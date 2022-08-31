@@ -2,11 +2,11 @@
 
 ## Introduction
 
-The raw data is the data directly from the field. This data was never modified from the moment it was taken. The dataset is composed of LiDAR acquisitions, and manual measurements on branches that may (tree 11, 12, 13) or may not (tree 1 and 3) measured by the LiDAR.
+The raw data is the data directly from the field. This data was never modified from the moment it was taken. The dataset is composed of LiDAR acquisitions, and manual measurements on branches that were also measured by LiDAR.
 
 ### Manual measurements
 
-All obvious mistakes and inconsistencies were modified in a copy of the data in `1.0-mtg_manual_measurement_corrected`. Then the common axis between manual measurements and plantscan3d reconstruction where identified for comparison (`1.1-mtg_manual_measurement_corrected_id`), adding a new `id` column. Then it was enriched with computed data, and the result is available in `1.2-mtg_manual_measurement_corrected_enriched`. The code for the computation is available in `1-compute_field_mtg_data.jl`.
+All obvious mistakes and inconsistencies were modified in a copy of the data in `1.0-mtg_manual_measurement_corrected`. Then the common axis between manual measurements and Plantscan3d reconstruction where identified for comparison (`1.1-mtg_manual_measurement_corrected_id`), adding a new `id` column. Then it was enriched with computed data, and the result is available in `1.2-mtg_manual_measurement_corrected_enriched`. The code for the computation is available in `1-compute_field_mtg_data.jl`.
 
 ### LiDAR measurements
 
@@ -16,7 +16,7 @@ The LiDAR point clouds of the branches were then used to compute the 3D topology
 
 ## Files and folders overview
 
-Here is a tree representing all folder and files in `0-data`, along with a short description of what they are:
+Here is a tree representing all folders and files in `0-data`, along with a short description of what they are:
 
 ```bash
 │
@@ -27,16 +27,12 @@ Here is a tree representing all folder and files in `0-data`, along with a short
 │   └───2-manual_measurements # Manual measurements on branches (topology + dimensions + density)
 │       │
 │       ├───1-mtg # Multi-Scale Tree Graph of each branch: topology + dimensions
-│       │       tree1l.xlsx  # From M. Millan (2020)
-│       │       tree3h.xlsx  # From M. Millan (2020)
-│       │       tree3l.xlsx  # From M. Millan (2020)
-│       │       tree1h.xlsx  # From M. Millan (2020)
-│       │       tree11h.xlsm # From A. Bonnet (2021)
-│       │       tree11l.xlsm # From A. Bonnet (2021)
-│       │       tree12h.xlsm # From A. Bonnet (2021)
-│       │       tree12l.xlsm # From A. Bonnet (2021)
-│       │       tree13h.xlsx # From A. Bonnet (2021)
-│       │       tree13l.xlsm # From A. Bonnet (2021)
+│       │       tree11h.xlsm # MTG for the tree 11, highest branch
+│       │       tree11l.xlsm # MTG for the tree 11, lowest branch
+│       │       tree12h.xlsm # ...
+│       │       tree12l.xlsm
+│       │       tree13h.xlsx
+│       │       tree13l.xlsm
 │       │       ArchiMacro.xlsm # Template file with a macro for field measurements
 │       │
 │       └───2-wood_density_measurements # Wood density measurements made on branches samples
@@ -92,15 +88,13 @@ Here is a tree representing all folder and files in `0-data`, along with a short
 │               [...]
 │
 └───3-mtg_lidar_plantscan3d # Topology and length reconstruction from point clouds using plantscan3d
-    │   README.md
-    ├───0-tests # Some random tests. Not important for this project (but could be for another)
-    │   └───[...]
+    │   README.md     # More detailed readme file
     │
     ├───1-raw_output # MTG output from plantscan3d, without any modification
     │       tree11h.mtg
     │       [...]
     │
-    ├───2-manually_corrected # MTG from plantscan3d, corrected manually for bigest errors (~40 min work each branch)
+    ├───2-manually_corrected # MTG from plantscan3d, corrected manually for biggest errors (~40 min work each branch)
     │       tree11h.mtg
     │       [...]
     │
@@ -115,4 +109,4 @@ Here is a tree representing all folder and files in `0-data`, along with a short
 
 ---
 
-For more details, please read the report of A. Bonnet (2021), and the code in `1-code`.
+For more details, please read the code in `1-code`.

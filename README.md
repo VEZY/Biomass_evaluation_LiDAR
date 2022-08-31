@@ -2,23 +2,23 @@
 
 ## Introduction
 
-Light detection and ranging (LiDAR) is commonly used in forestry for different applications, among which the evaluation of the trees biomass. Different methods exist to evalute the biomass of a tree from LiDAR data, with varying accuracy, mainly depending on the quality of the data acquisition.
+Light detection and ranging (LiDAR) is commonly used in forestry for different applications, among which the evaluation of the trees biomass. Different methods exist to evaluate the biomass of a tree from LiDAR data, with varying accuracy, mainly depending on the quality of the data acquisition.
 
-Low-precision LiDAR data is used to get the tree height and crown dimensions that are used to approximate the tree biomass using allometries, while middle-precision to high precision data are used to estimate the tree biomass directly from a reconstruction of the tree structure for the trunk and occasionally the structural branches (*e.g.* see appications of TreeQSM, plantscan3d or AMAPScan). But usually even high resolution data is not sufficient to estimate the biomass of trees as a whole including smaller branches. This is because LiDAR data is often messy at that scale, due to either the laser footprint that is too high compared to the footprint of the structure of interest, or more simply due to wind or occlusions. The resulting point cloud is often good enough to estimate the topology and the length of almost all the structures, but not enough to estimate their diameters properly, which is crucial to compute the volumes, and then the biomass.
+Low-precision LiDAR data is used to get the tree height and crown dimensions that are used to approximate the tree biomass using allometries, while middle-precision to high precision data are used to estimate the tree biomass directly from a reconstruction of the tree structure for the trunk and occasionally the structural branches (*e.g.* see applications of TreeQSM, Plantscan3d or AMAPScan). But usually even high resolution data is not sufficient to estimate the biomass of trees as a whole including smaller branches. This is because LiDAR data is often messy at that scale, due to either the laser footprint that is too high compared to the footprint of the structure of interest, or more simply due to wind or occlusions. The resulting point cloud is often good enough to estimate the topology and the length of almost all the structures, but not enough to estimate their diameters properly, which is crucial to compute the volumes, and then the biomass.
 
 This project is an attempt at finding a new method for the evaluation of the tree biomass including most of the tree structure up to the smaller branches by re-estimating the diameters.
 
 For this purpose we set up an experiment on an agroforestry system where we measured two branches per tree on three trees. The measurements included a LiDAR acquisition, and manual measurements on the branches for their topology, dimensions, biomass and a sampling of their fresh and dry wood density.
 
-The estimation of the volume and biomass from LiDAR data is first done using plantscan3d, an OpenAlea software used to estimate tree topology and dimensions. The diameters are estimated at each node using the mean-distance algorithm that uses the LiDAR point-cloud directly. This technique is known to generate a high error rate, especially for smaller strucures.
+The estimation of the volume and biomass from LiDAR data is first done using Plantscan3d, an OpenAlea software used to estimate tree topology and dimensions. The diameters are estimated at each node using the mean-distance algorithm that uses the LiDAR point-cloud directly. This technique is known to generate a high error rate, especially for smaller structures.
 
-A second estimation of the volumes and biomass is done using the pipe model algorithm, a well-known method in the field of forestry. The pipe model is used to compute the cross-section of the structures based on the cross-section of their bearer. Applying this method sequentially, all cross-sections are then estimated, and the volume of the structures can then be computed.
+A second estimation of the volumes and biomass is done using the pipe model theory (PMT), a well-known method in the field of forestry. The PMT is used to compute the cross-section of the structures based on the cross-section of their bearer. Applying this method recursively, all cross-sections are then estimated, and the volume of the structures can then be computed.
 
-Then, we propose a new method, combining botanical variables and statitics to compute the cross-section of the structures. The variables must be computable from the information we get from the LiDAR reconstruction, namely the topology and lengths of the structures.
+Then, we propose a new method that we name the "structural model", that combines botanical variables and statistics to compute the cross-section of the structures. The variables it uses must be computable from the information we get from the LiDAR reconstruction, namely the topology and lengths of the structures.
 
 The manual measurements are used for two purposes:
 
-- as a database to fit the statistical model of the third method, and
+- as a database to fit the statistical model of the third method (structural model), and
 - as a reference to assess the estimation of the volume and biomass from the different methods cited before
 
 ## Project steps
@@ -26,10 +26,10 @@ The manual measurements are used for two purposes:
 This project is divided into several steps:
 
 1. Compute the MTG data
-2. Check the measured length from the LiDAR data is close to the manual measurements. This is crucial as length are considered well estimated by LiDAR;
-3. Check the integrity of the manual measurements by evaluating if the biomass estimated from manual dimensions measurements (length and diameters) at segment scale and an average fresh wood density are close to the reference biomass measured using a scale on the field. This step helps us check if the volumes/biomass estimated using manual measurements can be used as a reference for evaluating the different methods to estimate them from LiDAR point-clouds;
-4. Find the variables explaining the cross-section at segment scale. This step is done to fit a statistical model onto the manual measurements dataset;
-5. Evaluate the different methods for the evaluation of the tree biomass
+2. Check the measured length from the LiDAR data is close to the manual measurements. This is crucial as lengths are considered well estimated by LiDAR;
+3. Check the integrity of the manual measurements by evaluating if the biomass estimated from manual dimensions measurements (lengths and diameters) at segment scale and an average fresh wood density are close to the reference biomass measured using a scale on the field. This step helps us check if the volumes/biomass estimated using manual measurements can be used as a reference for evaluating the different methods to estimate them from LiDAR point-clouds;
+4. Find the variables explaining the cross-section at segment scale and build the structural model;
+5. Evaluate the different methods for the estimation of the tree biomass
 
 ## Structure
 
@@ -54,7 +54,7 @@ Then you can open the notebooks with the commands given below.
 
 - Step 1: The first step is done in two Julia scripts. Open the following scripts in *e.g.* VS Code, and execute the code from the script to repeat the analysis.
   - the first script (`1.1-compute_field_mtg_data.jl`) computes new variables into the manually measured MTG, and export the results as CSV and MTG files in `0-data/1.2-mtg_manual_measurement_corrected_enriched`;
-  - the second script (`1.2-mtg_plantscan3d_to_segments.jl`) puts the MTGs from plantscan3d into the same format as used in the manually-measured MTGs;
+  - the second script (`1.2-mtg_plantscan3d_to_segments.jl`) puts the MTGs from Plantscan3d into the same format as used in the manually-measured MTGs;
 
 - Step 2: Checking estimated length from LiDAR:
 
@@ -94,16 +94,22 @@ Pluto.run(notebook = "1-code/4-model_cross_section.jl")
     Pluto.run(notebook = "1-code/5.3-tree_scale.jl")
     ```
 
-  - Visualization in 2D:
+  - Visualization in 2D (notebook can be slow, there is a faster script for this in `1-code/5.4-visualization_2d_script.jl`):
 
     ```julia
-    Pluto.run(notebook = "1-code/5.4-visualise_2d.jl")
+    Pluto.run(notebook = "1-code/5.4-visualize_2d.jl")
     ```
 
   - Visualization in 3D:
 
     ```julia
-    Pluto.run(notebook = "1-code/5.4-visualise_3d.jl")
+    Pluto.run(notebook = "1-code/5.5-visualize_3d.jl")
+    ```
+
+  - Visualization of the topology:
+
+    ```julia
+    Pluto.run(notebook = "1-code/5.6-visualize_topology.jl")
     ```
 
 ### Results

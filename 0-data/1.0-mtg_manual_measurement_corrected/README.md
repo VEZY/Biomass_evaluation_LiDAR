@@ -8,13 +8,3 @@ This folder contains the `.xlsx` or `.xlsm` (the ones with the macro) files used
 ## Metadata
 
 `metadata.csv` is the excel file where all attributes are described, including their units.
-
-## Files 1 and 3, h (higher branch) and l (lower branch)
-
-Branches MTGs from Mathilde Millan (2020).
-
-## Files 11, 12, 13
-
-Branches MTGs from Mathilde Millan (2021).
-
-See this [README](../0-raw/2-manual_measurements/1-mtg/README.md) for more details.
