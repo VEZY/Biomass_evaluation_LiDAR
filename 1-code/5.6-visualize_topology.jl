@@ -18,16 +18,14 @@ MTG_files =
         readdir(MTG_directory)
     )
 
-# List all branch names:
-branches_MTG = sort!(replace.(MTG_files, ".mtg" => ""))
-
 # Read all MTGs and compute the cylinders of all branches:
 symbol = "N"
 mtgs = []
-max_order = []
+max_order = Int[]
 xy_bottom = []
-for i in branches_MTG
-    mtg = read_mtg(joinpath(MTG_directory, i * ".mtg"))
+branches_MTG = String[]
+for i in MTG_files
+    mtg = read_mtg(joinpath(MTG_directory, i))
     transform!(mtg, (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], symbol=symbol)) => :cyl, symbol=symbol)
 
     branching_order!(mtg)
@@ -36,6 +34,8 @@ for i in branches_MTG
     x_bottom = minimum(traverse(mtg, node -> node[:XX], symbol=symbol))
     y_bottom = minimum(traverse(mtg, node -> node[:YY], symbol=symbol))
     push!(xy_bottom, [x_bottom, y_bottom])
+    branch_name = replace(i, ".mtg" => "")
+    push!(branches_MTG, string(branch_name[5:end-1], "-", branch_name[end]))
 end
 
 max_order = maximum(max_order)
