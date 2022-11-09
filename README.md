@@ -1,8 +1,8 @@
 # Tree biomass evaluation using LiDAR
 
-> This is the repository for the code and data used in the paper [Coupling LiDAR and structural models to improve the estimation of aboveground woody biomass](https://doi.org/10.5281/zenodo.7038482).
+> This is the repository for the code and data used in the paper **Coupling LiDAR and structural models to improve the estimation of aboveground woody biomass** ([preprint](https://hal.archives-ouvertes.fr/hal-03838571)).
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7038482.svg)](https://doi.org/10.5281/zenodo.7038482)
+The data (+code) is available on a dedicated Zenodo repository [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7038482.svg)](https://doi.org/10.5281/zenodo.7038482)
 
 ## Introduction
 
