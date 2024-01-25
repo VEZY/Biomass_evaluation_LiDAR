@@ -8,8 +8,8 @@ using ColorSchemes
 includet("./functions.jl")
 using .BiomassFromLiDAR
 
-MTG_directory = "0-data/3-mtg_lidar_plantscan3d/1-raw_output"
-# MTG_directory = "0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
+# MTG_directory = "0-data/3-mtg_lidar_plantscan3d/1-raw_output"
+MTG_directory = "0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
 
 # List all mtg files in the folder:
 MTG_files =
@@ -62,14 +62,14 @@ begin
             )
         end
 
-        errorbars!(ax, [xy_bottom[i][1]], [xy_bottom[i][2]], 0.1, whiskerwidth=5, direction=:x)
+        errorbars!(ax, [xy_bottom[i][1]], [xy_bottom[i][2]], 0.1, whiskerwidth=5, direction=:x, color="black")
         text!(
             ax,
             [xy_bottom[i][1]], [xy_bottom[i][2]],
             text="10 cm",
             align=(:center, :bottom),
-            textsize=10,
-            offset=(0, 3)
+            fontsize=9,
+            offset=(2, 3)
         )
         hidedecorations!(ax)
         ax.title = "$(branches_MTG[i])"
@@ -93,9 +93,9 @@ save("2-results/2-plots/step_5_visualisation_topology.png", fig, px_per_unit=3)
 # Visualize the topology of one part of a branch:
 begin
     fig2 = Figure()
-    ax = Axis(fig2[1, 1])
+    ax = Axis(fig2[1, 1], aspect=1)
     hidedecorations!(ax)
-    traverse!(get_node(mtgs[1], 740), symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
+    traverse!(mtgs[1], symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
         mesh!(ax, node[:cyl], color=get((ColorSchemes.RdBu_8), node[:branching_order] / max_order[1]))
     end
     fig2
