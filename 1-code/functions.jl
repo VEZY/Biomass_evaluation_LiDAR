@@ -10,101 +10,85 @@ export bind_csv_files
 export segmentize_mtgs
 export compute_volume, compute_var_axis
 export NRMSE, RMSE, EF, nRMSE
-export compute_volume_model, volume_stats
+export compute_volume_model, volume_stats, structural_model!
 
 ###############################################
 # Functions used in 1-compute_field_mtg_data.jl
 ###############################################
 
-function compute_data_mtg(mtg)
+function structural_model!(mtg_tree, fresh_density, dry_density, first_cross_section=nothing)
+    if (:radius in names(mtg_tree))
+        transform!(mtg_tree, :radius => (x -> x * 2) => :diameter, symbol="N") # diameter in m
+    end
 
-    @mutate_mtg!(mtg, length = compute_length(node), symbol = "S")
-    @mutate_mtg!(mtg, dry_weight = compute_dry_w(node), symbol = "S")
-    @mutate_mtg!(mtg, density = compute_density(node), symbol = "S")
+    # Step 1: computes the length of each node:
+    transform!(mtg_tree, compute_length_coord => :length, symbol="N") # length is in meters
 
     @mutate_mtg!(
-        mtg,
-        pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol="S", self=true))),
-        symbol = "S",
+        mtg_tree,
+        pathlength_subtree = sum(filter(x -> x !== nothing, descendants!(node, :length, symbol="N", self=true))),
+        symbol = "N",
         filter_fun = x -> x[:length] !== nothing
     )
 
+    # Identify which node is a segment root:
+    transform!(mtg_tree, is_seg => :is_segment, symbol="N")
+    transform!(mtg_tree, segment_index_on_axis => :segment_index_on_axis, symbol="N")
+
     @mutate_mtg!(
-        mtg,
-        segment_subtree = length(descendants!(node, :length, symbol="S", self=true)),
+        mtg_tree,
+        segment_subtree = length(descendants!(node, :length, symbol="N", self=true, filter_fun=is_seg)),
         number_leaves = nleaves!(node),
-        symbol = "S"
+        symbol = "N"
     )
 
-    branching_order!(mtg, ascend=false)
+    branching_order!(mtg_tree, ascend=false)
     # We use basipetal topological order (from tip to base) to allow comparisons between branches of
     # different ages (the last emitted segment will always be of order 1).
 
-    # Compute the index of each segment on the axis in a basipetal way (from tip to base)
-    @mutate_mtg!(
-        mtg,
-        n_segments = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)),
-        symbol = "A"
-    )
+    # Use the first cross-section for the first value to apply the pipe-model:
+    if first_cross_section === nothing
+        first_cross_section = π * ((descendants(mtg_tree, :diameter, ignore_nothing=true, recursivity_level=5)[1] / 2.0)^2)
+    end
 
-    # now use n_segments to compute the index of the segment on the axis (tip = 1, base = n_segments)
-    @mutate_mtg!(
-        mtg,
-        n_segments_axis = ancestors(node, :n_segments, symbol="A")[1],
-        segment_index_on_axis = length(descendants!(node, :length, symbol="S", link=("/", "<"), all=false)) + 1,
-        symbol = "S"
-    )
-
-    # Compute the total length of the axis in mm:
-    @mutate_mtg!(
-        mtg,
-        axis_length = compute_axis_length(node),
-        symbol = "A"
-    )
-
-    # Associate the axis length to each segment:
-    @mutate_mtg!(mtg, axis_length = get_axis_length(node), symbol = "S")
-
-    # New branches (>10, e.g. tree12l, the ones from A. Bonnet) diameters are measured twice
-    #  on the same point at mid-segment, or even at two points (30% and 70% of the segment
-    # length) when the segment length is > 30 cm
-    @mutate_mtg!(mtg, diameter = compute_diameter(node), symbol = "S") # diameter of the segment in mm
-
-    @mutate_mtg!(mtg, volume = compute_volume(node), symbol = "S") # volume of the segment in mm3
-
-    # @mutate_mtg!(mtg, volume = compute_var_axis(node), symbol = "A") # volume of the axis in mm3
-
-    @mutate_mtg!(mtg, cross_section = compute_cross_section(node), symbol = "S") # area of segment cross section in mm2
-    @mutate_mtg!(mtg, cross_section_children = compute_cross_section_children(node), symbol = "S") # area of segment cross section in mm2
-
-    # Cross section of the terminal nodes for each node
-    @mutate_mtg!(mtg, cross_section_leaves = compute_cross_section_leaves(node), symbol = "S")
-
-
-    # Volume of wood the section bears (all the sub-tree):
-    @mutate_mtg!(mtg, volume_subtree = compute_volume_subtree(node), symbol = "S")
-
-    # How many leaves the sibling of the node has:
-    @mutate_mtg!(mtg, nleaves_siblings = sum(nleaves_siblings!(node)))
-
-    # How many leaves the node has in proportion to its siblings + itself:
-    @mutate_mtg!(mtg, nleaf_proportion_siblings = node[:number_leaves] / (node[:nleaves_siblings] + node[:number_leaves]), symbol = "S")
-
-    first_cross_section = filter(x -> x !== nothing, descendants(mtg, :cross_section, recursivity_level=5))[1]
-    @mutate_mtg!(mtg, cross_section_pipe = pipe_model!(node, first_cross_section))
+    @mutate_mtg!(mtg_tree, cross_section_pipe = pipe_model!(node, first_cross_section))
 
     # Adding the cross_section to the root:
-    append!(mtg, (cross_section=first_cross_section,))
-    # Compute the cross-section for the axes nodes using the one measured on the S just below:
-    @mutate_mtg!(mtg, cross_section_all = compute_cross_section_all(node))
+    append!(
+        mtg_tree,
+        (
+            cross_section=first_cross_section,
+            cross_section_pipe=first_cross_section,
+            cross_section_sm=first_cross_section
+        )
+    )
 
-    # Use the pipe model, but only on nodes with a cross_section <= 314 (≈20mm diameter)
-    @mutate_mtg!(mtg, cross_section_pipe_50 = pipe_model!(node, :cross_section_all, 314, allow_missing=true))
+    # Compute the cross-section using the structural model:
+    @mutate_mtg!(mtg_tree, cross_section_sm = cross_section_stat_mod_all(node, symbol="N"), symbol = "N")
+
+    # Compute the diameters:
+    transform!(mtg_tree, :cross_section_pipe => (x -> sqrt(x / π) * 2.0) => :diameter_pipe, symbol="N")
+    transform!(mtg_tree, :cross_section_sm => (x -> sqrt(x / π) * 2.0 / 1000.0) => :diameter_sm, symbol="N")
+
+    # Compute the radius
+    transform!(mtg_tree, :diameter_pipe => (x -> x / 2) => :radius_pipe, symbol="N")
+    transform!(mtg_tree, :diameter_sm => (x -> x / 2) => :radius_sm, symbol="N")
+
+    # Recompute the volume:
+    compute_volume_stats(x, var) = x[var] * x[:length]
+
+    @mutate_mtg!(mtg_tree, volume_sm = compute_volume_stats(node, :cross_section_sm), symbol = "N") # volume in mm3
+    @mutate_mtg!(mtg_tree, volume_pipe_mod = compute_volume_stats(node, :cross_section_pipe), symbol = "N") # volume in mm3
+
+    # And the biomass:
+    @mutate_mtg!(mtg_tree, fresh_mass = node[:volume_sm] * fresh_density * 1e-3, symbol = "N") # in g
+    @mutate_mtg!(mtg_tree, dry_mass = node[:volume_sm] * dry_density * 1e-3, symbol = "N") # in g
+
+    @mutate_mtg!(mtg_tree, fresh_mass_pipe_mod = node[:volume_pipe_mod] * fresh_density * 1e-3, symbol = "N") # in g
+    @mutate_mtg!(mtg_tree, dry_mass_pipe_mod = node[:volume_pipe_mod] * dry_density * 1e-3, symbol = "N") # in g
 
     # Clean-up the cached variables:
-    clean_cache!(mtg)
-
-    return mtg
+    clean_cache!(mtg_tree)
 end
 
 function compute_cross_section_all(x, var=:cross_section)
@@ -406,12 +390,12 @@ end
 
 Compute node length as the distance between itself and its parent.
 """
-function compute_length_coord(node)
+function compute_length_coord(node; x=:XX, y=:YY, z=:ZZ)
     if !isroot(node.parent)
         sqrt(
-            (node.parent[:XX] - node[:XX])^2 +
-            (node.parent[:YY] - node[:YY])^2 +
-            (node.parent[:ZZ] - node[:ZZ])^2
+            (node.parent[x] - node[x])^2 +
+            (node.parent[y] - node[y])^2 +
+            (node.parent[z] - node[z])^2
         )
     else
         0.0
@@ -421,10 +405,21 @@ end
 """
     is_seg(x)
 
-Is a node also a segment node ? A segment node is a node at a branching position, or at the
-first (or last) position in the tree.
+Tests if a node is a segment node. A segment node is a node:
+    - at a branching position, *i.e.*, a parent of more than one children node
+    - a leaf.
 """
-is_seg(x) = isleaf(x) || (!isroot(x) && (length(x.children) > 1 || x[1].MTG.link == "+"))
+is_seg(x) = isleaf(x) || (!isroot(x) && (length(children(x)) > 1 || x[1].MTG.link == "+"))
+
+"""
+    segment_index_on_axis(node, symbol="N")
+
+Compute the index of a segment node on the axis. The computation is basipetal, starting from tip to base. 
+The index is the position of the segment on the axis.
+"""
+function segment_index_on_axis(node, symbol="N")
+    isleaf(node) ? 1 : sum(descendants!(node, :is_segment, symbol=symbol, link=("/", "<"), all=false, type=Bool)) + 1
+end
 
 """
     cumul_length_segment(node)
@@ -432,15 +427,15 @@ is_seg(x) = isleaf(x) || (!isroot(x) && (length(x.children) > 1 || x[1].MTG.link
 Cumulates the lengths of segments inside a segment. Only does it if the node is considered
 as a segment, else returns 0.
 """
-function cumul_length_segment(node)
+function cumul_length_segment(node, length_name=:length_node)
     if is_seg(node)
 
         length_ancestors =
             [
-                node[:length_node],
+                node[length_name],
                 ancestors(
                     node,
-                    :length_node,
+                    length_name,
                     filter_fun=x -> !is_seg(x),
                     scale=2,
                     all=false)...
@@ -663,41 +658,26 @@ function compute_data_mtg_lidar!(mtg, fresh_density, dry_density)
     return nothing
 end
 
-function cross_section_stat_mod(x)
-    # Using all variables:
-    # 0.217432 * x[:cross_section_pipe_50] + 0.0226391 * x[:pathlength_subtree] + 19.2056 * x[:branching_order] +
-    # 6.99042 * x[:segment_index_on_axis] - 10.0844 * x[:number_leaves] + 3.61329 * x[:segment_subtree] +
-    # 0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
+# function cross_section_stat_mod(x)
+#     # Using all variables:
+#     # 0.217432 * x[:cross_section_pipe_50] + 0.0226391 * x[:pathlength_subtree] + 19.2056 * x[:branching_order] +
+#     # 6.99042 * x[:segment_index_on_axis] - 10.0844 * x[:number_leaves] + 3.61329 * x[:segment_subtree] +
+#     # 0.9353 * x[:n_segments_axis] - 6.03946 * x[:nleaf_proportion_siblings]
 
-    # All variables except the cross section from the pipe model because it is too bad from plantscan3d:
-    # 0.0295598 * x[:pathlength_subtree] + 19.3697 * x[:branching_order] +
-    # 7.41646 * x[:segment_index_on_axis] - 9.54547 * x[:number_leaves] + 3.62477 * x[:segment_subtree] +
-    # 0.975984 * x[:n_segments_axis] - 3.6127 * x[:nleaf_proportion_siblings]
+#     # All variables except the cross section from the pipe model because it is too bad from plantscan3d:
+#     # 0.0295598 * x[:pathlength_subtree] + 19.3697 * x[:branching_order] +
+#     # 7.41646 * x[:segment_index_on_axis] - 9.54547 * x[:number_leaves] + 3.62477 * x[:segment_subtree] +
+#     # 0.975984 * x[:n_segments_axis] - 3.6127 * x[:nleaf_proportion_siblings]
 
-    # Last version using diam<50mm
-    0.891909 * x[:cross_section_pipe_50] + 0.00301214 * x[:pathlength_subtree] + 6.67531 * x[:branching_order] +
-    0.586842 * x[:segment_index_on_axis]
-end
+#     # Last version using diam<50mm
+#     0.891909 * x[:cross_section_pipe_50] + 0.00301214 * x[:pathlength_subtree] + 6.67531 * x[:branching_order] +
+#     0.586842 * x[:segment_index_on_axis]
+# end
 
-function cross_section_stat_mod_all(x)
-    # Using all variables:
-    # 0.951324 * x[:cross_section_pipe] + 0.0210469 * x[:pathlength_subtree] + 7.81015 * x[:branching_order] +
-    # 9.83616 * x[:segment_index_on_axis] - 0.0107971 * x[:axis_length] - 13.1118 * x[:number_leaves] + 3.1682 * x[:segment_subtree] +
-    # 2.11951 * x[:n_segments_axis]
-
-    # All variables except the cross section from the pipe model, trained on data from 2020 and 2021:
-    # 0.0416291 * x[:pathlength_subtree] + 5.83775 * x[:branching_order] +
-    # 10.7246 * x[:segment_index_on_axis] - 0.00588964 * x[:axis_length] -18.945 * x[:number_leaves] + 10.0918 * x[:segment_subtree] -
-    # 1.15572   * x[:n_segments_axis]
-
-    # Only the pipe model with a correction factor:
-    # 0.938161 * x[:cross_section_pipe]
-
-    # All variables except the cross section from the pipe model, trained on data from 2020 only:
-    0.990968 * x[:cross_section_pipe] + 0.017808 * x[:pathlength_subtree] + 4.58425 * x[:branching_order] +
-    6.99065 * x[:segment_index_on_axis] - 0.00942602 * x[:axis_length] - 1.89791 * x[:number_leaves] -
-    2.0631 * x[:segment_subtree] + 2.41539 * x[:n_segments_axis]
-
+function cross_section_stat_mod_all(node; symbol="N")
+    0.520508 * node[:cross_section_pipe] + 0.0153365 * node[:pathlength_subtree] +
+    6.38394 * node[:branching_order] + 10.9389 * node[:segment_index_on_axis] - 10.137 * node[:number_leaves] +
+    4.46843 * node[:segment_subtree]
 end
 
 function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
@@ -868,16 +848,48 @@ function cylinder(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; symb
 end
 
 
-function cylinder_from_radius(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; symbol="S")
+function cylinder_from_radius(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; radius=:radius, symbol="S")
     node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
     if length(node_start) != 0
         Cylinder(
             Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
             Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
-            node[:radius] # radius in meter
+            node[radius] # radius in meter
         )
     end
 end
+
+
+function circle_from_radius(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; radius=:radius, symbol="S", radius_factor=1.0)
+    node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
+    if length(node_start) != 0
+        template_cyl = cylinder_from_radius(node, xyz_attr, radius=radius, symbol=symbol)
+        top = extremity(template_cyl)
+        new_end_point = top + direction(template_cyl) * radius_factor # Scale the direction vector to the desired length
+
+        # Create a new cylinder with the same end point, but adding a new end point that gives the width of the circle:
+        new_cyl = Cylinder(top, new_end_point, Makie.radius(template_cyl))
+    end
+end
+
+function draw_skeleton!(axis, node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ]; symbol="S", linewidth)
+    node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
+    if length(node_start) != 0
+        lines!(
+            axis,
+            [node_start[1][1], node[:XX]],
+            [node_start[1][2], node[:YY]],
+            [node_start[1][3], node[:ZZ]],
+            color=get(
+                (ColorSchemes.seaborn_rocket_gradient),
+                node[:branching_order] / max_order
+            ),
+            linewidth=linewidth
+        )
+    end
+end
+
+
 
 """
     node_pos(node, angle, phyllotaxy, length=1.0)
