@@ -33,14 +33,14 @@ begin
     alphapoints = 0.5
     fig = Figure(size=(800, 1200))
     g = fig[1:4, 1:2] = GridLayout()
-    ax1 = Axis(g[1, 1], aspect=1, title="Point cloud")
-    ax2a = Axis(g[2, 1], aspect=1, title="Skeleton")
-    ax3 = Axis(g[3, 1:2], aspect=1, title="Diameters")
-    ax4 = Axis(g[4, 1:2], aspect=1, title="Volume")
+    ax1 = Axis(g[1, 1], aspect=1, title="Point cloud", titlealign=:left)
+    ax2a = Axis(g[2, 1], aspect=1, title="Skeleton", titlealign=:left)
+    ax3 = Axis(g[3, 1:2], aspect=1, title="Skeleton + Diameters", titlealign=:left)
+    ax4 = Axis(g[4, 1:2], aspect=1, title="Volume", titlealign=:left)
 
     # Left:
-    ax1b = Axis(g[1, 2], aspect=1, title="Destructive measurements")
-    ax2b = Axis(g[2, 2], aspect=1, title="Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)")
+    ax1b = Axis(g[1, 2], aspect=1, title="Destructive measurements", titlealign=:left)
+    ax2b = Axis(g[2, 2], aspect=1, title="Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
 
     hidedecorations!(ax1)
     hidedecorations!(ax1b)
@@ -48,6 +48,12 @@ begin
     # hidedecorations!(ax2b)
     hidedecorations!(ax3)
     hidedecorations!(ax4)
+    hidespines!(ax1)
+    hidespines!(ax1b)
+    hidespines!(ax2a)
+    hidespines!(ax2b)
+    hidespines!(ax3)
+    hidespines!(ax4)
 
     # Draw the LiDAR point cloud:
     scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2)
@@ -187,19 +193,14 @@ begin
     # Draw points that look like a linear relationship for the scatter plot:
     # Generate some fake data
     x = 1:10:4000
-    # Add some random noise to y
+    # Add some random noise to y:
     y = x .+ randn(length(x)) .* 150
     y[y.<=0] .= 0
     lines!(ax2b, x, x, color=:slategrey, linewidth=1, alpha=0.5)
     scatter!(ax2b, x, y, color=:black, markersize=2,)
 
-    # limits!(ax2b, 0, 1, 0, 1)
-
-    # hidespines!(ax2b)
-
     colgap!(fig.layout, 0)
     rowgap!(fig.layout, 0)
-    # resize_to_layout!(fig)
     fig
 end
 
