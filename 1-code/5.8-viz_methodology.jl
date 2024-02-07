@@ -31,45 +31,47 @@ transform!(
 # Make the figure:
 begin
     alphapoints = 0.5
-    fig = Figure(size=(800, 1200))
-    g = fig[1:4, 1:2] = GridLayout()
-    ax1 = Axis(g[1, 1], aspect=1, title="1. Point cloud", titlealign=:left)
-    ax1b = Axis(g[1, 2], aspect=1, title="2. Destructive measurements", titlealign=:left)
-    ax2a = Axis(g[2, 1], aspect=1, title="3. Skeleton", titlealign=:left)
-    ax2b = Axis(g[2, 2], aspect=1, title="4. Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
-    ax3 = Axis(g[3, 1:2], aspect=1, title="5. Skeleton + Diameters", titlealign=:left)
-    ax4 = Axis(g[4, 1:2], aspect=1, title="6. Volume", titlealign=:left)
+    fig = Figure(size=(1200, 800))
+    g1 = fig[1, 1:2] = GridLayout()
+    g2 = fig[2, 1:4] = GridLayout()
+    g1ax1 = Axis(g1[1, 1], aspect=1, title="1. Destructive measurements", titlealign=:left)
+    g1ax2 = Axis(g1[1, 2], aspect=1, title="2. Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
+
+    g2ax1 = Axis(g2[1, 1], aspect=1, title="1. Point cloud", titlealign=:left)
+    g2ax2 = Axis(g2[1, 2], aspect=1, title="2. Skeleton", titlealign=:left)
+    g2ax3 = Axis(g2[1, 3], aspect=1, title="3. Skeleton + Diameters", titlealign=:left)
+    g2ax4 = Axis(g2[1, 4], aspect=1, title="4. Volume", titlealign=:left)
 
 
-    hidedecorations!(ax1)
-    hidedecorations!(ax1b)
-    hidedecorations!(ax2a)
-    # hidedecorations!(ax2b)
-    hidedecorations!(ax3)
-    hidedecorations!(ax4)
-    hidespines!(ax1)
-    hidespines!(ax1b)
-    hidespines!(ax2a)
-    hidespines!(ax2b)
-    hidespines!(ax3)
-    hidespines!(ax4)
+    hidedecorations!(g1ax1)
+    # hidedecorations!(g1ax2)
+    hidedecorations!(g2ax1)
+    hidedecorations!(g2ax2)
+    hidedecorations!(g2ax3)
+    hidedecorations!(g2ax4)
+    hidespines!(g1ax1)
+    # hidespines!(g1ax2)
+    hidespines!(g2ax1)
+    hidespines!(g2ax2)
+    hidespines!(g2ax3)
+    hidespines!(g2ax4)
 
     #! Draw th full branch LiDAR point cloud and zoom-in for this part of the branch.
     # Draw the LiDAR point cloud:
-    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2)
+    scatter!(g2ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2)
 
     # Draw the skeleton (lines):
-    scatter!(ax2a, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
+    scatter!(g2ax2, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:cyl_sm] !== nothing) do node
-        draw_skeleton!(ax2a, node, xyz_attr, symbol=symbol, linewidth=2)
+        draw_skeleton!(g2ax2, node, xyz_attr, symbol=symbol, linewidth=2)
     end
 
     # Diameter based on the cross-sectional area at each node
-    scatter!(ax3, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
+    scatter!(g2ax3, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:circle_sm] !== nothing) do node
-        draw_skeleton!(ax3, node, xyz_attr, symbol=symbol, linewidth=0.8)
+        draw_skeleton!(g2ax3, node, xyz_attr, symbol=symbol, linewidth=0.8)
         mesh!(
-            ax3, node[:circle_sm],
+            g2ax3, node[:circle_sm],
             color=get(
                 (ColorSchemes.seaborn_rocket_gradient),
                 node[:branching_order] / max_order
@@ -78,10 +80,10 @@ begin
     end
 
     # Draw the 3d reconstruction:
-    scatter!(ax4, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
+    scatter!(g2ax4, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=alphapoints)
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:cyl_sm] !== nothing) do node
         mesh!(
-            ax4, node[:cyl_sm],
+            g2ax4, node[:cyl_sm],
             color=get(
                 (ColorSchemes.seaborn_rocket_gradient),
                 node[:branching_order] / max_order
@@ -122,7 +124,7 @@ begin
     # col_arrows = RGBA(139 / 255, 188 / 255, 182 / 255, 1.0)
     col_arrows = :black
     arrows!(
-        ax1b,
+        g1ax1,
         [p[1] + Point3(0.01, -0.01, 0.0) for p in arrows_positions],
         [p[2] - p[1] for p in arrows_positions],
         arrowsize=0.0040, color=col_arrows,
@@ -142,7 +144,7 @@ begin
     # Draw the field "measurement":
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:cyl_sm] !== nothing) do node
         mesh!(
-            ax1b, node[:cyl_sm],
+            g1ax1, node[:cyl_sm],
             # color="#BA8C63"
             color=:antiquewhite3
             # color=RGB(202 / 255, 200 / 255, 201 / 255)
@@ -161,11 +163,11 @@ begin
     end
 
     col = RGB(250 / 255, 178 / 255, 101 / 255)
-    scatter!(ax1b, segment_positions, color=col, markersize=10, label="Diameter")
+    scatter!(g1ax1, segment_positions, color=col, markersize=10, label="Diameter")
 
     # Legend of the "Destructive measurement" pane:
     Legend(
-        g[1, 2],
+        g1[1, 1],
         [
             MarkerElement(color=col, marker=:circle, markersize=10, strokecolor=:black),
             MarkerElement(color=col_arrows, marker='➞', markersize=10, strokecolor=:black)
@@ -182,7 +184,7 @@ begin
 
     # General equation of the multilinear model:
     text!(
-        ax2b,
+        g1ax2,
         [0], [4000],
         text=L"CSA = \beta_1x_1 + \beta_2x_2 + \ldots + \beta_nx_n + \epsilon",
         color=:black, fontsize=15, valign=:center, halign=:center
@@ -196,8 +198,8 @@ begin
     # Add some random noise to y:
     y = x .+ randn(length(x)) .* 150
     y[y.<=0] .= 0
-    lines!(ax2b, x, x, color=:slategrey, linewidth=1, alpha=0.5)
-    scatter!(ax2b, x, y, color=:black, markersize=2,)
+    lines!(g1ax2, x, x, color=:slategrey, linewidth=1, alpha=0.5)
+    scatter!(g1ax2, x, y, color=:black, markersize=2,)
 
     colgap!(fig.layout, 0)
     rowgap!(fig.layout, 0)
