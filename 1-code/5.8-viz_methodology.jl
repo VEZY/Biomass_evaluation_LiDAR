@@ -33,14 +33,13 @@ begin
     alphapoints = 0.5
     fig = Figure(size=(800, 1200))
     g = fig[1:4, 1:2] = GridLayout()
-    ax1 = Axis(g[1, 1], aspect=1, title="Point cloud", titlealign=:left)
-    ax2a = Axis(g[2, 1], aspect=1, title="Skeleton", titlealign=:left)
-    ax3 = Axis(g[3, 1:2], aspect=1, title="Skeleton + Diameters", titlealign=:left)
-    ax4 = Axis(g[4, 1:2], aspect=1, title="Volume", titlealign=:left)
+    ax1 = Axis(g[1, 1], aspect=1, title="1. Point cloud", titlealign=:left)
+    ax1b = Axis(g[1, 2], aspect=1, title="2. Destructive measurements", titlealign=:left)
+    ax2a = Axis(g[2, 1], aspect=1, title="3. Skeleton", titlealign=:left)
+    ax2b = Axis(g[2, 2], aspect=1, title="4. Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
+    ax3 = Axis(g[3, 1:2], aspect=1, title="5. Skeleton + Diameters", titlealign=:left)
+    ax4 = Axis(g[4, 1:2], aspect=1, title="6. Volume", titlealign=:left)
 
-    # Left:
-    ax1b = Axis(g[1, 2], aspect=1, title="Destructive measurements", titlealign=:left)
-    ax2b = Axis(g[2, 2], aspect=1, title="Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
 
     hidedecorations!(ax1)
     hidedecorations!(ax1b)
@@ -55,6 +54,7 @@ begin
     hidespines!(ax3)
     hidespines!(ax4)
 
+    #! Draw th full branch LiDAR point cloud and zoom-in for this part of the branch.
     # Draw the LiDAR point cloud:
     scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2)
 
@@ -205,4 +205,4 @@ begin
 end
 
 # Save the figure:
-save("2-results/2-plots/Fig.0-viz_methodology.png", fig, px_per_unit=3)
+save("2-results/2-plots/Fig.0-viz_methodology.png", fig, px_per_unit=5)
