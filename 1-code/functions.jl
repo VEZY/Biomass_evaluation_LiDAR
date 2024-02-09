@@ -852,8 +852,8 @@ function cylinder_from_radius(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY
     node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol=symbol)
     if length(node_start) != 0
         Cylinder(
-            Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
-            Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
+            Point3((node_start[1][1], node_start[1][2], node_start[1][3] .+ 0.01)),
+            Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]] .+ 0.01)),
             node[radius] # radius in meter
         )
     end
@@ -879,7 +879,7 @@ function draw_skeleton!(axis, node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY
             axis,
             [node_start[1][1], node[:XX]],
             [node_start[1][2], node[:YY]],
-            [node_start[1][3], node[:ZZ]],
+            [node_start[1][3], node[:ZZ]] .+ 0.01,
             color=get(
                 (ColorSchemes.seaborn_rocket_gradient),
                 node[:branching_order] / max_order
