@@ -130,6 +130,12 @@ begin
     # l = LScene(f[1, 1], show_axis=true)
     scatter!(g2ax1, LiDAR_fulltree[:, 1], color=LiDAR_fulltree_colors, markersize=LiDAR_fulltree_markers)
 
+    inset_ax = Axis(g2[1, 1], aspect=1, width=Relative(0.5), height=Relative(0.5), halign=0.9, valign=0.9, backgroundcolor=(:white, 0.2))
+    hidedecorations!(inset_ax)
+    translate!(inset_ax.scene, 0, 0, 10)
+    # this needs separate translation as well, since it's drawn in the parent scene
+    # translate!(inset_ax.elements[:background], 0, 0, 9)
+    scatter!(inset_ax, LiDAR_fullbranch[:, 1], color=LiDAR_fullbranch[:,2], markersize=1)
 
     # Draw the skeleton (lines):
     scatter!(g2ax2, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=alphapoints)
