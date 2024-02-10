@@ -93,7 +93,7 @@ transform!(
 begin
     # set_theme!(backgroundcolor=:white)
     alphapoints = 0.5
-    fig = Figure(size=(1200, 800))
+    fig = Figure(size=(900, 700))
     g1 = fig[1, 2:3] = GridLayout()
     g2 = fig[2:3, 1:4] = GridLayout()
     g1ax1 = Axis(g1[1, 1], aspect=1, title="1. Destructive measurements", titlealign=:left)
@@ -129,13 +129,21 @@ begin
     # scatter!(g2ax1, LiDAR_fullbranch[:, 1], LiDAR_fullbranch[:, 2], LiDAR_fullbranch[:, 3], color=LiDAR_fullbranch[:, 4], markersize=2)
     # l = LScene(f[1, 1], show_axis=true)
     scatter!(g2ax1, LiDAR_fulltree[:, 1], color=LiDAR_fulltree_colors, markersize=LiDAR_fulltree_markers)
+    zoom!(g2ax1.scene, Makie.Camera3D(g2ax1.scene), 0.5)
+    translate_cam!(g2ax1.scene, (0.5, 0.0, 0.0))
+    update_cam!(g2ax1.scene, cameracontrols(g2ax1.scene))
 
-    inset_ax = Axis(g2[1, 1], aspect=1, width=Relative(0.5), height=Relative(0.5), halign=0.9, valign=0.9, backgroundcolor=(:white, 0.2))
-    hidedecorations!(inset_ax)
-    translate!(inset_ax.scene, 0, 0, 10)
-    # this needs separate translation as well, since it's drawn in the parent scene
-    # translate!(inset_ax.elements[:background], 0, 0, 9)
-    scatter!(inset_ax, LiDAR_fullbranch[:, 1], color=LiDAR_fullbranch[:,2], markersize=1)
+    # inset_ax = Axis(g2[1, 1], aspect=1, width=Relative(0.5), height=Relative(0.5), halign=1.0, valign=1.0, backgroundcolor=(:white, 0.2))
+    # hidedecorations!(inset_ax)
+    # translate!(inset_ax.scene, 0, 0, 10)
+    # # rotate_cam!(inset_ax.scene, Camera3D(inset_ax.scene), (deg2rad(0.0), deg2rad(0.0), deg2rad(180.0)))
+    # scatter!(inset_ax, LiDAR_fullbranch[:, 1], color=:green, markersize=1)
+
+    inset_ax2 = Axis(g2[1, 1], aspect=1, width=Relative(0.40), height=Relative(0.40), halign=1.0, valign=1.0, backgroundcolor=(:white, 0.2))
+    hidedecorations!(inset_ax2)
+    translate!(inset_ax2.scene, 0, 0, 10)
+    # rotate_cam!(inset_ax.scene, Camera3D(inset_ax.scene), (deg2rad(0.0), deg2rad(0.0), deg2rad(180.0)))
+    scatter!(inset_ax2, LiDAR[:, 1], color=:red, markersize=1)
 
     # Draw the skeleton (lines):
     scatter!(g2ax2, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=alphapoints)
@@ -285,12 +293,13 @@ begin
 
     colgap!(fig.layout, 0)
     rowgap!(fig.layout, 0)
-    zoom!(g2ax1.scene, Makie.Camera3D(g2ax1.scene), 0.5)
-    translate_cam!(g2ax1.scene, (0.5, 0.0, 0.0))
-    update_cam!(g2ax1.scene, cameracontrols(g2ax1.scene))
     fig
 end
-g2ax1.scene.center = false
-fig.scene. = false
+# g2ax1.scene.
+# g2ax1.scene.center = false
+# fig.scene.center = false
+update_cam!(g2ax1.scene, cameracontrols(g2ax1.scene))
+# fig
+
 # Save the figure:
-save("2-results/2-plots/Fig.0-viz_methodology.png", fig, px_per_unit=5)
+save("2-results/2-plots/Fig.0-viz_methodology.png", fig, px_per_unit=5, update=false)
