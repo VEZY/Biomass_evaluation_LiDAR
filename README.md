@@ -87,7 +87,7 @@ Pluto.run(notebook = "1-code/4-model_cross_section.jl")
   - Axis scale:
 
     ```julia
-    Pluto.run(notebook = "1-code/5.1-axis_scale")
+    Pluto.run(notebook = "1-code/5.1-axis_scale.jl")
     ```
 
   - Branch scale:
