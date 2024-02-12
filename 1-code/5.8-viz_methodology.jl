@@ -93,12 +93,12 @@ transform!(
 begin
     # set_theme!(backgroundcolor=:white)
     alphapoints = 0.5
-    fig = Figure(size=(900, 700))
+    fig = Figure(size=(900, 800))
+    fig.scene.backgroundcolor[] = RGBAf(1, 1, 1, 1)
     g1 = fig[1, 2:3] = GridLayout()
     g2 = fig[2:3, 1:4] = GridLayout()
-    g1ax1 = Axis(g1[1, 1], aspect=1, title="1. Destructive measurements", titlealign=:left)
-    g1ax2 = Axis(g1[1, 2], aspect=1, title="2. Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
-
+    g1ax1 = Axis(g1[1, 1], aspect=1, title="S1. Destructive measurements", titlealign=:left)
+    g1ax2 = Axis(g1[1, 2], aspect=1, title="S2. Modelling", xlabel="Measured CSA (mm²)", ylabel="Predicted CSA (mm²)", titlealign=:left)
     # g2ax1 = Axis3(g2[1, 1], aspect=(1, 1, 1), title="1. Point cloud", titlealign=:left, elevation=deg2rad(0.0), azimuth=deg2rad(90.0))
     g2ax1 = Axis3(g2[1, 1], aspect=(1, 1, 1), title="1. Point cloud", titlealign=:left, elevation=deg2rad(0.0), azimuth=deg2rad(200.0))
     g2ax1.tellheight = false
@@ -123,7 +123,6 @@ begin
     hidespines!(g2ax3)
     hidespines!(g2ax4)
 
-    #! Draw th full branch LiDAR point cloud and zoom-in for this part of the branch.
     # Draw the LiDAR point cloud:
     # scatter!(g2ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 4], markersize=2)
     # scatter!(g2ax1, LiDAR_fullbranch[:, 1], LiDAR_fullbranch[:, 2], LiDAR_fullbranch[:, 3], color=LiDAR_fullbranch[:, 4], markersize=2)
@@ -148,20 +147,15 @@ begin
     # Draw the skeleton (lines):
     scatter!(g2ax2, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=alphapoints)
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:cyl_sm] !== nothing) do node
-        draw_skeleton!(g2ax2, node, xyz_attr, symbol=symbol, linewidth=4)
+        col = get((ColorSchemes.seaborn_rocket_gradient), node[:branching_order] / max_order)
+        draw_skeleton!(g2ax2, node, xyz_attr, symbol=symbol, linewidth=4, color=col)
     end
 
     # Diameter based on the cross-sectional area at each node
     scatter!(g2ax3, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=alphapoints)
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:circle_sm] !== nothing) do node
         draw_skeleton!(g2ax3, node, xyz_attr, symbol=symbol, linewidth=2)
-        mesh!(
-            g2ax3, node[:circle_sm],
-            color=get(
-                (ColorSchemes.seaborn_rocket_gradient),
-                node[:branching_order] / max_order
-            )
-        )
+        mesh!(g2ax3, node[:circle_sm], color=:red)
     end
 
     # Draw the 3d reconstruction:
@@ -169,14 +163,9 @@ begin
     traverse!(mtg, symbol=symbol, filter_fun=node -> node[:cyl_sm] !== nothing) do node
         mesh!(
             g2ax4, node[:cyl_sm],
-            color=:red
-            # color=get(
-            #     (ColorSchemes.seaborn_rocket_gradient),
-            #     node[:branching_order] / max_order
-            # )
+            color=get((ColorSchemes.seaborn_rocket_gradient), node[:branching_order] / max_order),
         )
     end
-
 
     # Get the nodes in each segment:
     nodes_in_segment = Vector{Vector{Node}}(Node[])
