@@ -123,6 +123,11 @@ md"""
 *Table 2. Prediction accuracy of the two modelling approach, computed with normalized root mean squared error (nRMSE, %) and modelling efficiency (EF).*
 """
 
+# ╔═╡ 0e160fb4-f2ba-4321-b661-4ce6eb422c6b
+md"""
+*Figure 3. Figure 1 + FIgure 2.*
+"""
+
 # ╔═╡ 9c04906b-10cd-4c53-a879-39d168e5bd1f
 md"""
 ## Compute the volume for LiDAR-based MTGs
@@ -405,13 +410,15 @@ begin
 end
 
 # ╔═╡ 19bc88a8-8299-49fe-bf19-60e0fdfbd1ba
-let
-	classes = 0.0:0.001:0.10
+begin
+p2, plt_cs_all2, xticks2 = let
+	#classes = 0.0:0.001:0.10
+	classes = 0.0:1.0:80
 	
 	df_plot = DataFrames.transform(
 		df_all,
-		:cross_section_pred => (x -> sqrt.(x ./ π) .* 1e-3 .* 2) => :diameter_pred,
-		:cross_section => (x -> sqrt.(x ./ π) .* 1e-3 .* 2)=> :diameter,
+		:cross_section_pred => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000) => :diameter_pred,
+		:cross_section => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000)=> :diameter,
     )
 	
 	filter!(row -> row.diameter < maximum(df_plot.diameter), df_plot)
@@ -446,23 +453,44 @@ let
 			dodge=:Model,
         ) *
 		visual(BarPlot)#, dodge_gap=0.1, gap=0.1)
-    draw(
+	xticks = (0:10:nclasses, string.(Int.(unwrap.(df_plot.diameter_class[1:10:nclasses]))))
+    p_ = draw(
 		plt_; 
 		figure=(fontsize=25,),
 		palettes=(; color=colors),
-		#axis=(; xticks= LinearTicks(10))
 		axis=
 			(;
-			xticks=(0:10:nclasses, string.(df_plot.diameter_class[1:10:nclasses])),
-			width=800, height=800, ylabel="Prediction error (m)", xlabel="Diameter (m)",
+			xticks=xticks,
+			#width=800, height=800, 
+			ylabel="Prediction error (mm)", xlabel="Diameter (mm)",
 			)
 	)
-	#filter(row -> row.Model == "PMT", df_plot)
+	p_, plt_, xticks
 end
+p2
+end
+
+# ╔═╡ c0ea7917-f0bf-445a-a612-40abd67fe9ad
+p3 = let
+	f = Figure(; size=(800, 300))
+	ax1 = Axis(f[1, 1], aspect = 1, ylabel = "Predicted CSA (mm²)", xlabel = "Measured CSA (mm²)", title = "1. Prediction~Measurement", titlealign=:left)
+	ax2 = Axis(f[1, 2], aspect = 1, ylabel="Prediction error (mm)", xlabel="Diameter (mm)", title = "2. Error by diameter class", titlealign=:left, xticks=xticks2)
+
+	d1 = draw!(ax1, plt_cs_all, palettes=(; color=colors),)
+	draw!(ax2, plt_cs_all2, palettes=(; color=colors),)
+	legend!(f[1, 3], d1)
+	f
+end
+
+# ╔═╡ bfe70951-a89d-4783-98a8-ac39fabed66b
+save("../2-results/2-plots/step_3_statistical_model_evaluation3.png", p3, px_per_unit=3)
+
+# ╔═╡ a802bffa-a5c3-4563-adde-7a393b47881c
+save("../2-results/2-plots/step_3_statistical_model_evaluation2.png", p2, px_per_unit=3)
 
 # ╔═╡ 61f8f651-1dba-4b91-a46e-bbe61cffb725
 md"""
-*Figure 1.b. Measured diameter (x-axis, m) and relative prediction error (y-axis, m) of segment diameter from the pipe model theory (PMT) and the structural model (SM). n = $(nrow(df_all)÷length(unique(df_all.Model))) for each model.*
+*Figure 2. Measured diameter (x-axis, m) and relative prediction error (y-axis, m) of segment diameter from the pipe model theory (PMT) and the structural model (SM). n = $(nrow(df_all)÷length(unique(df_all.Model))) for each model.*
 """
 
 # ╔═╡ d7a3c496-0ef0-454b-9e32-e5835928f4d5
@@ -2690,6 +2718,8 @@ version = "3.5.0+0"
 # ╟─dc2bd8f0-c321-407f-9592-7bcdf45f9634
 # ╟─19bc88a8-8299-49fe-bf19-60e0fdfbd1ba
 # ╟─61f8f651-1dba-4b91-a46e-bbe61cffb725
+# ╟─c0ea7917-f0bf-445a-a612-40abd67fe9ad
+# ╟─0e160fb4-f2ba-4321-b661-4ce6eb422c6b
 # ╟─9c04906b-10cd-4c53-a879-39d168e5bd1f
 # ╟─e5c0c40a-eb0a-4726-b58e-59c64cb39eae
 # ╟─d66aebf5-3681-420c-a342-166ea05dda2e
@@ -2707,6 +2737,8 @@ version = "3.5.0+0"
 # ╠═73515bd3-0124-42a4-9997-3730e7dcbf4c
 # ╟─1103b80b-7dc6-41ed-b5bd-a6ef739d0624
 # ╠═806c5fba-6166-41d9-a109-9fac15eb107a
+# ╠═a802bffa-a5c3-4563-adde-7a393b47881c
+# ╠═bfe70951-a89d-4783-98a8-ac39fabed66b
 # ╟─30f8608f-564e-4ffc-91b2-1f104fb46c1e
 # ╟─8bb72bea-be21-47c1-bdd3-484690c3cfd4
 # ╟─ffe53b41-96bd-4f44-b313-94aabdc8b1a6
