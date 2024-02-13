@@ -675,9 +675,12 @@ end
 # end
 
 function cross_section_stat_mod_all(node; symbol="N")
-    0.520508 * node[:cross_section_pipe] + 0.0153365 * node[:pathlength_subtree] +
-    6.38394 * node[:branching_order] + 10.9389 * node[:segment_index_on_axis] - 10.137 * node[:number_leaves] +
-    4.46843 * node[:segment_subtree]
+    max(
+        0.0,
+        0.520508 * node[:cross_section_pipe] + 0.0153365 * node[:pathlength_subtree] +
+        6.38394 * node[:branching_order] + 10.9389 * node[:segment_index_on_axis] - 10.137 * node[:number_leaves] +
+        4.46843 * node[:segment_subtree]
+    )
 end
 
 function compute_volume_model(branch, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
