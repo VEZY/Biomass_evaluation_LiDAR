@@ -115,4 +115,4 @@ begin
     resize_to_layout!(fig)
     fig
 end
-save("2-results/2-plots/step_5_visualisation_2d_GLMakie.png", fig, px_per_unit=3)
+save("2-results/2-plots/step_5_visualisation_2d.png", fig, px_per_unit=3)
