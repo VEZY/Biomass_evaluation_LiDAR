@@ -27,7 +27,7 @@ The manual measurements are used for two purposes:
 
 <img src="./2-results/2-plots/step_5_visualisation_2d.png" width="500" alt="3D reconstruction of a branch and a tree" />
 
-*Figure 1. Co-registered LiDAR point-cloud (left panels) and 3D reconstruction using the structural model (right panels) of a sampled branch (top panels) and a whole tree (bottom panels). Note that the 3D reconstruction was done at the segment level, which implies that the trunk base has only one segment.*
+*Figure 1. Co-registered LiDAR point-cloud (left panels) and 3D reconstruction using the structural model (right panels) of a sampled branch (top panels) and a whole tree (bottom panels).*
 
 ## Project steps
 
