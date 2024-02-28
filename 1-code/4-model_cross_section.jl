@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.38
 
 using Markdown
 using InteractiveUtils
@@ -1204,7 +1204,7 @@ StatsBase = "~0.33.21"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.0"
+julia_version = "1.10.1"
 manifest_format = "2.0"
 project_hash = "21ebec74e3b2537114fcc0a7bcb10124b6af449f"
 
@@ -1398,7 +1398,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.5+1"
+version = "1.1.0+0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -2109,7 +2109,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.23+2"
+version = "0.3.23+4"
 
 [[deps.OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -2700,7 +2700,7 @@ version = "3.5.0+0"
 # ╟─6b8d93de-2fb4-411d-befe-29cb29132b40
 # ╟─796a13d2-a65c-46f6-ad42-5fd42811c8a8
 # ╟─220dfbff-15fc-4e75-a6a2-39e60c08e8dc
-# ╟─492fc741-7a3b-4992-a453-fcac2bbf35ad
+# ╠═492fc741-7a3b-4992-a453-fcac2bbf35ad
 # ╟─068bccf7-7d01-40f5-b06b-97f6f51abcdd
 # ╟─0b8d39b2-9255-4bd7-a02f-2cc055bf61fd
 # ╟─fa9cf6f4-eb79-4c70-ba1f-4d80b3c3e62a
