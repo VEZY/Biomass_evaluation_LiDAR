@@ -268,9 +268,6 @@ f_tree = let
     fig
 end
 
-# ╔═╡ 80e68eb2-c787-4f5a-861f-3b25c8297d57
-# save("../2-results/2-plots/step_5_visualisation_2d.png", f_tree, px_per_unit=3)
-
 # ╔═╡ 319f00ff-c60d-43aa-bbb7-bd48638e2177
 f_tree_fine_structures = let
     fig = Figure()
@@ -2151,7 +2148,6 @@ version = "3.5.0+0"
 # ╟─fdec2992-0bfe-41e9-aac4-deceec2621ec
 # ╠═efd5b759-708d-4507-99a1-464540c61f20
 # ╟─d27d357e-b88c-4997-b8de-d45850ccc166
-# ╠═80e68eb2-c787-4f5a-861f-3b25c8297d57
 # ╟─319f00ff-c60d-43aa-bbb7-bd48638e2177
 # ╠═ba035c85-b05e-43bf-b171-6c83a75eb29c
 # ╟─00000000-0000-0000-0000-000000000001
