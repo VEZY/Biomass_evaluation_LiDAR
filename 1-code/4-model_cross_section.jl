@@ -382,7 +382,7 @@ begin
                 color=:Model => "Model:",
                 marker=(:tree, :branch) => ((x, y) -> join([x, y], "-")) => "Tree-Branch:"
             ) *
-            visual(Scatter, markersize=20, alpha=0.8)
+            visual(Scatter, markersize=15, alpha=0.8)
         )
     p = draw(plt_cs_all, palettes=(; color=colors))
 end
