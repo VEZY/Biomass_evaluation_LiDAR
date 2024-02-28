@@ -26,6 +26,12 @@ begin
 	using Colors
 end
 
+# ╔═╡ 502dddaf-bc6d-40c0-8d5e-2558615eb996
+begin
+	include("functions.jl")
+	using .BiomassFromLiDAR
+end
+
 # ╔═╡ 3793df6f-018f-4a34-aba8-c03fe5458519
 md"""
 # Vizualising LiDAR and branches reconstructions
@@ -38,6 +44,11 @@ md"""
 Importing the necessary packages:
 """
 
+# ╔═╡ e1e40cf1-a958-4af3-bdad-30db84983edd
+md"""
+Import the functions from our module:
+"""
+
 # ╔═╡ 34e4d584-d25d-4429-bea2-2d2762a2b2c3
 md"""
 ## Branch scale
@@ -48,11 +59,19 @@ md"""
 Setting the paths to the LiDAR and mtg files:
 """
 
-# ╔═╡ 7c05fdb4-ca1f-4266-bd41-89d365024cf0
-LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
+# ╔═╡ c5953f22-039a-455e-bc17-af005a76394c
+begin
+	MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
+	LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
+end
 
-# ╔═╡ 636d0ed6-1c7c-489a-a139-943f2c812b95
-MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/6-corrected_segmentized_id_enriched"
+# ╔═╡ d415a535-aed5-405b-8a41-ac0cfbe03033
+md"""
+The symbol used for the nodes in the MTG:
+"""
+
+# ╔═╡ 51652f1a-364a-4d2a-af52-6553eef5fab3
+symbol = "N"
 
 # ╔═╡ 279013c5-6651-4bba-b301-b1f6198886e2
 LiDAR_files =
@@ -89,6 +108,19 @@ Please choose the branch you want to plot:
 # ╔═╡ 29c32624-b0b7-4d9b-b9d1-1836393317ec
 @bind branch Select(branches_MTG)
 
+# ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
+begin
+    mtg = read_mtg(joinpath(MTG_directory, branch * ".mtg"))
+	BiomassFromLiDAR.structural_model!(mtg, 0.5, 0.5, 1999.0)
+    branching_order!(mtg) # Do it again, because the structural model does it in basipetal way
+	transform!(
+	    mtg,
+	    # Make the circle for the structural model:
+	    (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
+	    symbol=symbol
+	)
+end
+
 # ╔═╡ e886ae94-6075-4fe4-acbc-62b2d945a740
 LiDAR = CSV.read(joinpath(LiDAR_directory, branch * ".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
@@ -97,18 +129,52 @@ md"""
 Pre-computing the Z min/max coordinates for coloring:
 """
 
+# ╔═╡ c7762335-eeeb-48c9-82f5-e4906a990bba
+begin
+    # Computing min/max values for colouring:
+    z_values = descendants(mtg, :ZZ, ignore_nothing=true)
+    z_min = minimum(z_values)
+    z_max = maximum(z_values)
+end
+
 # ╔═╡ 64406a16-243b-4e0d-b632-84b0b2c2fa88
 md"""
 And here is the comparison between the LiDAR and the reconstrustion using our model:
 """
+
+# ╔═╡ 004960ba-a598-4808-bc7e-e87b4a1156d9
+f = let
+    fig = Figure()
+    scene = Scene(fig.scene)
+    ax1 = Axis(fig[1, 1])
+    # ax1 = Axis3(fig[1,1], elevation = 1π)
+    # rotate!(scene, Vec3f(0,1,1), -π/4)
+    hidedecorations!(ax1)
+    ax1.title = "LiDAR point cloud"
+    ax2 = Axis(fig[1, 2])
+    hidedecorations!(ax2)
+    ax2.title = "3D reconstruction"
+
+    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.5)
+    traverse!(mtg, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+        mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+    end
+    fig
+end
+
+# ╔═╡ 78532e4a-59a7-4bee-b4ce-c55d66150498
+save("../2-results/2-plots/step_5_visualisation.png", f, px_per_unit=3)
 
 # ╔═╡ ecfe3d47-2467-4ddb-92e2-b4792ba6821e
 md"""
 ## Tree scale
 """
 
-# ╔═╡ bb146a9e-3563-4848-915a-5762f12a7e40
-LiDAR_trees_dir = "../0-data/2-lidar_processing/2-grouped_point_clouds/1-trees"
+# ╔═╡ bfb18c27-d4f2-4781-ab04-a4a30fa0d310
+begin
+	MTG_trees_dir = "../0-data/3-mtg_lidar_plantscan3d/7-tree_scale"
+	LiDAR_trees_dir = "../0-data/2-lidar_processing/2-grouped_point_clouds/1-trees"
+end
 
 # ╔═╡ 4d3c7d0a-260f-4521-ae2f-f74fb74125e1
 LiDAR_files_tree =
@@ -116,9 +182,6 @@ LiDAR_files_tree =
         x -> endswith(x, ".txt"), # all MTGs
         readdir(LiDAR_trees_dir)
     )
-
-# ╔═╡ bfb18c27-d4f2-4781-ab04-a4a30fa0d310
-MTG_trees_dir = "../0-data/3-mtg_lidar_plantscan3d/9-tree_scale_segmentized_enriched"
 
 # ╔═╡ 5d061d80-32b8-4986-9d22-0b2d54775a0a
 MTG_files_tree =
@@ -136,6 +199,23 @@ trees_MTG = sort!([match(r"[0-9]{1,2}", i).match for i in MTG_files_tree])
 # ╔═╡ b5997eda-e4f8-4105-a5fb-72bf388e3c8c
 @bind tree Select(trees_MTG)
 
+# ╔═╡ 7daf4809-44e3-4c02-beb7-99d300353407
+md"""
+Import the MTG and use the structural model:
+"""
+
+# ╔═╡ 9a3bfb11-9fa3-4a87-b583-ca5ef5c62a0b
+begin
+    mtg_tree = read_mtg(joinpath(MTG_trees_dir, "all_scans_tree_" * tree * ".mtg"))
+    BiomassFromLiDAR.structural_model!(mtg_tree, 0.5, 0.5, 240000.0)
+	branching_order!(mtg_tree) # Do it again, because the structural model does it in basipetal way
+	transform!(
+	    mtg_tree,
+	    (node -> cylinder_from_radius(node, [:XX, :ZZ, :YY], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
+	    symbol=symbol
+	)
+end
+
 # ╔═╡ 20dc1132-2b84-4e02-98e1-377f74d1053b
 LiDAR_tree = CSV.read(joinpath(LiDAR_trees_dir, "all_scans_tree_" * tree * ".txt"), DataFrame, header=["x", "y", "z", "reflectance", "other"]);
 
@@ -143,79 +223,6 @@ LiDAR_tree = CSV.read(joinpath(LiDAR_trees_dir, "all_scans_tree_" * tree * ".txt
 md"""
 Pre-computing the color from the Z value:
 """
-
-# ╔═╡ 80e68eb2-c787-4f5a-861f-3b25c8297d57
-# save("../2-results/2-plots/step_5_visualisation_2d.png", f_tree, px_per_unit=3)
-
-# ╔═╡ 0c628653-c1a8-4f47-9e0e-540c92f48169
-md"""
-## References
-"""
-
-# ╔═╡ 943da48a-1ccd-48a9-9263-f40d7f290ffe
-"""
-	cylinder(node::MultiScaleTreeGraph.Node)
-
-Compute a cylinder based on [:XX, :YY, :ZZ] attributes of MTG nodes.
-"""
-function cylinder(node::MultiScaleTreeGraph.Node, xyz_attr=[:XX, :YY, :ZZ])
-    node_start = ancestors(node, xyz_attr, recursivity_level=2, symbol="S")
-    if length(node_start) != 0
-        cs = node[:cross_section_stat_mod]
-        if cs < 0.0
-            cs = 0.0
-        end
-        Cylinder(
-            Point3((node_start[1][1], node_start[1][2], node_start[1][3])),
-            Point3((node[xyz_attr[1]], node[xyz_attr[2]], node[xyz_attr[3]])),
-            sqrt(cs / π) * 1e-3 # radius in meter
-        )
-
-    end
-end
-
-# ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
-begin
-    mtg = read_mtg(joinpath(MTG_directory, branch * ".mtg"))
-    transform!(mtg, cylinder => :cyl, symbol="S")
-end
-
-# ╔═╡ c7762335-eeeb-48c9-82f5-e4906a990bba
-begin
-    # Computing min/max values for colouring:
-    z_values = descendants(mtg, :ZZ, ignore_nothing=true)
-    z_min = minimum(z_values)
-    z_max = maximum(z_values)
-end
-
-# ╔═╡ 004960ba-a598-4808-bc7e-e87b4a1156d9
-f = let
-    fig = Figure()
-    scene = Scene(fig.scene)
-    ax1 = Axis(fig[1, 1])
-    # ax1 = Axis3(fig[1,1], elevation = 1π)
-    # rotate!(scene, Vec3f(0,1,1), -π/4)
-    hidedecorations!(ax1)
-    ax1.title = "LiDAR point cloud"
-    ax2 = Axis(fig[1, 2])
-    hidedecorations!(ax2)
-    ax2.title = "3D reconstruction"
-
-    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.5)
-    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-        mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
-    end
-    fig
-end
-
-# ╔═╡ 78532e4a-59a7-4bee-b4ce-c55d66150498
-save("../2-results/2-plots/step_5_visualisation.png", f, px_per_unit=3)
-
-# ╔═╡ 9a3bfb11-9fa3-4a87-b583-ca5ef5c62a0b
-begin
-    mtg_tree = read_mtg(joinpath(MTG_trees_dir, "all_scans_tree_" * tree * ".mtg"))
-    transform!(mtg_tree, (node -> cylinder(node, [:XX, :ZZ, :YY])) => :cyl, symbol="S")
-end
 
 # ╔═╡ efd5b759-708d-4507-99a1-464540c61f20
 begin
@@ -230,7 +237,6 @@ end
 # ╔═╡ d27d357e-b88c-4997-b8de-d45850ccc166
 f_tree = let
     fig = Figure()
-    # ax1 = Axis3(fig[1,1], elevation = 0.0π)
     ax1 = Axis(fig[1, 1])
     hidedecorations!(ax1)
     ax1.title = "LiDAR point cloud"
@@ -243,14 +249,15 @@ f_tree = let
     hidedecorations!(ax4)
 
     scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
-    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-        mesh!(ax2, node[:cyl], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+    traverse!(mtg, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+        mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
+		#mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
     end
 
     scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], color=LiDAR_tree[:, 3], markersize=0.3)
-    traverse!(mtg_tree, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-        cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl])]
-        mesh!(ax4, node[:cyl], color=cols)
+    traverse!(mtg_tree, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+        cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl_sm])]
+        mesh!(ax4, node[:cyl_sm], color=cols)
     end
 
 
@@ -261,39 +268,40 @@ f_tree = let
     fig
 end
 
+# ╔═╡ 80e68eb2-c787-4f5a-861f-3b25c8297d57
+# save("../2-results/2-plots/step_5_visualisation_2d.png", f_tree, px_per_unit=3)
+
 # ╔═╡ 319f00ff-c60d-43aa-bbb7-bd48638e2177
 f_tree_fine_structures = let
     fig = Figure()
-    # ax1 = Axis3(fig[1,1], elevation = 0.0π)
     ax1 = Axis(fig[1, 1])
     hidedecorations!(ax1)
-    ax1.title = "Branch scale"
+    ax1.title = "LiDAR point cloud"
     ax2 = Axis(fig[1, 2])
     hidedecorations!(ax2)
-    ax2.title = "Tree scale"
-    
-    traverse!(mtg, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-		diameter = sqrt(node[:cross_section_stat_mod] / π) * 2
+    ax2.title = "3D reconstruction"
+    ax3 = Axis(fig[2, 1])
+    hidedecorations!(ax3)
+    ax4 = Axis(fig[2, 2])
+    hidedecorations!(ax4)
 
-		if diameter > 50.0
-			cols = :slategrey
-		else
-			cols = :orange
-		end
-        mesh!(ax1, node[:cyl], color=cols)
+	scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
+    traverse!(mtg, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+        mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
     end
-	diameter_max = maximum(descendants(mtg, :diameter, ignore_nothing = true))
-	
-	traverse!(mtg_tree, symbol="S", filter_fun=node -> node[:cyl] !== nothing) do node
-        diameter = sqrt(node[:cross_section_stat_mod] / π) * 2
 
-		if diameter > 50.0
-			cols = :slategrey
+	scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], 	color=LiDAR_tree[:, 3], markersize=0.3)
+	
+	traverse!(mtg_tree, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+		if node[:diameter] > 0.05
+			#cols = :slategrey
+			cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl_sm])]
 		else
 			cols = :orange
 		end
-		
-        mesh!(ax2, node[:cyl], color=cols)
+
+        mesh!(ax4, node[:cyl_sm], color=cols)
+		#mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
    end
     colsize!(fig.layout, 1, Aspect(1, 1.0))
     colsize!(fig.layout, 2, Aspect(1, 1.0))
@@ -301,6 +309,9 @@ f_tree_fine_structures = let
 	#cb = Colorbar(fig[1, 3], ax2.plot, label = "Test")
 	fig
 end
+
+# ╔═╡ ba035c85-b05e-43bf-b171-6c83a75eb29c
+save("../2-results/2-plots/step_5_visualisation_2d_fine.png", f_tree_fine_structures, px_per_unit=3)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2106,10 +2117,13 @@ version = "3.5.0+0"
 # ╟─3793df6f-018f-4a34-aba8-c03fe5458519
 # ╟─2cb5fbca-ce75-4de1-a126-0a2797c37cac
 # ╠═43a83fe0-ac4a-11ec-2b8c-677a7469b0b7
+# ╟─e1e40cf1-a958-4af3-bdad-30db84983edd
+# ╠═502dddaf-bc6d-40c0-8d5e-2558615eb996
 # ╟─34e4d584-d25d-4429-bea2-2d2762a2b2c3
 # ╟─74457937-6bc2-4e17-bf59-34f491414034
-# ╟─7c05fdb4-ca1f-4266-bd41-89d365024cf0
-# ╟─636d0ed6-1c7c-489a-a139-943f2c812b95
+# ╠═c5953f22-039a-455e-bc17-af005a76394c
+# ╟─d415a535-aed5-405b-8a41-ac0cfbe03033
+# ╠═51652f1a-364a-4d2a-af52-6553eef5fab3
 # ╟─279013c5-6651-4bba-b301-b1f6198886e2
 # ╟─5d7596b7-cf2b-4e86-8dfe-38142d14481f
 # ╟─09a748ff-8557-48c6-8580-17a2a9bfc648
@@ -2125,21 +2139,20 @@ version = "3.5.0+0"
 # ╟─004960ba-a598-4808-bc7e-e87b4a1156d9
 # ╠═78532e4a-59a7-4bee-b4ce-c55d66150498
 # ╟─ecfe3d47-2467-4ddb-92e2-b4792ba6821e
-# ╠═bb146a9e-3563-4848-915a-5762f12a7e40
 # ╟─4d3c7d0a-260f-4521-ae2f-f74fb74125e1
 # ╠═bfb18c27-d4f2-4781-ab04-a4a30fa0d310
 # ╟─5d061d80-32b8-4986-9d22-0b2d54775a0a
 # ╟─1b20e1d7-135e-43d1-9e92-7ca5eabe1f68
 # ╟─08786d04-cffe-4ad8-ac84-f9a7cc538969
 # ╠═b5997eda-e4f8-4105-a5fb-72bf388e3c8c
+# ╟─7daf4809-44e3-4c02-beb7-99d300353407
 # ╠═9a3bfb11-9fa3-4a87-b583-ca5ef5c62a0b
 # ╠═20dc1132-2b84-4e02-98e1-377f74d1053b
 # ╟─fdec2992-0bfe-41e9-aac4-deceec2621ec
 # ╠═efd5b759-708d-4507-99a1-464540c61f20
-# ╠═d27d357e-b88c-4997-b8de-d45850ccc166
+# ╟─d27d357e-b88c-4997-b8de-d45850ccc166
 # ╠═80e68eb2-c787-4f5a-861f-3b25c8297d57
-# ╠═319f00ff-c60d-43aa-bbb7-bd48638e2177
-# ╟─0c628653-c1a8-4f47-9e0e-540c92f48169
-# ╟─943da48a-1ccd-48a9-9263-f40d7f290ffe
+# ╟─319f00ff-c60d-43aa-bbb7-bd48638e2177
+# ╠═ba035c85-b05e-43bf-b171-6c83a75eb29c
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
