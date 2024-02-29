@@ -35,6 +35,8 @@ Here is a tree representing all folders and files in `0-data`, along with a shor
 │       │       tree13l.xlsm
 │       │       ArchiMacro.xlsm # Template file with a macro for field measurements
 │       │
+│       ├───Demol_et_al.2022_data.csv # Data from Demol et al. (2022) for comparison (see 1-code/0-Demol_et_al.2022_data.jl for more details)
+│       │
 │       └───2-wood_density_measurements # Wood density measurements made on branches samples
 │               README.md # More detailed readme file
 │               sample-data-2-branches-juin.csv # results for tree 11
@@ -57,9 +59,6 @@ Here is a tree representing all folders and files in `0-data`, along with a shor
 │       [...]
 │
 ├───2-lidar_processing # Processed LiDAR data from A. Bonnet (2021)
-│   ├───4-scans_positions # Scan positions data
-│   │       scan_positions.csv
-│   │
 │   ├───1-isolations_per_scan # point cloud of isolated trees or branches for each scan position
 │   │   ├───1-trees # Point clouds of each scan position for all trees
 │   │   │       ScanPos001 - SINGLESCANSJust-three - 210218_090717 - Cloud.txt
@@ -77,34 +76,61 @@ Here is a tree representing all folders and files in `0-data`, along with a shor
 │   │       │       [...]
 │   │       └─── [...]
 │   │
-│   └───2-grouped_point_clouds # Scan positions grouped into a single file
-│       ├───1-trees # All scans positions into one file for each tree
-│       │       all_scans_tree_11.txt
-│       │       all_scans_tree_12.txt
-│       │       all_scans_tree_13.txt
-│       └───2-branches # All scans positions into one file for each branch and manually cleaned
-│               ALLSCANS-tree13l-Cloud.txt
-│               ALLSCANS-tree11h-Cloud.txt
-│               [...]
+│   ├───2-grouped_point_clouds # Scan positions grouped into a single file
+│   │   ├───1-trees # All scans positions into one file for each tree
+│   │   │       all_scans_tree_11.txt
+│   │   │       all_scans_tree_12.txt
+│   │   │       all_scans_tree_13.txt
+│   │   └───2-branches # All scans positions into one file for each branch and manually cleaned
+│   │           ALLSCANS-tree13l-Cloud.txt
+│   │           ALLSCANS-tree11h-Cloud.txt
+│   │           [...]
+│   └───3-scans_positions # Scan positions data
+│           scan_positions.csv
 │
-└───3-mtg_lidar_plantscan3d # Topology and length reconstruction from point clouds using plantscan3d
-    │   README.md     # More detailed readme file
-    │
-    ├───1-raw_output # MTG output from plantscan3d, without any modification
-    │       tree11h.mtg
-    │       [...]
-    │
-    ├───2-manually_corrected # MTG from plantscan3d, corrected manually for biggest errors (~40 min work each branch)
-    │       tree11h.mtg
-    │       [...]
-    │
-    ├───3-raw_output_segmentized # MTG from `1-raw_output`, modified to match the field format (A + S instead of N)
-    │       tree11h.mtg
-    │       [...]
-    │
-    └───4-corrected_segmentized # MTG from `2-manually_corrected`, modified to match the field format (A + S instead of N)
-            tree11h.mtg
-            [...]
+├───3-mtg_lidar_plantscan3d # Topology and length reconstruction from point clouds using plantscan3d
+│   │   README.md     # More detailed readme file
+│   │
+│   ├───1-raw_output # MTG output from plantscan3d, without any modification
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───2-manually_corrected # MTG from plantscan3d, corrected manually for biggest errors (~40 min work each branch)
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───3-raw_output_segmentized # MTG from `1-raw_output`, modified to match the field format (A + S instead of N)
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───4-corrected_segmentized # MTG from `2-manually_corrected`, modified to match the field format (A + S instead of N)
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───5-corrected_segmentized_id # MTG from `4`, with a unique ID for each axis also identified in the mtg from lidar data 
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───6-corrected_segmentized_id_enriched # MTG from `5`, enriched with computed data
+│   │       tree11h.mtg
+│   │       [...]
+│   │
+│   ├───7-tree_scale # MTG at tree scale
+│   │       all_scans_tree_11.mtg
+│   │       [...]
+│   │
+│   ├───8-tree_scale_segmentized # MTG at tree scale, segmentized
+│   │       all_scans_tree_11.mtg
+│   │       [...]
+│   │
+│   └───9-tree_scale_segmentized_enriched # MTG at tree scale, segmentized and enriched with computed data
+│           all_scans_tree_11.mtg
+│           [...]
+│
+└───4-method_visualization
+        tree11h_extract.txt # Points for the point cloud extract
+        tree11h_extract_pmt.mtg
+        tree11h_extract_point_cloud.mtg # MTG resulting from the point cloud extract
 ```
 
 ---

@@ -2,14 +2,18 @@
 
 ## From point cloud to MTG
 
-The MTG files in `1-raw_output` were made using the [plantscan3d software](https://plantscan3d.readthedocs.io/) and the LiDAR point clouds of each branch (`0-data/2-lidar_processing/2-grouped_point_cloud/2-branches`). The software was used using default parameter values for the branch skeletization and the node diameters (mean-distance algorithm). The MTGs are the raw results output from Plantscan3d.
+The MTG files in `1-raw_output` were made using the [plantscan3d software](https://plantscan3d.readthedocs.io/) and the LiDAR point clouds of each branch (`0-data/2-lidar_processing/2-grouped_point_cloud/2-branches`). The software was used using default parameter values for the branch skeletonization and the node diameters (mean-distance algorithm). The MTGs are the raw results output from Plantscan3d.
 
 Then, those MTG files were copied into the `2-manually_corrected` folder, and manually corrected with a maximum working intensity of ~40min for each branch (worker: A. Bonnet). The corrections included wrong branching, missed structures, wrong relationship (axis or branch), and diameter smoothing.
 
 ## From nodes to segments and axis
 
-The MTGs from the `3-raw_output_segmentized` and `4-corrected_segmentized` folders are the same than the previous one, but the format of the MTG is automatically converted onto the format used on the manual acquisitions, *i.e.* with segments (S) and axis (A) instead of nodes (N).
+The MTGs from the `3-raw_output_segmentized` and `4-corrected_segmentized` folders are the same than the previous one, but the format of the MTG is automatically converted onto the format used for the manual acquisitions, *i.e.* with segments (S) and axes (A) instead of nodes (N).
 
 ## Axis identification
 
 The `5-corrected_segmentized_id` folder contains the same MTGs as `4-corrected_segmentized`, but with an added attribute: the id. This id helps matching branch second order axis (A2) between the Plantscan3d MTGs and the manually measured MTGs. See this [README.md](../1.1-mtg_manual_measurement_corrected_id/README.md) for further details.
+
+## Tree scale
+
+The same methodology was used to compute the MTGs for the whole trees. The MTGs are stored in the `6-trees` folder. The MTGs at tree scale were not manually corrected though.
