@@ -9,11 +9,13 @@ using Revise
 includet("./functions.jl")
 using .BiomassFromLiDAR
 
-LiDAR = CSV.read("0-data/4-method_visualization/tree11h_extract.asc", DataFrame, header=["x", "y", "z", "R", "G", "B"])
-point_color = CSV.read("0-data/4-method_visualization/tree11h_extract.txt", DataFrame)[:, 4]
+LiDAR = CSV.read("0-data/4-method_visualization/tree11h_extract.txt", DataFrame, header=["x", "y", "z", "reflectance", "other"], skipto=2)
+select!(LiDAR, [:x, :y, :z] => ((x, y, z) -> Point3.(x, y, z)) => :point, :reflectance)
+reference_point = Point3(11.91279984, -9.03291035, 4.90229988)
+new_reference_point = Point3(-0.155291, -0.0926051, -0.0124261)
+
 MTG_files = [
     "tree11h_extract_point_cloud.mtg",
-    "tree11h_extract_pmt.mtg",
     "tree11h_extract_pmt.mtg" # This one is repeated but it will be overwritten for our model
 ]
 
@@ -27,6 +29,11 @@ for i in MTG_files
     # Make the cylinder:
     transform!(
         mtg,
+        # Translate the branch extract to the previous reference point (plantscan3d changed the reference of the coordinates):
+        :XX => (x -> x + reference_point[1] - new_reference_point[1]) => :XX,
+        :YY => (y -> y + reference_point[2] - new_reference_point[2]) => :YY,
+        :ZZ => (z -> z + reference_point[3] - new_reference_point[3]) => :ZZ,
+        # Make the circle for the structural model:
         (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], symbol=symbol)) => :cyl,
         (node -> circle_from_radius(node, [:XX, :YY, :ZZ], symbol=symbol, radius_factor=0.0001)) => :circle,
         symbol=symbol
@@ -38,12 +45,12 @@ for i in MTG_files
 end
 
 
-structural_model!(mtgs[3], 0.5, 0.5, π * (0.008^2.0))
-branching_order!(mtgs[3]) # Do it again, because the structural model does it in basipetal way
+structural_model!(mtgs[2], 0.5, 0.5, π * (0.008^2.0))
+branching_order!(mtgs[2]) # Do it again, because the structural model does it in basipetal way
 
 # Make the circle for the structural model:
 transform!(
-    mtgs[3],
+    mtgs[2],
     (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_pipe, symbol=symbol)) => :cyl_pipe,
     (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
     (node -> circle_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_pipe, symbol=symbol, radius_factor=0.0001)) => :circle_pipe,
@@ -84,17 +91,16 @@ begin
     hidedecorations!(ax4c; grid=false, minorgrid=false)
 
     # Draw the LiDAR point cloud:
-    # scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 4], markersize=2)
-    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2)
+    scatter!(ax1, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2)
 
     # Draw the skeleton (lines):
-    scatter!(ax2, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=0.1)
+    scatter!(ax2, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=0.1)
     traverse!(mtgs[1], symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
         draw_skeleton!(ax2, node, xyz_attr, symbol=symbol, linewidth=2)
     end
 
     # Diameter based on the point cloud:
-    scatter!(ax3a, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=0.1)
+    scatter!(ax3a, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=0.1)
     traverse!(mtgs[1], symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
         draw_skeleton!(ax3a, node, xyz_attr, symbol=symbol, linewidth=0.8)
         mesh!(
@@ -107,8 +113,8 @@ begin
     end
 
     # Diameter based on the pipe model theory:
-    scatter!(ax3b, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=0.1)
-    traverse!(mtgs[3], symbol=symbol, filter_fun=node -> node[:circle_pipe] !== nothing) do node
+    scatter!(ax3b, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=0.1)
+    traverse!(mtgs[2], symbol=symbol, filter_fun=node -> node[:circle_pipe] !== nothing) do node
         draw_skeleton!(ax3b, node, xyz_attr, symbol=symbol, linewidth=0.8)
         mesh!(
             ax3b, node[:circle_pipe],
@@ -120,8 +126,8 @@ begin
     end
 
     # Diameter based on the cross-sectional area at each node
-    scatter!(ax3c, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=point_color, markersize=2, alpha=0.1)
-    traverse!(mtgs[3], symbol=symbol, filter_fun=node -> node[:circle_sm] !== nothing) do node
+    scatter!(ax3c, LiDAR[:, 1], color=LiDAR[:, 2], markersize=2, alpha=0.1)
+    traverse!(mtgs[2], symbol=symbol, filter_fun=node -> node[:circle_sm] !== nothing) do node
         draw_skeleton!(ax3c, node, xyz_attr, symbol=symbol, linewidth=0.8)
         mesh!(
             ax3c, node[:circle_sm],
@@ -155,7 +161,7 @@ begin
         )
     end
 
-    traverse!(mtgs[3], symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
+    traverse!(mtgs[2], symbol=symbol, filter_fun=node -> node[:cyl] !== nothing) do node
         # mesh!(
         #     ax4a, node[:cyl],
         #     color=get(

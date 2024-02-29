@@ -12,7 +12,6 @@ using .BiomassFromLiDAR
 
 GLMakie.activate!()
 
-# LiDAR = CSV.read("0-data/4-method_visualization/tree11h_extract.asc", DataFrame, header=["x", "y", "z", "R", "G", "B"])
 LiDAR = CSV.read("0-data/4-method_visualization/tree11h_extract.txt", DataFrame, header=["x", "y", "z", "reflectance", "other"], skipto=2)
 select!(LiDAR, [:x, :y, :z] => ((x, y, z) -> Point3.(x, y, z)) => :point, :reflectance)
 LiDAR_fullbranch = CSV.read("0-data/2-lidar_processing/2-grouped_point_clouds/2-branches/tree11h.txt", DataFrame, header=["x", "y", "z", "reflectance", "other"])

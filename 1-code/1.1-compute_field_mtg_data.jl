@@ -3,7 +3,7 @@
 # Date of creation: 22/07/2021
 
 # Imports
-
+using MultiScaleTreeGraph
 include("./functions.jl")
 using .BiomassFromLiDAR
 

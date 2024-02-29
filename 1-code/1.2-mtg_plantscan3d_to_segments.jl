@@ -5,7 +5,7 @@
 
 
 # Script set-up -----------------------------------------------------------
-
+using MultiScaleTreeGraph
 include("./functions.jl")
 using .BiomassFromLiDAR
 
