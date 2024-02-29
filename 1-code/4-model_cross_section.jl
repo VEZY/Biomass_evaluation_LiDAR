@@ -17,7 +17,7 @@ begin
     using CairoMakie
     using ColorSchemes
     using MLBase
-	using CategoricalArrays
+    using CategoricalArrays
 end
 
 # ╔═╡ 393b8020-3743-11ec-2da9-d1600147f3d1
@@ -64,7 +64,7 @@ csv_files =
         x -> endswith(x, ".csv"), # all MTGs
         # x -> endswith(x, r"tree[1,3].\.csv"), # train only on 2020 MTGs
         readdir(joinpath("../0-data", "1.2-mtg_manual_measurement_corrected_enriched"), join=true)
-	)
+    )
 
 # ╔═╡ 220dfbff-15fc-4e75-a6a2-39e60c08e8dc
 md"""
@@ -411,79 +411,79 @@ end
 
 # ╔═╡ 19bc88a8-8299-49fe-bf19-60e0fdfbd1ba
 begin
-p2, plt_cs_all2, xticks2 = let
-	#classes = 0.0:0.001:0.10
-	classes = 0.0:1.0:80
-	
-	df_plot = DataFrames.transform(
-		df_all,
-		:cross_section_pred => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000) => :diameter_pred,
-		:cross_section => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000)=> :diameter,
-    )
-	
-	filter!(row -> row.diameter < maximum(df_plot.diameter), df_plot)
-	
-	transform!(
-		df_plot,
-		[:diameter_pred, :diameter] => ((pred,obs) -> (obs .- pred) ./ obs .* 100) => :diameter_error_rel,
-		[:diameter_pred, :diameter] => ((pred,obs) -> (obs .- pred)) => :diameter_error,
-	)
-			
-	transform!(
-		df_plot,
-		 :diameter => (x -> cut(x, classes, labels = classes[2:end])) => :diameter_class,
-	)
+    p2, plt_cs_all2, xticks2 = let
+        #classes = 0.0:0.001:0.10
+        classes = 0.0:1.0:80
 
-	df_plot = combine(
-		groupby(df_plot, [:Model, :diameter_class]),
-		:diameter_error => mean => :diameter_error,
-		:diameter => mean => :diameter,
-		:diameter_pred => mean => :diameter_pred,
-	)
+        df_plot = DataFrames.transform(
+            df_all,
+            :cross_section_pred => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000) => :diameter_pred,
+            :cross_section => (x -> sqrt.(x ./ π) .* 1e-3 .* 2 .* 1000) => :diameter,
+        )
 
-	sort!(df_plot, order(:diameter))
-	classes_points = unique(df_plot.diameter_class)
-	nclasses = length(classes_points)
-	plt_ =
-        data(df_plot) *
-        mapping(
-			:diameter_class,
-			:diameter_error,
-            color=:Model, 
-			dodge=:Model,
-        ) *
-		visual(BarPlot)#, dodge_gap=0.1, gap=0.1)
-	xticks = (0:10:nclasses, string.(Int.(unwrap.(df_plot.diameter_class[1:10:nclasses]))))
-    p_ = draw(
-		plt_; 
-		figure=(fontsize=25,),
-		palettes=(; color=colors),
-		axis=
-			(;
-			xticks=xticks,
-			#width=800, height=800, 
-			ylabel="Prediction error (mm)", xlabel="Diameter (mm)",
-			)
-	)
-	p_, plt_, xticks
-end
-p2
+        filter!(row -> row.diameter < maximum(df_plot.diameter), df_plot)
+
+        transform!(
+            df_plot,
+            [:diameter_pred, :diameter] => ((pred, obs) -> (obs .- pred) ./ obs .* 100) => :diameter_error_rel,
+            [:diameter_pred, :diameter] => ((pred, obs) -> (obs .- pred)) => :diameter_error,
+        )
+
+        transform!(
+            df_plot,
+            :diameter => (x -> cut(x, classes, labels=classes[2:end])) => :diameter_class,
+        )
+
+        df_plot = combine(
+            groupby(df_plot, [:Model, :diameter_class]),
+            :diameter_error => mean => :diameter_error,
+            :diameter => mean => :diameter,
+            :diameter_pred => mean => :diameter_pred,
+        )
+
+        sort!(df_plot, order(:diameter))
+        classes_points = unique(df_plot.diameter_class)
+        nclasses = length(classes_points)
+        plt_ =
+            data(df_plot) *
+            mapping(
+                :diameter_class,
+                :diameter_error,
+                color=:Model,
+                dodge=:Model,
+            ) *
+            visual(BarPlot)#, dodge_gap=0.1, gap=0.1)
+        xticks = (0:10:nclasses, string.(Int.(unwrap.(df_plot.diameter_class[1:10:nclasses]))))
+        p_ = draw(
+            plt_;
+            figure=(fontsize=25,),
+            palettes=(; color=colors),
+            axis=
+            (;
+                xticks=xticks,
+                #width=800, height=800, 
+                ylabel="Prediction error (mm)", xlabel="Diameter (mm)",
+            )
+        )
+        p_, plt_, xticks
+    end
+    p2
 end
 
 # ╔═╡ c0ea7917-f0bf-445a-a612-40abd67fe9ad
 p3 = let
-	f = Figure(; size=(800, 300))
-	ax1 = Axis(f[1, 1], aspect = 1, ylabel = "Predicted CSA (mm²)", xlabel = "Measured CSA (mm²)", title = "1. Prediction~Measurement", titlealign=:left)
-	ax2 = Axis(f[1, 2], aspect = 1, ylabel="Prediction error (mm)", xlabel="Diameter (mm)", title = "2. Error by diameter class", titlealign=:left, xticks=xticks2)
+    f = Figure(; size=(800, 300))
+    ax1 = Axis(f[1, 1], aspect=1, ylabel="Predicted CSA (mm²)", xlabel="Measured CSA (mm²)", title="1. Prediction~Measurement", titlealign=:left)
+    ax2 = Axis(f[1, 2], aspect=1, ylabel="Prediction error (mm)", xlabel="Diameter (mm)", title="2. Error by diameter class", titlealign=:left, xticks=xticks2)
 
-	d1 = draw!(ax1, plt_cs_all, palettes=(; color=colors),)
-	draw!(ax2, plt_cs_all2, palettes=(; color=colors),)
-	legend!(f[1, 3], d1)
-	f
+    d1 = draw!(ax1, plt_cs_all, palettes=(; color=colors),)
+    draw!(ax2, plt_cs_all2, palettes=(; color=colors),)
+    legend!(f[1, 3], d1)
+    f
 end
 
 # ╔═╡ bfe70951-a89d-4783-98a8-ac39fabed66b
-save("../2-results/2-plots/step_3_statistical_model_evaluation3.png", p3, px_per_unit=3)
+save("../2-results/2-plots/Figure_5-statistical_model_evaluation.png", p3, px_per_unit=3)
 
 # ╔═╡ a802bffa-a5c3-4563-adde-7a393b47881c
 save("../2-results/2-plots/step_3_statistical_model_evaluation2.png", p2, px_per_unit=3)
@@ -1046,7 +1046,7 @@ function summarize_data(mtg_files, dir_path_lidar, dir_path_lidar_raw, dir_path_
         println("Computing branch $i")
         (mtg_manual, mtg_lidar_ps3d_raw, mtg_lidar_model) =
             compute_volume_model(i, dir_path_lidar, dir_path_lidar_raw, dir_path_manual, df_density)
-		
+
         # Write the computed LiDAR MTG to disk:
         write_mtg(joinpath(dir_path_lidar_new, i * ".mtg"), mtg_lidar_model)
 

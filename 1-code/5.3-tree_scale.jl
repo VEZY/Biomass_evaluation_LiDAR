@@ -135,16 +135,16 @@ nothing_to_missing(x) = x === nothing ? missing : x
 
 # ╔═╡ e1d56b58-a5e9-4694-a19c-3fb6915701fb
 begin
-	df_vec = DataFrame[]
-	for m in mtg_trees
-		push!(
-			df_vec,
-			DataFrame(
-				(cross_section_stat_mod = nothing_to_missing(i[1]), dry_mass = nothing_to_missing(i[2]), fresh_mass = nothing_to_missing(i[3]), length = nothing_to_missing(i[4]), ZZ = nothing_to_missing(i[5]), :tree => match(r"[0-9]+", m.MTG.symbol).match) for i in descendants(m, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length, :ZZ])
-			)
-		)
-	end
-	
+    df_vec = DataFrame[]
+    for m in mtg_trees
+        push!(
+            df_vec,
+            DataFrame(
+                (cross_section_stat_mod=nothing_to_missing(i[1]), dry_mass=nothing_to_missing(i[2]), fresh_mass=nothing_to_missing(i[3]), length=nothing_to_missing(i[4]), ZZ=nothing_to_missing(i[5]), :tree => match(r"[0-9]+", m.MTG.symbol).match) for i in descendants(m, [:cross_section_stat_mod, :dry_mass, :fresh_mass, :length, :ZZ])
+            )
+        )
+    end
+
     df = df_vec[1]
     if length(mtg_trees) > 1
         for i in df_vec[2:end]
@@ -271,7 +271,7 @@ begin
 end
 
 # ╔═╡ 3f457f7f-ea35-40bf-b086-24e370b5e006
-save("../2-results/2-plots/step_5_whole_tree_biomass_distribution.png", p, px_per_unit=3)
+save("../2-results/2-plots/Figure_7-whole_tree_biomass_distribution.png", p, px_per_unit=3)
 
 # ╔═╡ 4f27296a-68e7-4ecf-beca-9da7e6c93f5e
 begin
@@ -321,10 +321,10 @@ end
 p_AGB = let
     df_AGB = transform(df, :ZZ => (x -> cut(x, -7:1:12)) => :height)
 
-	df_AGB_class = combine(
+    df_AGB_class = combine(
         groupby(dropmissing(df_AGB, :fresh_mass), [:height, :tree]),
         :fresh_mass => (x -> sum(x) * 1e-3) => :fresh_mass,
-		:ZZ => maximum => :ZZ
+        :ZZ => maximum => :ZZ
     )
 
     df_AGB_tree = transform(
@@ -337,9 +337,9 @@ p_AGB = let
         [:fresh_mass, :tot_fresh_mass] => ((x, y) -> x ./ y) => :rel_fresh_mass,
     )
 
-	
+
     axis3 = (width=800, height=800, ylabel="Tree height (m)", xlabel="Relative AGB (%)")
-	
+
     plt_AGB =
         data(sort(df_AGB_tree, :ZZ)) *
         mapping(

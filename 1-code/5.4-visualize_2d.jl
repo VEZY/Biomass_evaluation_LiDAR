@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -23,13 +27,13 @@ begin
     using DataFrames
     using PlutoUI
     using ColorSchemes
-	using Colors
+    using Colors
 end
 
 # ╔═╡ 502dddaf-bc6d-40c0-8d5e-2558615eb996
 begin
-	include("functions.jl")
-	using .BiomassFromLiDAR
+    include("functions.jl")
+    using .BiomassFromLiDAR
 end
 
 # ╔═╡ 3793df6f-018f-4a34-aba8-c03fe5458519
@@ -61,8 +65,8 @@ Setting the paths to the LiDAR and mtg files:
 
 # ╔═╡ c5953f22-039a-455e-bc17-af005a76394c
 begin
-	MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
-	LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
+    MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
+    LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
 end
 
 # ╔═╡ d415a535-aed5-405b-8a41-ac0cfbe03033
@@ -111,14 +115,14 @@ Please choose the branch you want to plot:
 # ╔═╡ 087017bc-cfc1-4dbe-b5a2-dcb2c3c6768b
 begin
     mtg = read_mtg(joinpath(MTG_directory, branch * ".mtg"))
-	BiomassFromLiDAR.structural_model!(mtg, 0.5, 0.5, 1999.0)
+    BiomassFromLiDAR.structural_model!(mtg, 0.5, 0.5, 1999.0)
     branching_order!(mtg) # Do it again, because the structural model does it in basipetal way
-	transform!(
-	    mtg,
-	    # Make the circle for the structural model:
-	    (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
-	    symbol=symbol
-	)
+    transform!(
+        mtg,
+        # Make the circle for the structural model:
+        (node -> cylinder_from_radius(node, [:XX, :YY, :ZZ], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
+        symbol=symbol
+    )
 end
 
 # ╔═╡ e886ae94-6075-4fe4-acbc-62b2d945a740
@@ -172,8 +176,8 @@ md"""
 
 # ╔═╡ bfb18c27-d4f2-4781-ab04-a4a30fa0d310
 begin
-	MTG_trees_dir = "../0-data/3-mtg_lidar_plantscan3d/7-tree_scale"
-	LiDAR_trees_dir = "../0-data/2-lidar_processing/2-grouped_point_clouds/1-trees"
+    MTG_trees_dir = "../0-data/3-mtg_lidar_plantscan3d/7-tree_scale"
+    LiDAR_trees_dir = "../0-data/2-lidar_processing/2-grouped_point_clouds/1-trees"
 end
 
 # ╔═╡ 4d3c7d0a-260f-4521-ae2f-f74fb74125e1
@@ -208,12 +212,12 @@ Import the MTG and use the structural model:
 begin
     mtg_tree = read_mtg(joinpath(MTG_trees_dir, "all_scans_tree_" * tree * ".mtg"))
     BiomassFromLiDAR.structural_model!(mtg_tree, 0.5, 0.5, 240000.0)
-	branching_order!(mtg_tree) # Do it again, because the structural model does it in basipetal way
-	transform!(
-	    mtg_tree,
-	    (node -> cylinder_from_radius(node, [:XX, :ZZ, :YY], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
-	    symbol=symbol
-	)
+    branching_order!(mtg_tree) # Do it again, because the structural model does it in basipetal way
+    transform!(
+        mtg_tree,
+        (node -> cylinder_from_radius(node, [:XX, :ZZ, :YY], radius=:radius_sm, symbol=symbol)) => :cyl_sm,
+        symbol=symbol
+    )
 end
 
 # ╔═╡ 20dc1132-2b84-4e02-98e1-377f74d1053b
@@ -251,7 +255,7 @@ f_tree = let
     scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
     traverse!(mtg, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
         mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
-		#mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
+        #mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
     end
 
     scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], color=LiDAR_tree[:, 3], markersize=0.3)
@@ -282,33 +286,33 @@ f_tree_fine_structures = let
     ax4 = Axis(fig[2, 2])
     hidedecorations!(ax4)
 
-	scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
+    scatter!(ax1, LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], color=LiDAR[:, 3], markersize=0.3)
     traverse!(mtg, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
         mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, (node[:ZZ] - z_min) / (z_max - z_min)))
     end
 
-	scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], 	color=LiDAR_tree[:, 3], markersize=0.3)
-	
-	traverse!(mtg_tree, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
-		if node[:diameter] > 0.05
-			#cols = :slategrey
-			cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl_sm])]
-		else
-			cols = :orange
-		end
+    scatter!(ax3, LiDAR_tree[:, 1], LiDAR_tree[:, 3], LiDAR_tree[:, 2], color=LiDAR_tree[:, 3], markersize=0.3)
+
+    traverse!(mtg_tree, symbol="N", filter_fun=node -> node[:cyl_sm] !== nothing) do node
+        if node[:diameter] > 0.05
+            #cols = :slategrey
+            cols = [get(ColorSchemes.viridis, (i[2] - z_min_tree) / (z_max_tree - z_min_tree)) for i in GeometryBasics.coordinates(node[:cyl_sm])]
+        else
+            cols = :orange
+        end
 
         mesh!(ax4, node[:cyl_sm], color=cols)
-		#mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
-   end
+        #mesh!(ax2, node[:cyl_sm], color=get(ColorSchemes.viridis, node[:diameter_sm] / 0.03))
+    end
     colsize!(fig.layout, 1, Aspect(1, 1.0))
     colsize!(fig.layout, 2, Aspect(1, 1.0))
     resize_to_layout!(fig)
-	#cb = Colorbar(fig[1, 3], ax2.plot, label = "Test")
-	fig
+    #cb = Colorbar(fig[1, 3], ax2.plot, label = "Test")
+    fig
 end
 
 # ╔═╡ ba035c85-b05e-43bf-b171-6c83a75eb29c
-save("../2-results/2-plots/step_5_visualisation_2d_fine.png", f_tree_fine_structures, px_per_unit=3)
+save("../2-results/2-plots/Figure_8-visualisation_2d_fine.png", f_tree_fine_structures, px_per_unit=3)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """

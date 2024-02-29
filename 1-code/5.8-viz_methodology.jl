@@ -291,4 +291,4 @@ update_cam!(g2ax1.scene, cameracontrols(g2ax1.scene))
 # fig
 
 # Save the figure:
-save("2-results/2-plots/Fig.0-viz_methodology.png", fig, px_per_unit=5, update=false)
+save("2-results/2-plots/Figure_3-viz_methodology.png", fig, px_per_unit=5, update=false)

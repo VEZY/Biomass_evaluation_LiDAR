@@ -93,7 +93,7 @@ begin
     fig
 end
 
-save("2-results/2-plots/step_5_visualisation_topology.png", fig, px_per_unit=3)
+save("2-results/2-plots/Figure_2-visualisation_topology.png", fig, px_per_unit=3)
 
 # Visualize the topology of one part of a branch:
 LiDAR_directory = "0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
