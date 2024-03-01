@@ -24,6 +24,7 @@ begin
     using PlutoUI
     using ColorSchemes
     using Colors
+	using CodecBzip2, Tar # For decompressing the tar.bz2 file of the lidar point cloud
 end
 
 # ╔═╡ 502dddaf-bc6d-40c0-8d5e-2558615eb996
@@ -63,6 +64,19 @@ Setting the paths to the LiDAR and mtg files:
 begin
     MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
     LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
+end
+
+# ╔═╡ e649cc29-b316-40f6-af2f-9d383afec77b
+md"""
+If the directory does not exist, extract the tar.bz2 file:
+"""
+
+# ╔═╡ 31cf11b9-42a5-4674-b158-8ff5f755770f
+if !isdir(dirname(LiDAR_directory))
+    # Extract the reconstructions from the tar.bz2 file:
+    open(Bzip2DecompressorStream, "../0-data/2-lidar_processing/2-grouped_point_clouds.tar.bz2") do io
+        Tar.extract(io, dirname(LiDAR_directory))
+    end
 end
 
 # ╔═╡ d415a535-aed5-405b-8a41-ac0cfbe03033
@@ -315,16 +329,19 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 MultiScaleTreeGraph = "dd4a991b-8a45-4075-bede-262ee62d5583"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
 [compat]
 CSV = "~0.10.3"
 CairoMakie = "~0.11.9"
+CodecBzip2 = "~0.8.2"
 ColorSchemes = "~3.24.0"
 Colors = "~0.12.10"
 DataFrames = "~1.3.2"
@@ -339,7 +356,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "56be96b62adfd05c9a90b135a4257ff3e3929793"
+project_hash = "a6dbb6a2a7e84b6e274085b514df56cf6c830fd4"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2119,8 +2136,10 @@ version = "3.5.0+0"
 # ╟─34e4d584-d25d-4429-bea2-2d2762a2b2c3
 # ╟─74457937-6bc2-4e17-bf59-34f491414034
 # ╠═c5953f22-039a-455e-bc17-af005a76394c
+# ╟─e649cc29-b316-40f6-af2f-9d383afec77b
+# ╠═31cf11b9-42a5-4674-b158-8ff5f755770f
 # ╟─d415a535-aed5-405b-8a41-ac0cfbe03033
-# ╠═51652f1a-364a-4d2a-af52-6553eef5fab3
+# ╟─51652f1a-364a-4d2a-af52-6553eef5fab3
 # ╟─279013c5-6651-4bba-b301-b1f6198886e2
 # ╟─5d7596b7-cf2b-4e86-8dfe-38142d14481f
 # ╟─09a748ff-8557-48c6-8580-17a2a9bfc648

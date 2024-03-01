@@ -8,10 +8,20 @@ using ColorSchemes
 using Revise
 includet("./functions.jl")
 using .BiomassFromLiDAR
+using CodecBzip2, Tar # For decompressing the tar.bz2 file of the lidar point cloud
 
 LiDAR_directory = "0-data/2-lidar_processing/2-grouped_point_clouds/2-branches"
-MTG_directory = "0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
 LiDAR_trees_dir = "0-data/2-lidar_processing/2-grouped_point_clouds/1-trees"
+
+# If the directory does not exist, extract the tar.bz2 file:
+if !isdir("0-data/2-lidar_processing/2-grouped_point_clouds")
+    # Extract the reconstructions from the tar.bz2 file:
+    open(Bzip2DecompressorStream, "0-data/2-lidar_processing/2-grouped_point_clouds.tar.bz2") do io
+        Tar.extract(io, "0-data/2-lidar_processing/2-grouped_point_clouds")
+    end
+end
+
+MTG_directory = "0-data/3-mtg_lidar_plantscan3d/2-manually_corrected"
 MTG_trees_dir = "0-data/3-mtg_lidar_plantscan3d/7-tree_scale"
 symbol = "N"
 

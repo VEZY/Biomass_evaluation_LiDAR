@@ -28,6 +28,7 @@ begin
     using CSV
     using DataFrames
     using PlutoUI
+	using CodecBzip2, Tar # For decompressing the tar.bz2 file of the lidar point cloud
 end
 
 # ╔═╡ 3793df6f-018f-4a34-aba8-c03fe5458519
@@ -42,6 +43,19 @@ LiDAR_directory = "../0-data/2-lidar_processing/2-grouped_point_clouds/2-branche
 
 # ╔═╡ 636d0ed6-1c7c-489a-a139-943f2c812b95
 MTG_directory = "../0-data/3-mtg_lidar_plantscan3d/6-corrected_segmentized_id_enriched"
+
+# ╔═╡ 6c93598b-fc6f-437e-82d5-72887d466b73
+md"""
+If the directory does not exist, extract the tar.bz2 file:
+"""
+
+# ╔═╡ 30c82219-2ae2-4d74-8e57-354ee34cf3ca
+if !isdir(dirname(LiDAR_directory))
+    # Extract the reconstructions from the tar.bz2 file:
+    open(Bzip2DecompressorStream, "../0-data/2-lidar_processing/2-grouped_point_clouds.tar.bz2") do io
+        Tar.extract(io, dirname(LiDAR_directory))
+    end
+end
 
 # ╔═╡ 279013c5-6651-4bba-b301-b1f6198886e2
 LiDAR_files =
@@ -82,10 +96,7 @@ Here is the LiDAR point cloud:
 """
 
 # ╔═╡ 3e3dcc9c-016a-45b8-8e10-d6377fb106d7
-let
-	df_no_missing = dropmissing(LiDAR, [:x, :y, :z])
-	scatter(df_no_missing[:, 1], df_no_missing[:, 2], df_no_missing[:, 3])
-end
+scatter(LiDAR[:, 1], LiDAR[:, 2], LiDAR[:, 3], markersize = 1, color = LiDAR[:,4])
 
 # ╔═╡ 64406a16-243b-4e0d-b632-84b0b2c2fa88
 md"""
@@ -142,15 +153,18 @@ end
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 JSServe = "824d6782-a2ef-11e9-3a09-e5662e0c26f9"
 MultiScaleTreeGraph = "dd4a991b-8a45-4075-bede-262ee62d5583"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [compat]
 CSV = "~0.10.3"
+CodecBzip2 = "~0.8.2"
 DataFrames = "~1.3.2"
 GeometryBasics = "~0.4.2"
 JSServe = "~1.2.5"
@@ -165,7 +179,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "dc2be608c81054d5a3ecaeb24c0eeccff232fff1"
+project_hash = "221e28bcd4cad670f6bd2c6ef7b4f791be6cb8c0"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -277,6 +291,12 @@ weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
+
+[[deps.CodecBzip2]]
+deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
+git-tree-sha1 = "9b1ca1aa6ce3f71b3d1840c538a8210a043625eb"
+uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+version = "0.8.2"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1780,6 +1800,8 @@ version = "3.5.0+0"
 # ╠═43a83fe0-ac4a-11ec-2b8c-677a7469b0b7
 # ╠═7c05fdb4-ca1f-4266-bd41-89d365024cf0
 # ╠═636d0ed6-1c7c-489a-a139-943f2c812b95
+# ╟─6c93598b-fc6f-437e-82d5-72887d466b73
+# ╠═30c82219-2ae2-4d74-8e57-354ee34cf3ca
 # ╟─279013c5-6651-4bba-b301-b1f6198886e2
 # ╟─5d7596b7-cf2b-4e86-8dfe-38142d14481f
 # ╟─09a748ff-8557-48c6-8580-17a2a9bfc648
@@ -1793,6 +1815,6 @@ version = "3.5.0+0"
 # ╟─64406a16-243b-4e0d-b632-84b0b2c2fa88
 # ╠═5d4ed4ad-a0cf-4a33-a3ec-77bc70485728
 # ╠═004960ba-a598-4808-bc7e-e87b4a1156d9
-# ╠═943da48a-1ccd-48a9-9263-f40d7f290ffe
+# ╟─943da48a-1ccd-48a9-9263-f40d7f290ffe
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

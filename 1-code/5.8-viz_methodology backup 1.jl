@@ -7,19 +7,10 @@ using DataFrames
 using ColorSchemes
 using Colors
 using Revise
-using CodecBzip2, Tar # For decompressing the tar.bz2 file of the lidar point cloud
 includet("./functions.jl")
 using .BiomassFromLiDAR
 
 GLMakie.activate!()
-
-# If the directory does not exist, extract the tar.bz2 file:
-if !isdir("0-data/2-lidar_processing/2-grouped_point_clouds")
-    # Extract the reconstructions from the tar.bz2 file:
-    open(Bzip2DecompressorStream, "0-data/2-lidar_processing/2-grouped_point_clouds.tar.bz2") do io
-        Tar.extract(io, "0-data/2-lidar_processing/2-grouped_point_clouds")
-    end
-end
 
 LiDAR = CSV.read("0-data/4-method_visualization/tree11h_extract.txt", DataFrame, header=["x", "y", "z", "reflectance", "other"], skipto=2)
 select!(LiDAR, [:x, :y, :z] => ((x, y, z) -> Point3.(x, y, z)) => :point, :reflectance)
