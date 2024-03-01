@@ -2,7 +2,7 @@
 
 > This is the repository for the code and data used in the paper **Advancing Fine Branch Biomass Estimation with Lidar and Structural Models** ([preprint](https://hal.archives-ouvertes.fr/hal-03838571)).
 
-The data (+code) is available on a dedicated Zenodo repository [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7038482.svg)](https://doi.org/10.5281/zenodo.7038482)
+The data (+code) is available on a dedicated Zenodo repository [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7038482.svg)](https://doi.org/10.5281/zenodo.7038482). If you need to reproduce the results, you can download the data and code from the Zenodo repository and execute the scripts presented below.
 
 ## Introduction
 
