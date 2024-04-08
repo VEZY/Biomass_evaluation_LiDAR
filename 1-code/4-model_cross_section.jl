@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.38
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -382,7 +382,7 @@ begin
                 color=:Model => "Model:",
                 marker=(:tree, :branch) => ((x, y) -> join([x, y], "-")) => "Tree-Branch:"
             ) *
-            visual(Scatter, markersize=15, alpha=0.8)
+            visual(Scatter, markersize=8, alpha=0.8)
         )
     p = draw(plt_cs_all, palettes=(; color=colors))
 end
@@ -1213,7 +1213,7 @@ StatsBase = "~0.34.2"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.1"
+julia_version = "1.10.2"
 manifest_format = "2.0"
 project_hash = "6777684974abdcf8a2c8fd67100f1011cadb8d2d"
 
