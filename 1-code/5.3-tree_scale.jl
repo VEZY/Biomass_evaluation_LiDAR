@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.38
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -263,7 +263,7 @@ begin
         data(df_biomass_tree_plot) *
         mapping(
             :type => sorter(collect(values(classes_map))),
-            :rel_dry_mass,
+            :rel_dry_mass => (x -> x * 100),
             color=:tree, dodge=:tree
         ) *
         visual(BarPlot, dodge_gap=0, gap=0.1)
@@ -373,7 +373,7 @@ MultiScaleTreeGraph = "~0.12.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.1"
+julia_version = "1.10.2"
 manifest_format = "2.0"
 project_hash = "d7ef83742ba36509264a6af1a2f447114471edf4"
 
